@@ -3,6 +3,7 @@
 /node_modules
 /build
 /tmp
+/package-lock.json
 
 # Logs
 logs
@@ -59,5 +60,3 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-package-lock.json
