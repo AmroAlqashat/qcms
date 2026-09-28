@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+/* Tell v4 where to scan for class names. With NestJS + hbs there are no
+   conventional locations, so be explicit. */
+@source "../../views/**/*.hbs";
+@source "../../src/**/*.{ts,js}";
+/* in case you put classes in controllers */
+@source "../../public/**/*.html";
+/* if you have static html */
+
+/* HTMX niceties — show a subtle pulse on in-flight requests */
+@layer utilities {
+  .htmx-request {
+    @apply opacity-70 transition-opacity;
+  }
+
+  .htmx-request.htmx-indicator,
+  .htmx-indicator.htmx-request {
+    @apply opacity-100;
+  }
+}
