@@ -1,98 +1,90 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# QCMS — Quran Center Management System
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> An Arabic-first, right-to-left web application that gives a Quran memorisation centre one auditable record per student — replacing paper registers, notebooks and separate fee ledgers with a single system.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Table of Contents
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [About](#about)
+- [Scope](#scope)
+- [Getting Started](#getting-started)
+- [Database](#database)
+- [Branching & Workflow](#branching--workflow)
+- [Documentation](#documentation)
 
-## Project setup
+---
 
-```bash
-$ npm install
-```
+## About
 
-## Compile and run the project
+Quran memorisation centres commonly run on paper: a teacher's register for the halaqa, a notebook of who recited what, a separate fee ledger, and a mental record of which student needs watching. None of these records connect to each other, so a simple question — has this student finished the Juz' he's being tested on — can take an afternoon to answer.
 
-```bash
-# development
-$ npm run start
+QCMS is a single-tenant, single-centre web application that puts one auditable record behind each student. It covers registration by national ID, terms/halaqas/activities, daily attendance, memorisation and review against a canonical Quran reference, page-by-page Tasmee' assessment, Juz' tests and certification, manual financial recording, and a daily report the supervising sheikh shares with families.
 
-# watch mode
-$ npm run start:dev
+Two decisions shape the system more than any other:
 
-# production mode
-$ npm run start:prod
-```
+- **No fixed roles.** A job title is just a label — authority comes entirely from granted permissions, each scoped to exactly where it applies (centre-wide, an assigned class, an assigned activity, or the account's own record). A teacher who also collects fees needs one account, not two.
+- **No guardian channel.** The system never contacts a guardian directly. The centre decided that one daily report shared through the group they already run serves transparency better than automated messages nobody reads.
 
-## Run tests
+## Scope
+
+**In scope:** registration and intake, students, terms/halaqas/activities, attendance, memorisation and review, Tasmee' assessment, Juz' progress and tests, finance, access control, reporting, and core operations (audit trail, backups, bulk import).
+
+**Out of scope for this phase:** native mobile apps, a guardian portal, automated guardian messaging, online payment gateway integration, multi-tenant/multi-branch operation, public rankings, automated speech recognition, and real-time protocols (e.g. WebSockets).
+
+Full requirement-level detail lives in the SRS — see [Documentation](#documentation).
+
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20.x
+- [PostgreSQL](https://www.postgresql.org/) (local install or Docker)
+- npm
+
+### Installation
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+git clone https://github.com/AmroAlqashat/qcms.git
+cd qcms
+npm ci
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Environment variables
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+cp .env.example .env
+# then fill in the values in .env
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Running locally
 
-## Resources
+```bash
+npm run start:dev
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+The app starts in watch mode and restarts automatically on file changes.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Database
 
-## Support
+Schema lives in `prisma/schema.prisma`.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+# Generate the Prisma Client
+npx prisma generate
 
-## Stay in touch
+# Apply migrations (creates the database schema)
+npx prisma migrate dev
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# Inspect the database with a local GUI
+npx prisma studio
+```
 
-## License
+## Branching & Workflow
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- All work happens on a feature branch, merged into `main` via pull request.
+- `main` is protected: checks must pass before merging.
+
+## Documentation
+
+- **SRS (Software Requirements Specification)** — the full requirements baseline this project is built against.
