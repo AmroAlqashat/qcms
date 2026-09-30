@@ -1,8 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import { engine } from 'express-handlebars';
+
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // To triger $disconnect in PrismaService.onModuleDestroy() and close the DB connection
   app.enableShutdownHooks();
