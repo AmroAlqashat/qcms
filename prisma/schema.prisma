@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -33,6 +33,20 @@ enum RegistrationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum AuditAction {
+  STAFF_CREATED
+  STAFF_DELETED
+
+  STAFF_ROLE_ASSIGNED
+  STAFF_ROLE_REMOVED
+}
+
+enum AuditTarget {
+  STAFF
+  STUDENT
+  ROLE
 }
 
 // PERMISSIONS
@@ -117,14 +131,15 @@ model StaffActivityAssignment {
 }
 
 model AuditEvent {
-  id         String   @id @default(uuid())
+  id         String      @id @default(uuid())
   actorId    String?
-  actor      Staff?   @relation(fields: [actorId], references: [id])
-  actionType String
-  targetType String
+  actor      Staff?      @relation(fields: [actorId], references: [id])
+  actionType AuditAction
+  targetType AuditTarget
   targetId   String
-  outcome    String
-  createdAt  DateTime @default(now())
+  roleName   String?
+  isSuccess  Boolean
+  createdAt  DateTime    @default(now())
 
   @@index([targetType, targetId])
   @@index([actorId])
