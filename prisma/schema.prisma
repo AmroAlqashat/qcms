@@ -58,10 +58,10 @@ model Staff {
   email              String      @unique
   passwordHash       String
   fullName           String
-  dateOfBirth        DateTime    @db.Date
-  nationalId         String      @db.VarChar(30)
-  phone              String      @db.VarChar(20)
-  jobTitle           String?
+  dateOfBirth        DateTime?   @db.Date
+  nationalId         String?     @db.VarChar(30)
+  phone              String?     @db.VarChar(20)
+  jobTitle           String
   status             StaffStatus @default(INACTIVE)
   mustChangePassword Boolean
   createdAt          DateTime    @default(now())
