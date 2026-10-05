@@ -13,8 +13,8 @@
            with:
              node-version: 24
              cache: npm
-         - run: npm ci
          - run: npm install
+         - run: npm ci
          - run: npx prisma generate
          - run: npm run lint
          - run: npm run build
