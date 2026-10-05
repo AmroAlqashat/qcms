@@ -30,8 +30,7 @@ export class AuditService {
         targetType: event.targetType,
         targetId: event.targetId,
         roleName: event.roleName,
-        isSuccess: event.isSuccess,
-        createdAt: new Date()
+        isSuccess: event.isSuccess
       },
     });
   }

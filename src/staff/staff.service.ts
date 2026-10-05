@@ -76,7 +76,7 @@ export class StaffService {
         select,
       });
       
-      this.audit.record(this.prisma, {
+      await this.audit.record(this.prisma, {
         actorId: 'staff-admin',
         actionType: AuditAction.STAFF_CREATED,
         targetType: AuditTarget.STAFF,
