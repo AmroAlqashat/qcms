@@ -1,7 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
-import { StaffStatus } from '@prisma/client';
-import { Prisma } from '@prisma/client'
+import { AuditAction, AuditTarget, Prisma, StaffStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './utils/generate-temp-password.util'
@@ -79,8 +78,8 @@ export class StaffService {
       
       this.audit.record(this.prisma, {
         actorId: 'staff-admin',
-        actionType: 'STAFF_CREATED',
-        targetType: 'STAFF',
+        actionType: AuditAction.STAFF_CREATED,
+        targetType: AuditTarget.STAFF,
         targetId: newStaff.id,
         isSuccess: true,
       });
