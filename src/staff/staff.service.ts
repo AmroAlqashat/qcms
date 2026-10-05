@@ -1,10 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
-<<<<<<< HEAD
 import { AuditAction, AuditTarget, Prisma, StaffStatus } from '@prisma/client';
-=======
-import { Prisma, StaffStatus, AuditAction, AuditTarget } from '@prisma/client';
->>>>>>> 837e398 (fix inviteStaff function)
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './utils/generate-temp-password.util'
@@ -93,29 +89,8 @@ export class StaffService {
           isSuccess: true,
         });
 
-<<<<<<< HEAD
-        return { staff: reinvitedStaff, temporaryPassword };
-      }
-
-      const newStaff = await this.prisma.staff.create({
-        data,
-        select,
-      });
-      
-      await this.audit.record(this.prisma, {
-        actorId: 'staff-admin',
-        actionType: AuditAction.STAFF_CREATED,
-        targetType: AuditTarget.STAFF,
-        targetId: newStaff.id,
-        isSuccess: true,
-      });
-
-      return { staff: newStaff, temporaryPassword }
-
-=======
         return { staff, temporaryPassword };
       })
->>>>>>> 837e398 (fix inviteStaff function)
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
