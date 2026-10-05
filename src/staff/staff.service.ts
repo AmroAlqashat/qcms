@@ -76,6 +76,14 @@ export class StaffService {
         data,
         select,
       });
+      
+      this.audit.record(this.prisma, {
+        actorId: 'staff-admin',
+        actionType: 'STAFF_CREATED',
+        targetType: 'STAFF',
+        targetId: newStaff.id,
+        isSuccess: true,
+      });
 
       return { staff: newStaff, temporaryPassword }
 
