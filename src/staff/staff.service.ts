@@ -1,6 +1,10 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
+<<<<<<< HEAD
 import { AuditAction, AuditTarget, Prisma, StaffStatus } from '@prisma/client';
+=======
+import { Prisma, StaffStatus, AuditAction, AuditTarget } from '@prisma/client';
+>>>>>>> 837e398 (fix inviteStaff function)
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './utils/generate-temp-password.util'
@@ -44,7 +48,7 @@ export class StaffService {
       jobTitle,
       status: StaffStatus.PENDING,
       mustChangePassword: true,
-    }
+    };
 
     const select = {
       id: true,
@@ -52,22 +56,44 @@ export class StaffService {
       fullName: true,
       jobTitle: true,
       status: true,
-    }
+    } satisfies Prisma.StaffSelect;
+
+    type StaffSummary = Prisma.StaffGetPayload<{
+      select: typeof select
+    }>;
 
     try {
-      // Check if the staff exist and deleted
-      if (existingStaff && existingStaff.status === StaffStatus.DELETED) {
-        // Change the status to pending
-        const reinvitedStaff = await this.prisma.staff.update({
-          // We need the check here too, to prevent another invitation at the same time.
-          where: {
-            id: existingStaff.id,
-            status: StaffStatus.DELETED
-          },
-          data,
-          select,
+      return await this.prisma.$transaction(async (tx) => {
+        let staff: StaffSummary;
+
+        // Check if the staff exist and deleted
+        if (existingStaff && existingStaff.status === StaffStatus.DELETED) {
+          // Change the status to pending
+          staff = await tx.staff.update({
+            // We need the check here too, to prevent another invitation at the same time.
+            where: {
+              id: existingStaff.id,
+              status: StaffStatus.DELETED
+            },
+            data,
+            select,
+          });
+        } else {
+          staff = await tx.staff.create({
+            data,
+            select,
+          });
+        }
+
+        await this.audit.record(tx, {
+          actorId: 'staff-admin',
+          actionType: AuditAction.STAFF_INVITED,
+          targetType: AuditTarget.STAFF,
+          targetId: staff.id,
+          isSuccess: true,
         });
 
+<<<<<<< HEAD
         return { staff: reinvitedStaff, temporaryPassword };
       }
 
@@ -86,6 +112,10 @@ export class StaffService {
 
       return { staff: newStaff, temporaryPassword }
 
+=======
+        return { staff, temporaryPassword };
+      })
+>>>>>>> 837e398 (fix inviteStaff function)
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
