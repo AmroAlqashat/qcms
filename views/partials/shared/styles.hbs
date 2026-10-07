@@ -1,0 +1,67 @@
+<style>
+  body,
+  button,
+  input,
+  select,
+  textarea {
+    font-family: Cairo, system-ui, sans-serif;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  dialog:not([open]) {
+    display: none;
+  }
+
+  dialog {
+    margin: auto;
+    border: 0;
+    padding: 0;
+    color: inherit;
+  }
+
+  dialog::backdrop {
+    background: rgb(12 46 41 / 48%);
+  }
+
+  .skip-link {
+    position: fixed;
+    top: -100px;
+    right: 16px;
+    z-index: 200;
+    background: white;
+    padding: 12px;
+  }
+
+  .skip-link:focus {
+    top: 12px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      scroll-behavior: auto !important;
+      transition: none !important;
+    }
+  }
+</style>

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>{{> shared/head}}</head>
+<body class="min-h-screen bg-[#f5f6f8] text-[#12383b] antialiased">
+  <a href="#main-content" class="skip-link">تجاوز إلى المحتوى</a>
+  {{> shared/icons}}
+  {{> app/sidebar}}
+  <div class="min-h-screen lg:mr-60">
+    {{> app/topbar}}
+    <main id="main-content" tabindex="-1" class="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-10">
+      {{{body}}}
+    </main>
+  </div>
+  <p id="app-announcement" role="status" aria-live="polite" class="sr-only"></p>
+  {{> shared/scripts}}
+</body>
+</html>

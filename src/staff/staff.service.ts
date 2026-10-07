@@ -3,7 +3,7 @@ import { InviteStaffDto } from './dto/invite-staff.dto';
 import { AuditAction, AuditTarget, Prisma, StaffStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { generateTempPassword } from './utils/generate-temp-password.util'
+import { generateTempPassword } from './helpers/generate-temp-password.util'
 import * as argon2 from 'argon2';
 
 @Injectable()
@@ -94,14 +94,16 @@ export class StaffService {
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new ConflictException(
-            'A staff exist with these unique details.'
+          throw new ConflictException({
+            message: 'هذا البريد الإلكتروني مسجّل بالفعل',
+            errors: { email: 'هذا البريد الإلكتروني مسجّل بالفعل' },
+          }
           );
         }
 
         if (existingStaff && error.code === 'P2025') {
           throw new ConflictException(
-            'This staff account changed during the invitation. Refresh and try again.'
+            'تغيّر حساب الموظف أثناء الدعوة. حدّث الصفحة وأعد المحاولة'
           )
         }
       }
