@@ -13,7 +13,7 @@ const blankToUndefined = ({ value }: { value: unknown }) => {
   return v === '' ? undefined : v;
 };
 
-export class CreateRoleDto {
+export class NewRoleDto {
   @Transform(trim)
   @IsString({ message: 'اسم القالب يجب أن يكون نصًا' })
   @MinLength(2, { message: 'يجب ألا يقل اسم القالب عن حرفين' })
