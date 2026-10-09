@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateNewRoleDto } from './dto/create-new-role.dto';
 import { EditRoleDto } from './dto/edit-role.dto';
-import { InputRoleDto } from './dto/input-role.dto';
+import { RolePermissionDto } from './dto/role-permission.dto';
 
 @Injectable()
 export class RolesService {
@@ -14,87 +14,19 @@ export class RolesService {
   ) { }
 
   async createRole(createNewRoleDto: CreateNewRoleDto, actorId: string) {
-    //validate
-    const rows = await this.validateRoleValues(createNewRoleDto, actorId);
-
-    // Save the role, its permissions and the audit entry together
-    return await this.implNewRole(rows, createNewRoleDto, actorId);
-  }
-
-  async editRole(roleId: string, editRoleDto: EditRoleDto, actorId: string) {
-    //validation
-    //TODO: validate if user is allowed to edit this role and/or roles in general
-    //validate if old role exists
-    const oldRoleExists = await this.prisma.role.findUnique({ where: { id: roleId } });
-    if (!oldRoleExists)
-      throw new ConflictException({
-        message: 'هاذ القالب غير موجود',
-        errors: { name: 'هاذ القالب غير موجود' }
-      });
-    //validate the provided values of the role
-    const rows = await this.validateRoleValues(editRoleDto, actorId)
-    //implmentation
-    //edit the role and audit this change
-    return await this.implEditRole(rows, editRoleDto, actorId, roleId);
-  }
-
-  private async validateRoleValues(dto: InputRoleDto, actorId: string) {
-    const { name, description, permissions } = dto;
-    const normalizedName: string = name.trim().toLowerCase();
-
-    // Check if the role name exist or not
-    const roleNameExisting = await this.prisma.role.findUnique({
-      where: { name: normalizedName }
-    });
-    if (roleNameExisting) {
-      throw new ConflictException({
-        message: 'اسم القالب مستخدم بالفعل',
-        errors: { name: 'اسم القالب مستخدم بالفعل' },
-      });
-    }
-
-    // Check for the same (resource, action, scope) submitted twice
-    const keys = permissions.map((p) => `${p.resource}:${p.action}:${p.scope}`);
-    if (new Set(keys).size !== keys.length) {
-      throw new UnprocessableEntityException({
-        message: 'صلاحيات مكررة',
-        errors: { permissions: 'تم تحديد صلاحية أكثر من مرة' },
-      });
-    }
-
-    // Each permission must exist in the catalog, and its scope must be allowed
-    const rows: { permissionId: string; scopeType: ScopeType }[] = [];
-
-    for (const item of permissions) {
-      const perm = await this.prisma.permission.findUnique({
-        where: { resource_action: { resource: item.resource, action: item.action } },
-      });
-
-      if (!perm) {
-        throw new UnprocessableEntityException({
-          message: 'صلاحية غير موجودة',
-          errors: { permissions: `صلاحية غير موجودة: ${item.resource} / ${item.action}` },
-        });
-      }
-
-      if (!perm.allowedScopes.includes(item.scope)) {
-        throw new UnprocessableEntityException({
-          message: 'نطاق غير مسموح',
-          errors: { permissions: `النطاق غير مسموح للصلاحية: ${item.resource} / ${item.action}` },
-        });
-      }
-
-      rows.push({ permissionId: perm.id, scopeType: item.scope });
-    }
-
-    return rows;
-  }
-
-  private async implNewRole(rows: any, createNewRoleDto: CreateNewRoleDto, actorId: string) {
-
     const { name, description, permissions } = createNewRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 
+    // Check if role name exists
+    await this.checkExistingRoleName(normalizedName);
+
+    // Check for submitted twice permissions
+    this.dublicatePermissionValidation(permissions);
+
+    // Validate submitted roles
+    const rows = await this.validateRoleValues(permissions);
+
+    // Save the new role and audit
     try {
       return await this.prisma.$transaction(async (tx) => {
         const role = await tx.role.create({ data: { name: normalizedName, description } });
@@ -124,10 +56,30 @@ export class RolesService {
     }
   }
 
-  private async implEditRole(rows: any, editRoleDto: EditRoleDto, actorId: string, roleId: string) {
+  async editRole(editRoleDto: EditRoleDto, roleId: string, actorId: string) {
     const { name, description, permissions } = editRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 
+    //TODO: validate if user is allowed to edit this role and/or roles in general
+
+    // Check if role name exists
+    await this.checkExistingRoleName(normalizedName, roleId);
+
+    // Check for submitted twice permissions
+    this.dublicatePermissionValidation(permissions);
+
+    // Check if the role we are trying to edit exist or not
+    const oldRoleExists = await this.prisma.role.findUnique({ where: { id: roleId } });
+    if (!oldRoleExists)
+      throw new ConflictException({
+        message: 'هاذ القالب غير موجود',
+        errors: { name: 'هاذ القالب غير موجود' }
+      });
+
+    // Validate submitted roles
+    const rows = await this.validateRoleValues(permissions);
+
+    // Update the role and save to audit
     try {
       return await this.prisma.$transaction(async (tx) => {
         const role = await tx.role.update({ where: { id: roleId }, data: { name: normalizedName, description } });
@@ -155,5 +107,61 @@ export class RolesService {
       }
       throw error;
     }
+  }
+
+  private async checkExistingRoleName(roleName: string, excludeRoleId?: string) {
+    // Check if the role name exist or not
+    const roleNameExisting = await this.prisma.role.findUnique({
+      where: { name: roleName },
+      select: { id: true },
+    });
+
+    // To prevent finding its own name when not editing the name (editRole)
+    if (roleNameExisting && roleNameExisting.id !== excludeRoleId) {
+      throw new ConflictException({
+        message: 'اسم القالب مستخدم بالفعل',
+        errors: { name: 'اسم القالب مستخدم بالفعل' },
+      });
+    }
+  }
+
+  private dublicatePermissionValidation(permissions: RolePermissionDto[]) {
+    //Check for the same (resource, action, scope) submitted twice
+    const keys = permissions.map((p) => `${p.resource}:${p.action}:${p.scope}`);
+    if (new Set(keys).size !== keys.length) {
+      throw new UnprocessableEntityException({
+        message: 'صلاحيات مكررة',
+        errors: { permissions: 'تم تحديد صلاحية أكثر من مرة' },
+      });
+    }
+  }
+
+  private async validateRoleValues(permissions: RolePermissionDto[]) {
+    // Each permission must exist in the catalog, and its scope must be allowed
+    const rows: { permissionId: string; scopeType: ScopeType }[] = [];
+
+    for (const item of permissions) {
+      const perm = await this.prisma.permission.findUnique({
+        where: { resource_action: { resource: item.resource, action: item.action } },
+      });
+
+      if (!perm) {
+        throw new UnprocessableEntityException({
+          message: 'صلاحية غير موجودة',
+          errors: { permissions: `صلاحية غير موجودة: ${item.resource} / ${item.action}` },
+        });
+      }
+
+      if (!perm.allowedScopes.includes(item.scope)) {
+        throw new UnprocessableEntityException({
+          message: 'نطاق غير مسموح',
+          errors: { permissions: `النطاق غير مسموح للصلاحية: ${item.resource} / ${item.action}` },
+        });
+      }
+
+      rows.push({ permissionId: perm.id, scopeType: item.scope });
+    }
+
+    return rows;
   }
 }
