@@ -1,0 +1,21 @@
+<script>
+  (() => {
+    const closeDialog = (dialog) => {
+      if (dialog?.open) dialog.close();
+    };
+
+    document.addEventListener('click', (event) => {
+      const control = event.target.closest('button, a');
+      if (!control) return;
+
+      if (control.matches('[data-dialog-open]')) {
+        const dialog = document.getElementById(control.dataset.dialogOpen);
+        if (dialog && !dialog.open) dialog.showModal();
+      }
+
+      if (control.matches('[data-dialog-close]')) {
+        closeDialog(control.closest('dialog'));
+      }
+    });
+  })();
+</script>

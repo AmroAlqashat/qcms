@@ -1,0 +1,85 @@
+<form action="/staff/invite" method="post" class="space-y-5">
+  {{#if error}}
+    <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-700">
+      {{error}}
+    </div>
+  {{/if}}
+
+  <div>
+    <label for="invite-email" class="mb-2 block text-sm font-semibold{{#if errors.email}} text-red-700{{/if}}">
+      البريد الإلكتروني
+    </label>
+    <input
+      id="invite-email"
+      name="email"
+      type="email"
+      value="{{form.email}}"
+      maxlength="254"
+      autocomplete="off"
+      required
+      dir="ltr"
+      {{#if errors.email}}aria-invalid="true" aria-describedby="invite-email-error"{{/if}}
+      class="block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm text-[#12383b] aria-[invalid=true]:border-red-500"
+    >
+    {{#if errors.email}}
+      <p id="invite-email-error" class="mt-1 text-xs text-red-700">{{errors.email}}</p>
+    {{/if}}
+  </div>
+
+  <div>
+    <label for="invite-name" class="mb-2 block text-sm font-semibold{{#if errors.fullName}} text-red-700{{/if}}">
+      الاسم الكامل
+    </label>
+    <input
+      id="invite-name"
+      name="fullName"
+      type="text"
+      value="{{form.fullName}}"
+      maxlength="100"
+      autocomplete="off"
+      required
+      {{#if errors.fullName}}aria-invalid="true" aria-describedby="invite-name-error"{{/if}}
+      class="block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm text-[#12383b] aria-[invalid=true]:border-red-500"
+    >
+    {{#if errors.fullName}}
+      <p id="invite-name-error" class="mt-1 text-xs text-red-700">{{errors.fullName}}</p>
+    {{/if}}
+  </div>
+
+  <div>
+    <label for="invite-title" class="mb-2 block text-sm font-semibold{{#if errors.jobTitle}} text-red-700{{/if}}">
+      المسمى الوظيفي
+    </label>
+    <input
+      id="invite-title"
+      name="jobTitle"
+      type="text"
+      value="{{form.jobTitle}}"
+      maxlength="100"
+      autocomplete="off"
+      required
+      {{#if errors.jobTitle}}aria-invalid="true" aria-describedby="invite-title-error"{{/if}}
+      class="block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm text-[#12383b] aria-[invalid=true]:border-red-500"
+    >
+    {{#if errors.jobTitle}}
+      <p id="invite-title-error" class="mt-1 text-xs text-red-700">{{errors.jobTitle}}</p>
+    {{/if}}
+    <p class="mt-1 text-xs leading-6 text-slate-600">
+      وصف وظيفي فقط؛ لا يمنح أي صلاحيات.
+    </p>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-7">
+    <h2 class="mb-1 font-bold">ماذا يحدث بعد ذلك؟</h2>
+    <p class="text-slate-600">
+      سيتم إنشاء حساب معلّق وتظهر كلمة مرور مؤقتة لتسليمها للموظف.
+    </p>
+  </div>
+
+  <button
+    type="submit"
+    class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#216c65]"
+  >
+    إنشاء الحساب المعلّق
+  </button>
+</form>

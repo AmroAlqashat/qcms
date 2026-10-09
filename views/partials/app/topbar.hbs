@@ -1,0 +1,15 @@
+<header class="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+  <div class="flex min-w-0 items-center gap-3">
+    <button type="button" data-dialog-open="mobile-navigation" aria-controls="mobile-navigation"
+      aria-haspopup="dialog"
+      class="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 lg:hidden"
+      aria-label="فتح القائمة">
+      {{> ui/icon name="menu"}}
+    </button>
+    <nav aria-label="مسار الصفحة" class="flex items-center gap-2 text-xs sm:text-sm">
+      <a href="/staff" class="text-[#287a73]">QCMS</a>
+      <span aria-hidden="true">/</span>
+      <span>{{#if sectionTitle}}{{sectionTitle}}{{else}}الموظفون{{/if}}</span>
+    </nav>
+  </div>
+</header>
