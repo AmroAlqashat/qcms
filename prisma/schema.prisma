@@ -14,7 +14,9 @@ datasource db {
 
 enum StaffStatus {
   ACTIVE
+  PENDING
   INACTIVE
+  DELETED
 }
 
 enum ScopeType {
@@ -36,8 +38,12 @@ enum RegistrationStatus {
 }
 
 enum AuditAction {
-  STAFF_CREATED
+  STAFF_ONBOARDING_COMPLETED
+  STAFF_INVITED
+  STAFF_ACTIVATED
+  STAFF_DEACTIVATED
   STAFF_DELETED
+  STAFF_UPDATED
 
   STAFF_ROLE_ASSIGNED
   STAFF_ROLE_REMOVED
@@ -52,14 +58,18 @@ enum AuditTarget {
 // PERMISSIONS
 
 model Staff {
-  id           String      @id @default(uuid())
-  email        String      @unique
-  passwordHash String
-  fullName     String
-  jobTitle     String?
-  status       StaffStatus @default(ACTIVE)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id                 String      @id @default(uuid())
+  email              String      @unique
+  passwordHash       String
+  fullName           String
+  dateOfBirth        DateTime?   @db.Date
+  nationalId         String?     @db.VarChar(30)
+  phone              String?     @db.VarChar(20)
+  jobTitle           String
+  status             StaffStatus @default(INACTIVE)
+  mustChangePassword Boolean
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   roleGrants          RoleStaff[]
   classAssignments    StaffClassAssignment[]

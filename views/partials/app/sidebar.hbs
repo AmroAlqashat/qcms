@@ -1,0 +1,18 @@
+<aside class="fixed inset-y-0 right-0 z-30 hidden w-60 flex-col bg-[#0d2e29] lg:flex">
+  {{> app/brand}}
+  {{> app/nav}}
+</aside>
+<dialog id="mobile-navigation" aria-label="التنقل"
+  class="!fixed !inset-y-0 !left-auto !right-0 !m-0 h-dvh max-h-none w-[min(85vw,300px)] max-w-none bg-[#0d2e29] text-white">
+  <div class="flex h-full flex-col">
+    <div class="flex items-center">
+      <div class="min-w-0 flex-1">{{> app/brand}}</div>
+      <button type="button" data-dialog-close
+        class="m-2 flex h-11 w-11 items-center justify-center rounded-xl hover:bg-white/10"
+        aria-label="إغلاق القائمة">
+        {{> ui/icon name="close"}}
+      </button>
+    </div>
+    {{> app/nav}}
+  </div>
+</dialog>

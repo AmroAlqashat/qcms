@@ -1,0 +1,7 @@
+<nav aria-label="القائمة الرئيسية" class="flex flex-1 flex-col gap-1 p-2 text-sm">
+  <p class="px-3 pb-1 pt-5 text-xs text-[#81aaa4]">الإدارة</p>
+  <a href="/staff" {{#if (eq activeNav "staff")}}aria-current="page"{{/if}}
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "staff")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
+    {{> ui/icon name="users"}}الموظفون
+  </a>
+</nav>
