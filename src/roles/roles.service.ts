@@ -1,9 +1,10 @@
 import { ConflictException, Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { AuditAction, AuditTarget, Prisma, ScopeType } from '@prisma/client';
-import { NewRoleDto } from './dto/new-role.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { error } from 'console';
+import { CreateNewRoleDto } from './dto/create-new-role.dto';
+import { EditRoleDto } from './dto/edit-role.dto';
+import { InputRoleDto } from './dto/input-role.dto';
 
 @Injectable()
 export class RolesService {
@@ -12,33 +13,33 @@ export class RolesService {
     private readonly audit: AuditService,
   ) { }
 
-  async createRole(newRoleDto: NewRoleDto, actorId: string) {
+  async createRole(createNewRoleDto: CreateNewRoleDto, actorId: string) {
     //validate
-    const rows = await this.validateRoleValues(newRoleDto, actorId);
+    const rows = await this.validateRoleValues(createNewRoleDto, actorId);
 
     // Save the role, its permissions and the audit entry together
-    return await this.implNewRole(rows, newRoleDto, actorId);
+    return await this.implNewRole(rows, createNewRoleDto, actorId);
   }
 
-  async editRole(roleId: string, newRoleDto: NewRoleDto, actorId:string){
+  async editRole(roleId: string, editRoleDto: EditRoleDto, actorId: string) {
     //validation
-      //TODO: validate if user is allowed to edit this role and/or roles in general
-      //validate if old role exists
-      const oldRoleExists = await this.prisma.role.findUnique({where: {id: roleId}});
-      if(!oldRoleExists)
-        throw new ConflictException({
-          message: 'هاذ القالب غير موجود',
-          errors: {name: 'هاذ القالب غير موجود'}
+    //TODO: validate if user is allowed to edit this role and/or roles in general
+    //validate if old role exists
+    const oldRoleExists = await this.prisma.role.findUnique({ where: { id: roleId } });
+    if (!oldRoleExists)
+      throw new ConflictException({
+        message: 'هاذ القالب غير موجود',
+        errors: { name: 'هاذ القالب غير موجود' }
       });
-      //validate the provided values of the role
-      const rows = await this.validateRoleValues(newRoleDto, actorId)
+    //validate the provided values of the role
+    const rows = await this.validateRoleValues(editRoleDto, actorId)
     //implmentation
-      //edit the role and audit this change
-      return await this.implEditRole(rows, newRoleDto, actorId, roleId);
+    //edit the role and audit this change
+    return await this.implEditRole(rows, editRoleDto, actorId, roleId);
   }
 
-  private async validateRoleValues(newRoleDto: NewRoleDto, actorId: string){
-    const { name, description, permissions } = newRoleDto;
+  private async validateRoleValues(dto: InputRoleDto, actorId: string) {
+    const { name, description, permissions } = dto;
     const normalizedName: string = name.trim().toLowerCase();
 
     // Check if the role name exist or not
@@ -89,13 +90,13 @@ export class RolesService {
     return rows;
   }
 
-  private async implNewRole(rows: any, newRoleDto: NewRoleDto, actorId: string){
-    
-    const { name, description, permissions } = newRoleDto;
+  private async implNewRole(rows: any, createNewRoleDto: CreateNewRoleDto, actorId: string) {
+
+    const { name, description, permissions } = createNewRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 
-    try{
-        return await this.prisma.$transaction(async (tx) => {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
         const role = await tx.role.create({ data: { name: normalizedName, description } });
 
         await tx.rolePermission.createMany({
@@ -123,13 +124,13 @@ export class RolesService {
     }
   }
 
-  private async implEditRole(rows: any, newRoleDto: NewRoleDto, actorId: string, roleId: string){
-    const { name, description, permissions } = newRoleDto;
+  private async implEditRole(rows: any, editRoleDto: EditRoleDto, actorId: string, roleId: string) {
+    const { name, description, permissions } = editRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 
-    try{
-        return await this.prisma.$transaction(async (tx) => {
-        const role = await tx.role.update({where: {id: roleId}, data: { name: normalizedName, description } });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const role = await tx.role.update({ where: { id: roleId }, data: { name: normalizedName, description } });
 
         await tx.rolePermission.createMany({
           data: rows.map((row) => ({ ...row, roleId: role.id })),
