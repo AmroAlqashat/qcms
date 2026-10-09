@@ -2,7 +2,6 @@ import { Controller, Post, Body, Put, Param } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { NewRoleDto } from './dto/new-role.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { EditRoleDto } from './dto/Edit-role.dto';
 
 @Controller('roles')
 export class RolesController {
@@ -14,7 +13,7 @@ export class RolesController {
   }
 
   @Put(':edit/:rid')
-  editedRole(@Body() editRoleDto: EditRoleDto, @Param('rid') roleId: string,  @CurrentUser() user: { id: string }){
-    return this.rolesService.editRole(roleId, editRoleDto, user.id);
+  editedRole(@Body() newRoleDto: NewRoleDto, @Param('rid') roleId: string,  @CurrentUser() user: { id: string }){
+    return this.rolesService.editRole(roleId, newRoleDto, user.id);
   }
 }
