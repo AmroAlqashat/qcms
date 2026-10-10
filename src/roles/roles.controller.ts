@@ -15,6 +15,6 @@ export class RolesController {
 
   @Put(':edit/:rid')
   editedRole(@Body() editRoleDto: EditRoleDto, @Param('rid') roleId: string, @CurrentUser() user: { id: string }) {
-    return this.rolesService.editRole(roleId, editRoleDto, user.id);
+    return this.rolesService.editRole(editRoleDto, roleId, user.id);
   }
 }
