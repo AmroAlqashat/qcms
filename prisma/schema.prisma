@@ -8,14 +8,240 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// QCMS — Sprint 0 schema (Permissions + Staff/Classes + Registration)
+model Staff {
+  id                  String                    @id @default(uuid())
+  email               String                    @unique
+  passwordHash        String
+  fullName            String
+  jobTitle            String
+  status              StaffStatus               @default(INACTIVE)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  dateOfBirth         DateTime?                 @db.Date
+  mustChangePassword  Boolean
+  nationalId          String?                   @db.VarChar(30)
+  phone               String?                   @db.VarChar(20)
+  auditEvents         AuditEvent[]
+  roleGrants          RoleStaff[]
+  activityAssignments StaffActivityAssignment[]
+  classAssignments    StaffClassAssignment[]
+}
 
-// ENUMS
+model Permission {
+  id              String           @id @default(uuid())
+  resource        String
+  action          String
+  category        String
+  allowedScopes   ScopeType[]
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String      @id @default(uuid())
+  roleId       String
+  permissionId String
+  scopeType    ScopeType
+  permission   Permission  @relation(fields: [permissionId], references: [id])
+  role         Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  RoleStaff    RoleStaff[]
+
+  @@unique([roleId, permissionId, scopeType])
+}
+
+model RoleStaff {
+  id               String         @id @default(uuid())
+  staffId          String
+  rolePermissionId String
+  grantedById      String
+  grantedAt        DateTime       @default(now())
+  revokedAt        DateTime?
+  RolePermission   RolePermission @relation(fields: [rolePermissionId], references: [id])
+  staff            Staff          @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, rolePermissionId])
+}
+
+model StaffClassAssignment {
+  staffId  String
+  halaqaId String
+  halaqa   Halaqa @relation(fields: [halaqaId], references: [id])
+  staff    Staff  @relation(fields: [staffId], references: [id])
+
+  @@id([staffId, halaqaId])
+}
+
+model StaffActivityAssignment {
+  staffId    String
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id])
+  staff      Staff    @relation(fields: [staffId], references: [id])
+
+  @@id([staffId, activityId])
+}
+
+model AuditEvent {
+  id         String      @id @default(uuid())
+  actorId    String?
+  targetId   String
+  createdAt  DateTime    @default(now())
+  isSuccess  Boolean
+  roleName   String?
+  actionType AuditAction
+  targetType AuditTarget
+  actor      Staff?      @relation(fields: [actorId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([actorId])
+}
+
+model Term {
+  id                String             @id @default(uuid())
+  name              String
+  startDate         DateTime
+  endDate           DateTime
+  archivedAt        DateTime?
+  halaqas           Halaqa[]
+  termRegistrations TermRegistration[]
+}
+
+model Halaqa {
+  id               String                 @id @default(uuid())
+  termId           String
+  name             String
+  meetingDays      Json
+  activities       Activity[]
+  enrollments      Enrollment[]
+  term             Term                   @relation(fields: [termId], references: [id])
+  transfersFrom    HalaqaTransfer[]       @relation("TransferFrom")
+  transfersTo      HalaqaTransfer[]       @relation("TransferTo")
+  staffAssignments StaffClassAssignment[]
+}
+
+model Activity {
+  id               String                    @id @default(uuid())
+  name             String
+  level            ActivityLevel
+  halaqaId         String?
+  date             DateTime
+  halaqa           Halaqa?                   @relation(fields: [halaqaId], references: [id])
+  participants     ActivityParticipant[]
+  staffAssignments StaffActivityAssignment[]
+}
+
+model Enrollment {
+  id         String    @id @default(uuid())
+  studentId  String
+  halaqaId   String
+  enrolledAt DateTime  @default(now())
+  endedAt    DateTime?
+  halaqa     Halaqa    @relation(fields: [halaqaId], references: [id])
+  student    Student   @relation(fields: [studentId], references: [id])
+}
+
+model HalaqaTransfer {
+  id            String   @id @default(uuid())
+  studentId     String
+  fromHalaqaId  String
+  toHalaqaId    String
+  actingStaffId String
+  transferredAt DateTime @default(now())
+  fromHalaqa    Halaqa   @relation("TransferFrom", fields: [fromHalaqaId], references: [id])
+  student       Student  @relation(fields: [studentId], references: [id])
+  toHalaqa      Halaqa   @relation("TransferTo", fields: [toHalaqaId], references: [id])
+}
+
+model ActivityParticipant {
+  studentId  String
+  activityId String
+  attendedAt DateTime?
+  activity   Activity  @relation(fields: [activityId], references: [id])
+  student    Student   @relation(fields: [studentId], references: [id])
+
+  @@id([studentId, activityId])
+}
+
+model Student {
+  id                String                @id @default(uuid())
+  fullName          String
+  dateOfBirth       DateTime
+  nationalId        String                @unique
+  createdAt         DateTime              @default(now())
+  activityEntries   ActivityParticipant[]
+  enrollments       Enrollment[]
+  guardianLinks     GuardianStudentLink[]
+  transfers         HalaqaTransfer[]
+  specialCaseNotes  SpecialCaseNote[]
+  termRegistrations TermRegistration[]
+}
+
+model Guardian {
+  id             String                @id @default(uuid())
+  fullName       String
+  primaryPhone   String
+  secondaryPhone String?
+  createdAt      DateTime              @default(now())
+  studentLinks   GuardianStudentLink[]
+}
+
+model GuardianStudentLink {
+  id          String    @id @default(uuid())
+  guardianId  String
+  studentId   String
+  createdById String
+  removedAt   DateTime?
+  removedById String?
+  guardian    Guardian  @relation(fields: [guardianId], references: [id])
+  student     Student   @relation(fields: [studentId], references: [id])
+}
+
+model TermRegistration {
+  id              String             @id @default(uuid())
+  studentId       String
+  termId          String
+  status          RegistrationStatus @default(PENDING)
+  submittedAt     DateTime           @default(now())
+  decidedById     String?
+  decidedAt       DateTime?
+  rejectionReason String?
+  student         Student            @relation(fields: [studentId], references: [id])
+  term            Term               @relation(fields: [termId], references: [id])
+
+  @@unique([studentId, termId])
+}
+
+model SpecialCaseNote {
+  id        String   @id @default(uuid())
+  studentId String
+  note      String
+  authorId  String
+  createdAt DateTime @default(now())
+  student   Student  @relation(fields: [studentId], references: [id])
+}
+
+model Setting {
+  id      String   @id @default(uuid())
+  key     String
+  value   Json
+  setById String
+  setAt   DateTime @default(now())
+
+  @@index([key, setAt])
+}
 
 enum StaffStatus {
   ACTIVE
-  PENDING
   INACTIVE
+  PENDING
   DELETED
 }
 
@@ -44,269 +270,16 @@ enum AuditAction {
   STAFF_DEACTIVATED
   STAFF_DELETED
   STAFF_UPDATED
-
   STAFF_ROLE_ASSIGNED
   STAFF_ROLE_REMOVED
+
+  ROLE_CREATED
+  ROLE_UPDATED
+  ROLE_DELETED
 }
 
 enum AuditTarget {
   STAFF
   STUDENT
   ROLE
-}
-
-// PERMISSIONS
-
-model Staff {
-  id                 String      @id @default(uuid())
-  email              String      @unique
-  passwordHash       String
-  fullName           String
-  dateOfBirth        DateTime?   @db.Date
-  nationalId         String?     @db.VarChar(30)
-  phone              String?     @db.VarChar(20)
-  jobTitle           String
-  status             StaffStatus @default(INACTIVE)
-  mustChangePassword Boolean
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-
-  roleGrants          RoleStaff[]
-  classAssignments    StaffClassAssignment[]
-  activityAssignments StaffActivityAssignment[]
-  auditEvents         AuditEvent[]
-}
-
-model Permission {
-  id              String           @id @default(uuid())
-  resource        String
-  action          String
-  category        String
-  allowedScopes   ScopeType[]
-  rolePermissions RolePermission[]
-
-  @@unique([resource, action])
-}
-
-model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-
-  rolePermissions RolePermission[]
-
-  roleStaffs RoleStaff[]
-}
-
-model RolePermission {
-  id           String      @id @default(uuid())
-  roleId       String
-  role         Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permissionId String
-  permission   Permission  @relation(fields: [permissionId], references: [id])
-  scopeType    ScopeType
-
-  @@unique([roleId, permissionId, scopeType])
-}
-
-model RoleStaff {
-  id               String         @id @default(uuid())
-  staffId          String
-  staff            Staff          @relation(fields: [staffId], references: [id])
-  roleId           String
-  role             Role @relation(fields: [roleId], references: [id])
-  grantedById      String // who granted it — stored as plain id, no relation
-  grantedAt        DateTime       @default(now())
-  revokedAt        DateTime?
-
-  @@unique([staffId, roleId])
-}
-
-model StaffClassAssignment {
-  staffId  String
-  staff    Staff  @relation(fields: [staffId], references: [id])
-  halaqaId String
-  halaqa   Halaqa @relation(fields: [halaqaId], references: [id])
-
-  @@id([staffId, halaqaId])
-}
-
-model StaffActivityAssignment {
-  staffId    String
-  staff      Staff    @relation(fields: [staffId], references: [id])
-  activityId String
-  activity   Activity @relation(fields: [activityId], references: [id])
-
-  @@id([staffId, activityId])
-}
-
-model AuditEvent {
-  id         String      @id @default(uuid())
-  actorId    String?
-  actor      Staff?      @relation(fields: [actorId], references: [id])
-  actionType AuditAction
-  targetType AuditTarget
-  targetId   String
-  roleName   String?
-  isSuccess  Boolean
-  createdAt  DateTime    @default(now())
-
-  @@index([targetType, targetId])
-  @@index([actorId])
-}
-
-// DEFERRED
-// model DirectGrant {
-//   id           String     @id @default(uuid())
-//   staffId      String
-//   permissionId String
-//   scopeType    ScopeType
-//   grantedById  String
-//   grantedAt    DateTime   @default(now())
-//   revokedAt    DateTime?
-//   @@unique([staffId, permissionId])
-// }
-
-// STAFF & CLASSES
-
-model Term {
-  id         String    @id @default(uuid())
-  name       String
-  startDate  DateTime
-  endDate    DateTime
-  archivedAt DateTime?
-
-  halaqas           Halaqa[]
-  termRegistrations TermRegistration[]
-}
-
-model Halaqa {
-  id          String @id @default(uuid())
-  termId      String
-  term        Term   @relation(fields: [termId], references: [id])
-  name        String
-  meetingDays Json
-
-  staffAssignments StaffClassAssignment[]
-  enrollments      Enrollment[]
-  activities       Activity[]
-  transfersFrom    HalaqaTransfer[]       @relation("TransferFrom")
-  transfersTo      HalaqaTransfer[]       @relation("TransferTo")
-}
-
-model Activity {
-  id       String        @id @default(uuid())
-  name     String
-  level    ActivityLevel
-  halaqaId String?
-  halaqa   Halaqa?       @relation(fields: [halaqaId], references: [id])
-  date     DateTime
-
-  staffAssignments StaffActivityAssignment[]
-  participants     ActivityParticipant[]
-}
-
-model Enrollment {
-  id         String    @id @default(uuid())
-  studentId  String
-  student    Student   @relation(fields: [studentId], references: [id])
-  halaqaId   String
-  halaqa     Halaqa    @relation(fields: [halaqaId], references: [id])
-  enrolledAt DateTime  @default(now())
-  endedAt    DateTime?
-}
-
-model HalaqaTransfer {
-  id            String   @id @default(uuid())
-  studentId     String
-  student       Student  @relation(fields: [studentId], references: [id])
-  fromHalaqaId  String
-  fromHalaqa    Halaqa   @relation("TransferFrom", fields: [fromHalaqaId], references: [id])
-  toHalaqaId    String
-  toHalaqa      Halaqa   @relation("TransferTo", fields: [toHalaqaId], references: [id])
-  actingStaffId String // who performed the transfer — plain id, no relation
-  transferredAt DateTime @default(now())
-}
-
-model ActivityParticipant {
-  studentId  String
-  student    Student   @relation(fields: [studentId], references: [id])
-  activityId String
-  activity   Activity  @relation(fields: [activityId], references: [id])
-  attendedAt DateTime?
-
-  @@id([studentId, activityId])
-}
-
-// REGISTRATION & GUARDIANS
-
-model Student {
-  id          String   @id @default(uuid())
-  fullName    String
-  dateOfBirth DateTime
-  nationalId  String   @unique
-  createdAt   DateTime @default(now())
-
-  guardianLinks     GuardianStudentLink[]
-  enrollments       Enrollment[]
-  transfers         HalaqaTransfer[]
-  activityEntries   ActivityParticipant[]
-  specialCaseNotes  SpecialCaseNote[]
-  termRegistrations TermRegistration[]
-}
-
-model Guardian {
-  id             String   @id @default(uuid())
-  fullName       String
-  primaryPhone   String
-  secondaryPhone String?
-  createdAt      DateTime @default(now())
-
-  studentLinks GuardianStudentLink[]
-}
-
-model GuardianStudentLink {
-  id          String    @id @default(uuid())
-  guardianId  String
-  guardian    Guardian  @relation(fields: [guardianId], references: [id])
-  studentId   String
-  student     Student   @relation(fields: [studentId], references: [id])
-  createdById String
-  removedAt   DateTime?
-  removedById String?
-}
-
-model TermRegistration {
-  id              String             @id @default(uuid())
-  studentId       String
-  student         Student            @relation(fields: [studentId], references: [id])
-  termId          String
-  term            Term               @relation(fields: [termId], references: [id])
-  status          RegistrationStatus @default(PENDING)
-  submittedAt     DateTime           @default(now())
-  decidedById     String?
-  decidedAt       DateTime?
-  rejectionReason String?
-
-  @@unique([studentId, termId])
-}
-
-model SpecialCaseNote {
-  id        String   @id @default(uuid())
-  studentId String
-  student   Student  @relation(fields: [studentId], references: [id])
-  note      String
-  authorId  String
-  createdAt DateTime @default(now())
-}
-
-model Setting {
-  id      String   @id @default(uuid())
-  key     String
-  value   Json
-  setById String
-  setAt   DateTime @default(now())
-
-  @@index([key, setAt])
 }
