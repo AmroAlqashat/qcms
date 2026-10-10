@@ -82,8 +82,13 @@ export class RolesService {
     // Update the role and save to audit
     try {
       return await this.prisma.$transaction(async (tx) => {
+        //update local role values
         const role = await tx.role.update({ where: { id: roleId }, data: { name: normalizedName, description } });
+        
+        //delete old role_perms
+        await tx.rolePermission.deleteMany({where: {roleId: roleId}});
 
+        //create the new and updated role_perms
         await tx.rolePermission.createMany({
           data: rows.map((row) => ({ ...row, roleId: role.id })),
         });
