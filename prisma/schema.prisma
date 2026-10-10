@@ -95,6 +95,8 @@ model Role {
   createdAt   DateTime @default(now())
 
   rolePermissions RolePermission[]
+
+  roleStaffs RoleStaff[]
 }
 
 model RolePermission {
@@ -104,7 +106,6 @@ model RolePermission {
   permissionId String
   permission   Permission  @relation(fields: [permissionId], references: [id])
   scopeType    ScopeType
-  roleStaff    RoleStaff[]
 
   @@unique([roleId, permissionId, scopeType])
 }
@@ -114,7 +115,7 @@ model RoleStaff {
   staffId          String
   staff            Staff          @relation(fields: [staffId], references: [id])
   roleId           String
-  role             RolePermission @relation(fields: [roleId], references: [id])
+  role             Role @relation(fields: [roleId], references: [id])
   grantedById      String // who granted it — stored as plain id, no relation
   grantedAt        DateTime       @default(now())
   revokedAt        DateTime?
