@@ -113,13 +113,13 @@ model RoleStaff {
   id               String         @id @default(uuid())
   staffId          String
   staff            Staff          @relation(fields: [staffId], references: [id])
-  rolePermissionId String
-  rolePermission   RolePermission @relation(fields: [rolePermissionId], references: [id])
+  roleId           String
+  role             RolePermission @relation(fields: [roleId], references: [id])
   grantedById      String // who granted it — stored as plain id, no relation
   grantedAt        DateTime       @default(now())
   revokedAt        DateTime?
 
-  @@unique([staffId, rolePermissionId])
+  @@unique([staffId, roleId])
 }
 
 model StaffClassAssignment {
