@@ -1,0 +1,80 @@
+<a href="/roles"
+   class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-[#287a73]">
+  {{> ui/icon name="arrow" class="h-4 w-4"}}قوالب الصلاحيات
+</a>
+<section id="roles-editor"
+         aria-labelledby="roles-heading"
+         class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+  <header class="flex items-center justify-between gap-4 border-b-2 border-[#c68c2b] bg-[#195954] p-5 text-white">
+    <div>
+      <h1 id="roles-heading" class="text-lg font-extrabold">
+      {{#if role.id }}تعديل قالب «{{role.name}}»{{else}}قالب صلاحيات جديد{{/if}}
+      </h1>
+      <p class="mt-1 text-xs leading-6 text-[#c0e3dc]">اختر الإجراءات ثم حدّد نطاقها.</p>
+    </div>
+    <span class="rounded-xl bg-white/10 p-3 text-[#edbc5a]">{{> ui/icon name="folder"}}</span>
+  </header>
+<form action="{{#if role.id }}/roles/edit/{{role.id}}{{else}}/roles/create{{/if}}"
+      method="post"
+      {{#if role.id }}hx-post="/roles/edit/{{role.id}}"
+      {{else}}hx-post="/roles/create"
+      {{/if}}
+      hx-target="#roles-editor"
+      hx-select="#roles-editor"
+      hx-swap="outerHTML"
+      class="space-y-5 p-4 sm:p-5"
+      data-permission-editor>
+  {{> ui/form-error error=error}}
+  {{> ui/field id="role-name" name="name" label="اسم القالب" value=role.name required=true maxlength="100" error=errors.name}}
+  <div class="min-w-0">
+    <label for="role-description" class="mb-2 block text-sm font-semibold">وصف القالب</label>
+    <textarea class="field block min-h-24 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm text-[#12383b]"
+              id="role-description"
+              name="description"
+              maxlength="400"
+              aria-describedby="role-description-error"
+              {{#if errors.description}}aria-invalid="true"
+              {{/if}}>{{role.description}}</textarea>
+    <p id="role-description-error"
+       class="mt-1 text-xs text-red-700"
+       {{#unless errors.description}}hidden{{/unless}}>{{errors.description}}</p>
+  </div>
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div>
+      <h2 class="font-bold">الصلاحيات</h2>
+      <p class="text-xs leading-6 text-slate-600">اختر الإجراءات وحدد نطاقها.</p>
+    </div>
+    <span class="rounded-full bg-[#f0faf9] px-3 py-1 text-xs font-bold text-[#287a73]"
+          data-permission-total
+          aria-live="polite">{{selectedPermissionCount}} محددة</span>
+  </div>
+  {{> ui/form-error error=errors.permissions}}
+  <div class="grid items-start gap-4 xl:grid-cols-2">
+    {{#each permissionColumns }}
+      <div class="space-y-4">
+        {{#each this }}
+          <details close
+                   class="overflow-hidden rounded-2xl border border-slate-200 bg-white cursor-pointer"
+                   data-permission-group>
+            <summary class="flex min-h-14 list-none items-center gap-2 bg-slate-50 p-4 text-sm font-extrabold">
+              {{> ui/icon name="folder" class="h-5 w-5 text-amber-600"}}
+              <span class="flex-1">ملف {{category}}</span>
+              <span class="rounded-full border border-[#a8dfdc] bg-white px-2 py-1 text-xs text-[#287a73]"
+                    data-permission-count>{{selectedCount}} محددة</span>
+              {{> ui/icon name="down" class="disclosure-chevron h-4 w-4 text-slate-400"}}
+            </summary>
+            {{#each resources }}
+              {{> roles/resource}}
+            {{/each}}
+          </details>
+        {{/each}}
+      </div>
+    {{/each}}
+  </div>
+  <div class="flex flex-wrap gap-2">
+    {{> ui/submit label="حفظ القالب" icon="check"}}
+    <a href="/roles"
+       class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-5 py-2 text-sm font-bold text-slate-600">إلغاء</a>
+  </div>
+  </form>
+</section>

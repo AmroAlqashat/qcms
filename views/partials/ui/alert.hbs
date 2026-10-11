@@ -1,0 +1,4 @@
+<div {{#if error}}role="alert"{{else}}role="status"{{/if}}
+  class="rounded-xl border p-3 text-sm leading-7 {{#if error}}border-red-200 bg-red-50 text-red-700{{else}}{{#if warning}}border-amber-200 bg-[#fff9ef] text-[#92600c]{{else}}border-[#a8dfdc] bg-[#f0faf9] text-[#215b5c]{{/if}}{{/if}}">
+  {{message}}
+</div>

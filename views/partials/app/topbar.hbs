@@ -7,7 +7,7 @@
       {{> ui/icon name="menu"}}
     </button>
     <nav aria-label="مسار الصفحة" class="flex items-center gap-2 text-xs sm:text-sm">
-      <a href="/staff" class="text-[#287a73]">QCMS</a>
+      <a href="{{#if (eq activeNav "roles")}}/roles{{else}}/staff{{/if}}" class="text-[#287a73]">QCMS</a>
       <span aria-hidden="true">/</span>
       <span>{{#if sectionTitle}}{{sectionTitle}}{{else}}الموظفون{{/if}}</span>
     </nav>

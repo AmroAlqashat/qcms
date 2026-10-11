@@ -4,4 +4,8 @@
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "staff")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
     {{> ui/icon name="users"}}الموظفون
   </a>
+  <a href="/roles" {{#if (eq activeNav "roles")}}aria-current="page"{{/if}}
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "roles")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
+    {{> ui/icon name="layers"}}قوالب الصلاحيات
+  </a>
 </nav>

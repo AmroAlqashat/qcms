@@ -1,21 +1,53 @@
 <script>
-  (() => {
-    const closeDialog = (dialog) => {
-      if (dialog?.open) dialog.close();
-    };
+  (() => { const updatePermissions = (form) => { const selected = (root) =>
+  root.querySelectorAll('input[name="permissions"]:checked').length;
+  form.querySelectorAll('[data-permission-group]').forEach((group) => { const
+  count = group.querySelector('[data-permission-count]'); if (count)
+  count.textContent = `${selected(group)} محددة`; }); const total =
+  form.querySelector('[data-permission-total]'); if (total) total.textContent =
+  `${selected(form)} محددة`;
+  form.querySelectorAll('[data-permission-action]').forEach((action) => {
+  const checkbox = action.querySelector('input[name="permissions"]'); const
+  scope = action.querySelector('[data-permission-scope]'); if (checkbox && scope)
+  scope.disabled = !checkbox.checked; }); }; const init = () => { document
+  .querySelectorAll('[data-permission-editor]') .forEach(updatePermissions); };
+  const closeDialog = (dialog) => { if (dialog?.open) dialog.close(); };
+  document.addEventListener('click', (event) => { const control =
+  event.target.closest('button, a'); if (!control) return; if
+  (control.matches('[data-dialog-open]')) { const dialog =
+  document.getElementById(control.dataset.dialogOpen); if (dialog &&
+  !dialog.open) dialog.showModal(); } if
+  (control.matches('[data-dialog-close]')) {
+  closeDialog(control.closest('dialog')); } });
+  document.addEventListener('change', (event) => { const form =
+  event.target.closest('[data-permission-editor]'); if (form)
+  updatePermissions(form); }); document.addEventListener('htmx:configRequest',
+  (event) => { const form =
+  event.detail.elt.closest('[data-permission-editor]'); if (!form) return; const
+  permissions = [...form.querySelectorAll('input[name="permissions"]:checked')]
+  .map((input) => { const action =
+  input.closest('[data-permission-action]'); const scope =
+  action?.querySelector('[data-permission-scope]')?.value; return { resource:
+  input.dataset.resource, action: input.dataset.action, scope, }; });
+  event.detail.parameters.permissions = JSON.stringify(permissions); delete
+  event.detail.parameters.scopes; });
+  document.addEventListener('htmx:beforeSwap', (event) => { const xhr =
+  event.detail.xhr; if ( [400, 409, 422].includes(xhr.status) &&
+  xhr.getResponseHeader('X-QCMS-Fragment') === 'true' ) {
+  event.detail.shouldSwap = true; event.detail.isError = false; } }); if
+  (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init); } else { init(); } })();
 
-    document.addEventListener('click', (event) => {
-      const control = event.target.closest('button, a');
-      if (!control) return;
+document.addEventListener('change', (event) => {
+  const checkbox = event.target.closest('input[name="permissions"]');
 
-      if (control.matches('[data-dialog-open]')) {
-        const dialog = document.getElementById(control.dataset.dialogOpen);
-        if (dialog && !dialog.open) dialog.showModal();
-      }
+  if (!checkbox) return;
 
-      if (control.matches('[data-dialog-close]')) {
-        closeDialog(control.closest('dialog'));
-      }
-    });
-  })();
+  const row = checkbox.closest('[data-permission-action]');
+  const scope = row?.querySelector('[data-permission-scope]');
+
+  if (scope) {
+    scope.disabled = !checkbox.checked;
+  }
+});
 </script>
