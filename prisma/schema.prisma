@@ -44,31 +44,31 @@ model Role {
   description     String?
   createdAt       DateTime         @default(now())
   rolePermissions RolePermission[]
+  staffGrants     RoleStaff[]
 }
 
 model RolePermission {
-  id           String      @id @default(uuid())
+  id           String     @id @default(uuid())
   roleId       String
   permissionId String
   scopeType    ScopeType
-  permission   Permission  @relation(fields: [permissionId], references: [id])
-  role         Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  RoleStaff    RoleStaff[]
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId, scopeType])
 }
 
 model RoleStaff {
-  id               String         @id @default(uuid())
-  staffId          String
-  rolePermissionId String
-  grantedById      String
-  grantedAt        DateTime       @default(now())
-  revokedAt        DateTime?
-  RolePermission   RolePermission @relation(fields: [rolePermissionId], references: [id])
-  staff            Staff          @relation(fields: [staffId], references: [id])
+  id          String    @id @default(uuid())
+  staffId     String
+  roleId      String
+  grantedById String
+  grantedAt   DateTime  @default(now())
+  revokedAt   DateTime?
+  role        Role      @relation(fields: [roleId], references: [id])
+  staff       Staff     @relation(fields: [staffId], references: [id])
 
-  @@unique([staffId, rolePermissionId])
+  @@unique([staffId, roleId])
 }
 
 model StaffClassAssignment {
