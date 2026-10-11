@@ -1,5 +1,5 @@
-import { IsEnum, IsString, IsNotEmpty } from "class-validator";
-import { ScopeType } from "@prisma/client";
+import { IsEnum, IsString, IsNotEmpty } from 'class-validator';
+import { ScopeType } from '@prisma/client';
 
 export class RolePermissionDto {
   @IsString({ message: 'المورد غير صالح' })
