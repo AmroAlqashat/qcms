@@ -8,6 +8,22 @@ import { RolePermissionDto } from './dto/role-permission.dto';
 
 @Injectable()
 export class RolesService {
+  async deleteRole(roleId: string, id: string) {
+    //validate if user may delete this role
+
+    try{
+      return await this.prisma.$transaction(async (tx) => {
+        tx.role.delete({where: {id: id}})
+      });
+    }
+    catch (error: unknown){
+      if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === 'P2003' || error.code === 'P2025'))
+        throw new ConflictException({
+        message: 'هاذ القالب غير موجود',
+        errors: { name: 'هاذ القالب غير موجود' }
+        });
+    }
+  }
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Render, Redirect, UseFilters } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Render, Redirect, UseFilters, Delete } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { CreateNewRoleDto } from './dto/create-new-role.dto';
 import { EditRoleDto } from './dto/edit-role.dto';
@@ -48,6 +48,13 @@ export class RolesController {
     };
   }
 
+  @Get('delete/:id')
+  @Render('roles/role-delete')
+  async showDeleteRolePage(@Param('id') roleId: string){
+    //TODO: show a confirmation dialog THEN after confirmation activate the delete post method THEN redirect to show-roles
+    return null;
+  }
+
   @Post('create')
   @Redirect('/roles')
   @UseFilters(RolesErrorFilter)
@@ -61,4 +68,12 @@ export class RolesController {
   async editedRole(@Body() editRoleDto: EditRoleDto, @Param('id') roleId: string, @CurrentUser() user: { id: string }) {
     await this.rolesService.editRole(editRoleDto, roleId, user.id);
   }
+
+  @Delete('delete/:id')
+  @Redirect('/roles')
+  @UseFilters(RolesErrorFilter)
+  async deletedRole(@Param('id') roleId: string, @CurrentUser() user: {id: string}){
+    await this.rolesService.deleteRole(roleId, user.id);
+  }
+
 }

@@ -61,10 +61,10 @@ model RolePermission {
 model RoleStaff {
   id          String    @id @default(uuid())
   staffId     String
-  roleId      String
   grantedById String
   grantedAt   DateTime  @default(now())
   revokedAt   DateTime?
+  roleId      String
   role        Role      @relation(fields: [roleId], references: [id])
   staff       Staff     @relation(fields: [staffId], references: [id])
 
@@ -272,7 +272,6 @@ enum AuditAction {
   STAFF_UPDATED
   STAFF_ROLE_ASSIGNED
   STAFF_ROLE_REMOVED
-
   ROLE_CREATED
   ROLE_UPDATED
   ROLE_DELETED
