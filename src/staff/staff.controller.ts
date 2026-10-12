@@ -19,6 +19,18 @@ import { InviteStaffErrorFilter } from './helpers/invite-staff-error.filter';
 export class StaffController {
   constructor(private readonly staffService: StaffService) { }
 
+  @Get()
+  @Render('staff/staff-page')
+  showStaffPage() {
+    return { activeNav: 'staff' };
+  }
+
+  @Get('invitations')
+  @Render('staff/pending-invitations-page')
+  showStaffInvitationPage() {
+    return { activeNav: 'staff' };
+  }
+
   @Get('invite')
   @Render('staff/staff-invitation-page')
   showInviteForm() {
