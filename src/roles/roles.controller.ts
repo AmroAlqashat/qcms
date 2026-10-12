@@ -60,14 +60,14 @@ export class RolesController {
   }
 
   @Post('create')
-  @Redirect('/roles')
+  @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
   async newRole(@Body() createRoleDto: CreateNewRoleDto, @CurrentUser() user: { id: string }) {
     await this.rolesService.createRole(createRoleDto, user.id);
   }
 
   @Post('edit/:id')
-  @Redirect('/roles')
+  @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
   async editedRole(@Body() editRoleDto: EditRoleDto, @Param('id') roleId: string, @CurrentUser() user: { id: string }) {
     await this.rolesService.editRole(editRoleDto, roleId, user.id);
