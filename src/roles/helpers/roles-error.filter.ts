@@ -42,6 +42,31 @@ export class RolesErrorFilter implements ExceptionFilter {
     const roleId = [request.params.id, request.params.rid].find(
       (value): value is string => typeof value === 'string',
     );
+    const requestBody = request.body as Record<string, unknown>;
+    const details =
+      typeof body === 'object' && body !== null
+        ? (body as { errors?: Record<string, string> })
+        : {};
+
+    if (request.path.startsWith('/roles/delete/')) {
+      const role = await this.loadRole(roleId);
+
+      if (!role) {
+        this.redirectToList(request, response);
+        return;
+      }
+
+      response
+        .status(status)
+        .setHeader('X-QCMS-Fragment', 'true')
+        .render('roles/roles-delete', {
+          activeNav: 'roles',
+          role,
+          errors: details.errors,
+          error: details.errors ? undefined : exception.message,
+        });
+      return;
+    }
 
     // Nest does not catch errors thrown inside a filter, so load defensively.
     const editor = await this.loadEditor(roleId);
@@ -50,12 +75,6 @@ export class RolesErrorFilter implements ExceptionFilter {
       return;
     }
     const { role, permissionsData } = editor;
-
-    const requestBody = request.body as Record<string, unknown>;
-    const details =
-      typeof body === 'object' && body !== null
-        ? (body as { errors?: Record<string, string> })
-        : {};
 
     permissionsData.selectedPermissionCount =
       this.restoreSubmittedPermissions(
@@ -83,6 +102,18 @@ export class RolesErrorFilter implements ExceptionFilter {
         errors: details.errors,
         error: details.errors ? undefined : exception.message,
       });
+  }
+
+  private async loadRole(roleId?: string) {
+    if (!roleId) {
+      return null;
+    }
+
+    try {
+      return await this.rolesService.getRoleById(roleId);
+    } catch {
+      return null;
+    }
   }
 
   private async loadEditor(roleId?: string) {

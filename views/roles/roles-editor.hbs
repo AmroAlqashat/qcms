@@ -71,12 +71,16 @@
       </div>
     {{/each}}
   </div>
-  <div class="flex flex-wrap gap-2">
-    {{> ui/submit label="حفظ القالب" icon="check"}}
-    <a href="/roles"
-       class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-5 py-2 text-sm font-bold text-slate-600">إلغاء</a>
-       <a href="/roles/delete/{{role.id}}"
-          class="inline-flex min-h-11 items-center rounded-xl border border-red-200 px-5 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">حذف القالب</a>
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex flex-wrap gap-2">
+      {{> ui/submit label="حفظ القالب" icon="check"}}
+      <a href="/roles"
+         class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-5 py-2 text-sm font-bold text-slate-600">إلغاء</a>
+    </div>
+    {{#if role.id}}
+      <a href="/roles/delete/{{role.id}}"
+         class="inline-flex min-h-11 items-center rounded-xl border border-red-200 px-5 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">حذف القالب</a>
+    {{/if}}
   </div>
   </form>
 </section>

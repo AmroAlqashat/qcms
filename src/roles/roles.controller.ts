@@ -73,11 +73,10 @@ export class RolesController {
     await this.rolesService.editRole(editRoleDto, roleId, user.id);
   }
 
-  @Delete('delete/:id')
-  @Redirect('/roles')
+  @Post('delete/:id')
+  @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
-  async deletedRole(@Param('id') roleId: string, @CurrentUser() user: {id: string}){
+  async deletedRole(@Param('id') roleId: string, @CurrentUser() user: { id: string }) {
     await this.rolesService.deleteRole(roleId, user.id);
   }
-
 }

@@ -8,7 +8,6 @@ import { RolePermissionDto } from './dto/role-permission.dto';
 
 @Injectable()
 export class RolesService {
-  
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -17,10 +16,11 @@ export class RolesService {
   async deleteRole(roleId: string, actorId: string) {
     //validate if user may delete this role
 
-    try{
+    try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.role.delete({ where: { id: roleId } });
-        await this.audit.record(tx,  {
+
+        await this.audit.record(tx, {
           actorId,
           actionType: AuditAction.ROLE_DELETED,
           targetType: AuditTarget.ROLE,
@@ -29,11 +29,11 @@ export class RolesService {
         });
       });
     }
-    catch (error: unknown){
+    catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === 'P2003' || error.code === 'P2025'))
         throw new ConflictException({
-        message: 'هاذ القالب غير موجود',
-        errors: { name: 'هاذ القالب غير موجود' }
+          message: 'هاذ القالب غير موجود',
+          errors: { name: 'هاذ القالب غير موجود' }
         });
     }
   }
