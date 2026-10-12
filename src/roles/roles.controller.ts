@@ -41,10 +41,13 @@ export class RolesController {
 
     const permissionsData = await this.rolesService.getPermissionsWithCategory(roleId);
 
+    const accountCount = await this.rolesService.getRoleAccountCount(roleId);
+
     return {
       role,
       ...permissionsData,
       activeNav: 'roles',
+      accountCount,
     };
   }
 

@@ -16,7 +16,9 @@
     </div>
     <span class="rounded-xl bg-white/10 p-3 text-[#edbc5a]">{{> ui/icon name="folder"}}</span>
   </header>
-<form action="{{#if role.id }}/roles/edit/{{role.id}}{{else}}/roles/create{{/if}}"
+<form {{#if role.id }}id="role-editor-form"
+      {{/if}}
+      action="{{#if role.id }}/roles/edit/{{role.id}}{{else}}/roles/create{{/if}}"
       method="post"
       {{#if role.id }}hx-post="/roles/edit/{{role.id}}"
       {{else}}hx-post="/roles/create"
@@ -74,7 +76,13 @@
   </div>
   <div class="flex flex-wrap items-center justify-between gap-2">
     <div class="flex flex-wrap gap-2">
-      {{> ui/submit label="حفظ القالب" icon="check"}}
+      {{#if role.id }}
+        <button type="button"
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#216c65]"
+                data-dialog-open="confirm-edit">{{> ui/icon name="check"}}تعديل القالب</button>
+      {{else}}
+        {{> ui/submit label="حفظ القالب" icon="check"}}
+      {{/if}}
       <a href="/roles"
          class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-5 py-2 text-sm font-bold text-slate-600">إلغاء</a>
     </div>
@@ -84,4 +92,33 @@
     {{/if}}
   </div>
   </form>
+  <dialog id="confirm-edit"
+          dir="rtl"
+          aria-labelledby="confirm-edit-title"
+          aria-describedby="confirm-edit-description"
+          class="m-auto w-[92vw] max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 text-[#12383b] shadow-2xl backdrop:bg-black/40">
+    <div class="border-b border-slate-100 p-6">
+      <h2 id="confirm-edit-title" class="text-lg font-extrabold">تأكيد تعديل القالب</h2>
+      <p id="confirm-edit-description"
+         class="mt-2 text-sm leading-7 text-slate-600">هل تريد حفظ التغييرات على قالب «{{role.name}}»؟</p>
+      <div class="mt-4 rounded-xl bg-amber-50 p-4 text-sm leading-7 text-amber-900">
+        <p>
+          ستنطبق هذه التعديلات على هذا العدد من الموظفين:
+          <strong>{{accountCount}}</strong>
+        </p>
+      </div>
+    </div>
+    <div class="flex flex-wrap justify-start gap-3 bg-slate-50 p-4">
+      <button type="submit"
+              form="role-editor-form"
+              class="min-h-11 rounded-xl bg-[#2b827a] px-5 py-2 text-sm font-bold text-white hover:bg-[#216c65]">
+        تأكيد الحفظ
+      </button>
+      <button type="button"
+              data-dialog-close
+              class="min-h-11 rounded-xl border border-slate-200 bg-white px-5 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100">
+        إلغاء
+      </button>
+    </div>
+  </dialog>
 </section>

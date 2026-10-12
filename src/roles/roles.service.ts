@@ -13,6 +13,25 @@ export class RolesService {
     private readonly audit: AuditService,
   ) { }
 
+  async getRoleAccountCount(roleId: string) {
+    const accountCount = await this.prisma.role.findFirst({
+      where: { id: roleId },
+      select: {
+        _count: {
+          select: {
+            staffGrants: true,
+          },
+        },
+      },
+    });
+
+    if (!accountCount) {
+      throw new NotFoundException('القالب غير موجود')
+    }
+
+    return accountCount._count.staffGrants;
+  }
+
   async deleteRole(roleId: string, actorId: string) {
     //validate if user may delete this role
 
