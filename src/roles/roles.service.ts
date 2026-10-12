@@ -8,12 +8,25 @@ import { RolePermissionDto } from './dto/role-permission.dto';
 
 @Injectable()
 export class RolesService {
+  
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) { }
+
   async deleteRole(roleId: string, actorId: string) {
     //validate if user may delete this role
 
     try{
       return await this.prisma.$transaction(async (tx) => {
         await tx.role.delete({ where: { id: roleId } });
+        await this.audit.record(tx,  {
+          actorId,
+          actionType: AuditAction.ROLE_DELETED,
+          targetType: AuditTarget.ROLE,
+          targetId: roleId,
+          isSuccess: true,
+        });
       });
     }
     catch (error: unknown){
@@ -24,10 +37,6 @@ export class RolesService {
         });
     }
   }
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly audit: AuditService,
-  ) { }
 
   async listRoles() {
     const roles = await this.prisma.role.findMany({
@@ -155,7 +164,7 @@ export class RolesService {
     await this.checkExistingRoleName(normalizedName);
 
     // Check for submitted twice permissions
-    this.dublicatePermissionValidation(permissions);
+    this.duplicatePermissionValidation(permissions);
 
     // Validate submitted roles
     const rows = await this.validateRoleValues(permissions);
@@ -200,7 +209,7 @@ export class RolesService {
     await this.checkExistingRoleName(normalizedName, roleId);
 
     // Check for submitted twice permissions
-    this.dublicatePermissionValidation(permissions);
+    this.duplicatePermissionValidation(permissions);
 
     // Check if the role we are trying to edit exist or not
     const oldRoleExists = await this.prisma.role.findUnique({ where: { id: roleId } });
@@ -264,7 +273,7 @@ export class RolesService {
     }
   }
 
-  private dublicatePermissionValidation(permissions: RolePermissionDto[]) {
+  private duplicatePermissionValidation(permissions: RolePermissionDto[]) {
     //Check for the same (resource, action, scope) submitted twice
     const keys = permissions.map((p) => `${p.resource}:${p.action}:${p.scope}`);
     if (new Set(keys).size !== keys.length) {
