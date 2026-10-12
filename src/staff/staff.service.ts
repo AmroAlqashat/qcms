@@ -82,7 +82,7 @@ export class StaffService {
         }
 
         await this.audit.record(tx, {
-          actorId: 'staff-admin',
+          actorId: 'staff_admin',
           actionType: AuditAction.STAFF_INVITED,
           targetType: AuditTarget.STAFF,
           targetId: staff.id,

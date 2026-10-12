@@ -8,12 +8,12 @@ import { RolePermissionDto } from './dto/role-permission.dto';
 
 @Injectable()
 export class RolesService {
-  async deleteRole(roleId: string, id: string) {
+  async deleteRole(roleId: string, actorId: string) {
     //validate if user may delete this role
 
     try{
       return await this.prisma.$transaction(async (tx) => {
-        tx.role.delete({where: {id: id}})
+        await tx.role.delete({ where: { id: roleId } });
       });
     }
     catch (error: unknown){

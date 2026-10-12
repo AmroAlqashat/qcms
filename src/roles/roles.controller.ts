@@ -49,10 +49,14 @@ export class RolesController {
   }
 
   @Get('delete/:id')
-  @Render('roles/role-delete')
-  async showDeleteRolePage(@Param('id') roleId: string){
-    //TODO: show a confirmation dialog THEN after confirmation activate the delete post method THEN redirect to show-roles
-    return null;
+  @Render('roles/roles-delete')
+  async showDeleteRolePage(@Param('id') roleId: string) {
+    const role = await this.rolesService.getRoleById(roleId);
+
+    return {
+      role,
+      activeNav: 'roles',
+    };
   }
 
   @Post('create')

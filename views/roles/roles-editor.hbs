@@ -75,6 +75,8 @@
     {{> ui/submit label="حفظ القالب" icon="check"}}
     <a href="/roles"
        class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-5 py-2 text-sm font-bold text-slate-600">إلغاء</a>
+       <a href="/roles/delete/{{role.id}}"
+          class="inline-flex min-h-11 items-center rounded-xl border border-red-200 px-5 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">حذف القالب</a>
   </div>
   </form>
 </section>
