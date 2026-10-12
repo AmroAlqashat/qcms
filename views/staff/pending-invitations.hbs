@@ -1,0 +1,45 @@
+{{> staff/page-header pendingTab=true}}
+<div class="mb-4">
+  {{> ui/alert message="تظهر كلمة المرور المؤقتة مرة واحدة عند إصدارها. إذا فُقدت، أصدر كلمة مرور جديدة؛ تتوقف القديمة فورًا."}}
+</div>
+<section id="pending-invitations" aria-label="الدعوات المعلقة"
+  class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+  {{#each invitations}}
+    <article class="border-b border-slate-100 p-4 last:border-0 sm:p-5">
+      <div class="flex items-start gap-3"><span
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">{{> ui/icon name="mail"}}</span>
+        <div class="min-w-0 flex-1">
+          <h2 dir="ltr" class="break-anywhere text-right text-sm font-bold">{{email}}</h2>
+          <p class="mt-1 text-xs leading-6 text-slate-600">{{fullName}} · {{invitedAtLabel}} <span
+              class="rounded-full bg-amber-50 px-2 py-1 text-amber-800">بانتظار التفعيل</span></p>
+        </div>
+      </div>
+      <div
+        class="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-xs leading-6 text-slate-600">
+        لا يمكن عرض كلمة المرور السابقة. إصدار كلمة جديدة يُبطل القديمة.</div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        {{#if canReissue}}
+          <form action="/staff/invitations/{{id}}/reissue" method="post" hx-post="/staff/invitations/{{id}}/reissue"
+            hx-target="#modal-root" hx-swap="innerHTML" hx-disabled-elt="find button[type='submit']">
+            {{> ui/csrf}}<button
+              class="min-h-11 rounded-lg border border-[#a8dfdc] px-3 text-xs font-bold text-[#287a73]"
+              type="submit">إصدار كلمة مرور جديدة</button></form>
+        {{/if}}
+        {{#if canCorrectEmail}}<a href="/staff/invitations/{{id}}/email" hx-get="/staff/invitations/{{id}}/email"
+            hx-target="#modal-root"
+            class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold">{{> ui/icon name="edit" class="h-4 w-4"}}تصحيح
+            البريد</a>{{/if}}
+        {{#if canCancel}}
+          <form action="/staff/invitations/{{id}}/cancel" method="post" hx-post="/staff/invitations/{{id}}/cancel"
+            hx-target="#pending-invitations" hx-select="#pending-invitations" hx-swap="outerHTML"
+            hx-confirm="هل تريد إلغاء هذه الدعوة؟ لن تعمل بيانات الدخول المؤقتة بعدها."
+            hx-disabled-elt="find button[type='submit']">{{> ui/csrf}}<button
+              class="min-h-11 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700" type="submit">إلغاء
+              الدعوة</button></form>
+        {{/if}}
+      </div>
+    </article>
+  {{else}}
+    <p class="p-10 text-center text-sm text-slate-600">لا توجد دعوات معلّقة.</p>
+  {{/each}}
+</section>

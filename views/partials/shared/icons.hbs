@@ -1,5 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" class="hidden" aria-hidden="true">
   <defs>
+    <symbol id="icon-home" viewBox="0 0 24 24">
+      <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />
+    </symbol>
     <symbol id="icon-users" viewBox="0 0 24 24">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M20 8v6m-3-3h6" />
       <circle cx="9" cy="7" r="4" />
@@ -7,17 +10,38 @@
     <symbol id="icon-layers" viewBox="0 0 24 24">
       <path d="m12 3 10 5-10 5L2 8zM2 12l10 5 10-5M2 16l10 5 10-5" />
     </symbol>
-    <symbol id="icon-plus" viewBox="0 0 24 24">
-      <path d="M12 5v14M5 12h14" />
+    <symbol id="icon-archive" viewBox="0 0 24 24">
+      <path d="M4 8v13h16V8M2 3h20v5H2zM9 12h6" />
     </symbol>
-    <symbol id="icon-chevron" viewBox="0 0 24 24">
-      <path d="m14 6-6 6 6 6" />
+    <symbol id="icon-settings" viewBox="0 0 24 24">
+      <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+      <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z" />
+    </symbol>
+    <symbol id="icon-check-shield" viewBox="0 0 24 24">
+      <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6" />
+    </symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24">
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+    </symbol>
+    <symbol id="icon-logout" viewBox="0 0 24 24">
+      <path d="M9 3H3v18h6M9 12h12m-4-4 4 4-4 4" />
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m16 16 5 5" />
+    </symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24">
+      <path d="m6 6 12 12M6 18 18 6" />
     </symbol>
     <symbol id="icon-arrow" viewBox="0 0 24 24">
       <path d="M4 12h16m-6-6 6 6-6 6" />
     </symbol>
-    <symbol id="icon-folder" viewBox="0 0 24 24">
-      <path d="M3 5h6l2 3h10v12H3z" />
+    <symbol id="icon-chevron" viewBox="0 0 24 24">
+      <path d="m14 6-6 6 6 6" />
     </symbol>
     <symbol id="icon-down" viewBox="0 0 24 24">
       <path d="m6 9 6 6 6-6" />
@@ -29,15 +53,67 @@
       <circle cx="12" cy="12" r="9" />
       <path d="M12 11v6M12 7h.01" />
     </symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24">
+      <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </symbol>
+    <symbol id="icon-copy" viewBox="0 0 24 24">
+      <rect x="8" y="8" width="12" height="13" rx="2" />
+      <path d="M16 8V3H3v13h5" />
+    </symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24">
+      <path d="m16 3 5 5L9 20l-6 1 1-6zM14 5l5 5" />
+    </symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24">
+      <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />
+    </symbol>
+    <symbol id="icon-pause" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9 8v8m6-8v8" />
+    </symbol>
+    <symbol id="icon-mail" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 6 9 7 9-7" />
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 6v6l4 2" />
+    </symbol>
+    <symbol id="icon-send" viewBox="0 0 24 24">
+      <path d="m22 2-7 20-4-9-9-4zM22 2 11 13" />
+    </symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24">
+      <path d="M12 5v14M5 12h14" />
+    </symbol>
+    <symbol id="icon-folder" viewBox="0 0 24 24">
+      <path d="M3 5h6l2 3h10v12H3z" />
+    </symbol>
+    <symbol id="icon-filter" viewBox="0 0 24 24">
+      <path d="M3 4h18l-7 8v8l-4-2v-6z" />
+    </symbol>
     <symbol id="icon-menu" viewBox="0 0 24 24">
       <path d="M4 6h16M4 12h16M4 18h16" />
     </symbol>
-    <symbol id="icon-close" viewBox="0 0 24 24">
-      <path d="m6 6 12 12M6 18 18 6" />
+    <symbol id="icon-phone" viewBox="0 0 24 24">
+      <path d="m7 3 3 5-3 3c2 3 3 4 6 6l3-3 5 3c-1 4-3 5-6 4C8 18 5 15 3 8 2 5 3 3 7 3Z" />
     </symbol>
-    <symbol id="icon-search" viewBox="0 0 24 24">
-      <circle cx="10.5" cy="10.5" r="6.5" />
-      <path d="m16 16 5 5" />
+    <symbol id="icon-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M7 2v6m10-6v6M3 11h18" />
+    </symbol>
+    <symbol id="icon-ban" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m6 6 12 12" />
+    </symbol>
+    <symbol id="icon-database" viewBox="0 0 24 24">
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M3 5v14c0 4 18 4 18 0V5M3 12c0 4 18 4 18 0" />
+    </symbol>
+    <symbol id="icon-sliders" viewBox="0 0 24 24">
+      <path d="M5 3v7m0 4v7M12 3v12m0 4v2M19 3v2m0 4v12M2 10h6m1 9h6m1-14h6" />
+    </symbol>
+    <symbol id="icon-document" viewBox="0 0 24 24">
+      <path d="M4 3h11l5 5v13H4zM15 3v6h5M8 13h8m-8 4h8" />
     </symbol>
   </defs>
 </svg>

@@ -50,4 +50,78 @@ document.addEventListener('change', (event) => {
     scope.disabled = !checkbox.checked;
   }
 });
+
+(() => {
+  const initializeStaffUi = () => {
+    document.querySelectorAll('dialog[data-auto-open]:not([open])').forEach((dialog) => {
+      dialog.showModal();
+      const focusTarget = dialog.querySelector(
+        '[data-form-error], [aria-invalid="true"], input:not([type="hidden"]), button[data-dialog-close]',
+      );
+      focusTarget?.focus({ preventScroll: true });
+    });
+  };
+
+  document.addEventListener('click', async (event) => {
+    const control = event.target.closest('button, a');
+    if (!control) return;
+
+    if (control.hasAttribute('data-password-toggle')) {
+      const input = document.getElementById(control.dataset.passwordToggle);
+      if (!input) return;
+
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      control.setAttribute('aria-pressed', String(visible));
+      control.setAttribute(
+        'aria-label',
+        visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور',
+      );
+    }
+
+    if (control.hasAttribute('data-copy')) {
+      const input = document.getElementById(control.dataset.copy);
+      if (!input?.value) return;
+
+      const feedback = control
+        .closest('[data-sensitive-credentials]')
+        ?.querySelector('[data-copy-feedback]');
+
+      try {
+        await navigator.clipboard.writeText(input.value);
+        if (feedback) feedback.textContent = 'نُسخت كلمة المرور.';
+      } catch {
+        input.focus();
+        input.select();
+        if (feedback) feedback.textContent = 'تم تحديد النص؛ انسخه يدويًا.';
+      }
+    }
+  });
+
+  document.addEventListener('change', (event) => {
+    if (event.target.matches('[data-auto-submit]')) {
+      event.target.form?.requestSubmit();
+    }
+  });
+
+  document.addEventListener('close', (event) => {
+    const dialog = event.target;
+    if (!(dialog instanceof HTMLDialogElement)) return;
+
+    dialog
+      .querySelectorAll('[data-sensitive-credentials] input')
+      .forEach((input) => {
+        input.value = '';
+        input.removeAttribute('value');
+      });
+
+    if (dialog.id !== 'mobile-navigation') {
+      dialog.remove();
+    }
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', initializeStaffUi);
+  document.addEventListener('htmx:afterSwap', initializeStaffUi);
+  initializeStaffUi();
+})();
 </script>

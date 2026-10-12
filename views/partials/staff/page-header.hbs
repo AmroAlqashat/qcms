@@ -1,0 +1,18 @@
+<header class="mb-5 flex flex-wrap items-center justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-extrabold">الموظفون</h1>
+    <p class="mt-1 text-sm leading-7 text-slate-600">الحسابات والدعوات وتعيين الحلقات والأنشطة والقوالب.</p>
+  </div>
+  {{#if permissions.canInvite}}<a href="/staff/invite" hx-get="/staff/invite" hx-target="#modal-root"
+      hx-swap="innerHTML"
+      class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#216c65]">{{> ui/icon name="users"}}دعوة
+      موظف</a>{{/if}}
+</header>
+<nav aria-label="أقسام الموظفين" class="mb-5 flex flex-wrap gap-2 text-sm">
+  <a href="/staff"
+    class="rounded-xl px-4 py-2.5 {{#unless pendingTab}}bg-white font-bold shadow-sm{{else}}text-slate-600{{/unless}}"
+    {{#unless pendingTab}}aria-current="page" {{/unless}}>الحسابات</a>
+  <a href="/staff/invitations"
+    class="rounded-xl px-4 py-2.5 {{#if pendingTab}}bg-white font-bold shadow-sm{{else}}text-slate-600{{/if}}"
+    {{#if pendingTab}}aria-current="page" {{/if}}>الدعوات المعلّقة {{#if pendingCount}}({{pendingCount}}){{/if}}</a>
+</nav>

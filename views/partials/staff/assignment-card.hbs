@@ -1,0 +1,8 @@
+<div class="rounded-2xl bg-slate-50 p-4">
+  <h3 class="text-xs text-slate-600">{{heading}} {{#if items.length}}({{items.length}}){{/if}}</h3>
+  <ul class="mt-1 text-sm font-bold leading-7">{{#each items}}
+      <li>{{name}}</li>
+    {{else}}
+      <li class="font-normal text-slate-600">لا يوجد</li>
+    {{/each}}</ul>
+</div>

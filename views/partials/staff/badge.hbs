@@ -1,0 +1,4 @@
+<span
+  class="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-bold {{#if (eq status 'ACTIVE')}}bg-[#f0faf9] text-[#246e68]{{else}}{{#if (eq status 'DELETED')}}bg-red-50 text-red-700{{else}}{{#if (eq status 'PENDING')}}bg-amber-50 text-amber-800{{else}}bg-slate-100 text-slate-600{{/if}}{{/if}}{{/if}}">{{#if (eq status 'ACTIVE')}}نشط{{else}}{{#if (eq status 'DELETED')}}محذوف{{else}}{{#if (eq status 'PENDING')}}بانتظار
+        التفعيل
+      {{else}}موقوف{{/if}}{{/if}}{{/if}}</span>

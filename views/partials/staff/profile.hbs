@@ -1,0 +1,84 @@
+<a href="/staff"
+  class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-[#287a73]">{{> ui/icon name="arrow" class="h-4 w-4"}}الموظفون</a>
+<section id="staff-profile" aria-labelledby="staff-name">
+  <header
+    class="mb-4 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-slate-200 bg-white p-5">
+    <div class="flex min-w-0 items-center gap-3"><span aria-hidden="true"
+        class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f0faf9] text-xl font-bold text-[#287a73]">{{staff.initial}}</span>
+      <div class="min-w-0">
+        <h1 id="staff-name" class="text-xl font-extrabold">{{staff.fullName}}</h1>
+        <p dir="ltr" class="break-anywhere text-right text-xs leading-7 text-slate-600">{{staff.email}}</p>
+        <div class="mt-1 flex flex-wrap items-center gap-2">{{> staff/badge status=staff.status}}<span
+            class="rounded-full bg-slate-100 px-3 py-1 text-xs">{{staff.jobTitle}}</span><span
+            class="text-xs text-slate-600">المسمى وصف فقط ولا يمنح صلاحيات</span></div>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {{#if permissions.canEditStaff}}<a href="/staff/{{staff.id}}/edit" hx-get="/staff/{{staff.id}}/edit"
+          hx-target="#modal-root"
+          class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold">{{> ui/icon name="edit" class="h-4 w-4"}}تعديل
+          الملف</a>{{/if}}
+      {{#if permissions.canManageAssignments}}<a href="/staff/{{staff.id}}/assignments"
+          class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 text-xs font-bold text-[#287a73]">{{> ui/icon name="sliders" class="h-4 w-4"}}تعديل
+          التعيينات</a>{{/if}}
+      {{#if permissions.canDeactivate}}<a href="/staff/{{staff.id}}/deactivate" hx-get="/staff/{{staff.id}}/deactivate"
+          hx-target="#modal-root"
+          class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-amber-200 px-3 text-xs font-bold text-amber-800">{{> ui/icon name="pause" class="h-4 w-4"}}إيقاف</a>{{/if}}
+      {{#if permissions.canDelete}}<a href="/staff/{{staff.id}}/delete" hx-get="/staff/{{staff.id}}/delete"
+          hx-target="#modal-root"
+          class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700">{{> ui/icon name="trash" class="h-4 w-4"}}حذف</a>{{/if}}
+    </div>
+  </header>
+  <div class="grid items-start gap-5 xl:grid-cols-5">
+    <div class="space-y-4 xl:col-span-3">
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <header class="border-b border-slate-100 p-4">
+          <h2 class="font-extrabold">ملخص التعيينات</h2>
+          <p class="text-xs leading-6 text-slate-600">تسري أي تغييرات من الطلب التالي للحساب</p>
+        </header>
+        <div class="grid gap-4 p-4 sm:grid-cols-2">
+          {{> staff/assignment-card heading="الحلقات" items=assignments.classes}}
+          {{> staff/assignment-card heading="الأنشطة" items=assignments.activities}}
+          {{> staff/assignment-card heading="قوالب الصلاحيات" items=assignments.templates}}
+          <div class="rounded-2xl bg-slate-50 p-4">
+            <h3 class="text-xs text-slate-600">المنح المباشرة</h3>
+            <p class="mt-1 text-sm">{{#if assignments.directGrantsLabel}}{{assignments.directGrantsLabel}}{{else}}تُتاح
+                في إصدار لاحق{{/if}}</p>
+          </div>
+        </div>
+      </section>
+      <a href="/staff/{{staff.id}}/permissions"
+        class="flex min-h-16 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4"><span
+          class="rounded-xl bg-[#f0faf9] p-2 text-[#287a73]">{{> ui/icon name="check-shield"}}</span>
+        <div class="flex-1">
+          <h2 class="text-sm font-bold">الصلاحيات الفعلية</h2>
+          <p class="text-xs leading-6 text-slate-600">{{effectivePermissionCount}} صلاحية سارية — مع مصدر كل منها</p>
+        </div>{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}
+      </a>
+    </div>
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white xl:col-span-2">
+      <h2 class="border-b border-slate-100 p-4 font-extrabold">البيانات الشخصية</h2>
+      <dl class="px-4 py-2 text-sm">
+        <div class="flex flex-wrap justify-between gap-3 border-b border-dashed border-slate-200 py-4">
+          <dt class="text-slate-600">تاريخ الميلاد</dt>
+          <dd dir="ltr" class="font-bold">{{#if staff.dateOfBirthLabel}}{{staff.dateOfBirthLabel}}{{else}}لم
+              يُستكمل{{/if}}</dd>
+        </div>
+        <div class="flex flex-wrap justify-between gap-3 border-b border-dashed border-slate-200 py-4">
+          <dt class="text-slate-600">الرقم الوطني</dt>
+          <dd dir="ltr" class="break-anywhere font-bold">{{#if staff.nationalId}}{{staff.nationalId}}{{else}}لم
+              يُستكمل{{/if}}</dd>
+        </div>
+        <div class="flex flex-wrap justify-between gap-3 border-b border-dashed border-slate-200 py-4">
+          <dt class="text-slate-600">الهاتف</dt>
+          <dd dir="ltr" class="font-bold">{{#if staff.phone}}{{staff.phone}}{{else}}لم يُستكمل{{/if}}</dd>
+        </div>
+        <div class="flex flex-wrap justify-between gap-3 py-4">
+          <dt class="text-slate-600">تفعيل الحساب</dt>
+          <dd class="font-bold">{{#if staff.activatedAtLabel}}{{staff.activatedAtLabel}}{{else}}لم يُفعّل بعد{{/if}}
+          </dd>
+        </div>
+      </dl>
+    </section>
+  </div>
+</section>

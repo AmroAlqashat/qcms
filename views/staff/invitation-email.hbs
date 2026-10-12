@@ -1,0 +1,10 @@
+{{!-- Extra supporting fragment. Full page: main, isHtmx=false. HTMX: layout=false, isHtmx=true. --}}
+{{#unless isHtmx}}{{> staff/list}}{{/unless}}
+{{#> ui/dialog id="invitation-email-dialog" heading="تصحيح بريد الدعوة" icon="edit" description="تصحيح البريد لا يكشف كلمة المرور السابقة"}}
+  <form action="/staff/invitations/{{staff.id}}/email" method="post" hx-post="/staff/invitations/{{staff.id}}/email"
+    hx-target="#invitation-email-dialog" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']"
+    class="space-y-4">
+    {{> ui/csrf}}{{> ui/form-error error=error}}{{> ui/field id="correct-email" name="email" label="البريد الإلكتروني" type="email" value=form.email required=true dir="ltr" maxlength="254" error=errors.email}}
+    <div class="flex justify-end gap-2">{{> ui/cancel}}{{> ui/submit label="حفظ البريد"}}</div>
+  </form>
+{{/ui/dialog}}

@@ -38,8 +38,7 @@ export class RolesErrorFilter implements ExceptionFilter {
       return;
     }
 
-    // Use whichever name your route uses for the role id; delete the other one.
-    const roleId = [request.params.id, request.params.rid].find(
+    const roleId = [request.params.id].find(
       (value): value is string => typeof value === 'string',
     );
     const requestBody = request.body as Record<string, unknown>;
