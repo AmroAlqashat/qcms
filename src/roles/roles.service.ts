@@ -304,31 +304,60 @@ export class RolesService {
   }
 
   private async validateRoleValues(permissions: RolePermissionDto[]) {
-    // Each permission must exist in the catalog, and its scope must be allowed
-    const rows: { permissionId: string; scopeType: ScopeType }[] = [];
+    if (permissions.length === 0) return [];
 
-    for (const item of permissions) {
-      const perm = await this.prisma.permission.findUnique({
-        where: { resource_action: { resource: item.resource, action: item.action } },
-      });
+    const catalog = await this.prisma.permission.findMany({
+      where: {
+        OR: permissions.map(({ resource, action }) => ({
+          resource,
+          action,
+        })),
+      },
+      select: {
+        id: true,
+        resource: true,
+        action: true,
+        allowedScopes: true,
+      },
+    });
 
-      if (!perm) {
+    const key = (resource: string, action: string) =>
+      JSON.stringify([resource, action]);
+
+    const permissionsByKey = new Map(
+      catalog.map((permission) => [
+        key(permission.resource, permission.action),
+        permission,
+      ]),
+    );
+
+    return permissions.map((item) => {
+      const permission = permissionsByKey.get(
+        key(item.resource, item.action),
+      );
+
+      if (!permission) {
         throw new UnprocessableEntityException({
           message: 'صلاحية غير موجودة',
-          errors: { permissions: `صلاحية غير موجودة: ${item.resource} / ${item.action}` },
+          errors: {
+            permissions: `صلاحية غير موجودة: ${item.resource} / ${item.action}`,
+          },
         });
       }
 
-      if (!perm.allowedScopes.includes(item.scope)) {
+      if (!permission.allowedScopes.includes(item.scope)) {
         throw new UnprocessableEntityException({
           message: 'نطاق غير مسموح',
-          errors: { permissions: `النطاق غير مسموح للصلاحية: ${item.resource} / ${item.action}` },
+          errors: {
+            permissions: `النطاق غير مسموح للصلاحية: ${item.resource} / ${item.action}`,
+          },
         });
       }
 
-      rows.push({ permissionId: perm.id, scopeType: item.scope });
-    }
-
-    return rows;
+      return {
+        permissionId: permission.id,
+        scopeType: item.scope,
+      };
+    });
   }
 }

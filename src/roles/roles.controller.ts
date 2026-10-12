@@ -37,11 +37,13 @@ export class RolesController {
   @Get('edit/:id')
   @Render('roles/roles-editor')
   async showEditRolePage(@Param('id') roleId: string) {
-    const role = await this.rolesService.getRoleById(roleId);
 
-    const permissionsData = await this.rolesService.getPermissionsWithCategory(roleId);
+    const [role, permissionsData, accountCount] = await Promise.all([
+      this.rolesService.getRoleById(roleId),
+      this.rolesService.getPermissionsWithCategory(roleId),
+      this.rolesService.getRoleAccountCount(roleId),
+    ])
 
-    const accountCount = await this.rolesService.getRoleAccountCount(roleId);
 
     return {
       role,
