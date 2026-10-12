@@ -16,7 +16,7 @@
               {{templatesSummary}}{{/if}}{{#if classesSummary}} · الحلقات: {{classesSummary}}{{/if}}</p>
         </div>
         <div class="flex shrink-0 flex-col items-center gap-2 sm:flex-row sm:gap-4">
-          {{> staff/badge status=status}}{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}</div>
+          {{> staff/staff-status-badge status=status}}{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}</div>
       </a>
     {{else}}
       <div class="px-5 py-12 text-center">

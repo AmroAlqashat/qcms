@@ -8,7 +8,7 @@
       <div class="min-w-0">
         <h1 id="staff-name" class="text-xl font-extrabold">{{staff.fullName}}</h1>
         <p dir="ltr" class="break-anywhere text-right text-xs leading-7 text-slate-600">{{staff.email}}</p>
-        <div class="mt-1 flex flex-wrap items-center gap-2">{{> staff/badge status=staff.status}}<span
+        <div class="mt-1 flex flex-wrap items-center gap-2">{{> staff/staff-status-badge status=staff.status}}<span
             class="rounded-full bg-slate-100 px-3 py-1 text-xs">{{staff.jobTitle}}</span><span
             class="text-xs text-slate-600">المسمى وصف فقط ولا يمنح صلاحيات</span></div>
       </div>
@@ -37,9 +37,9 @@
           <p class="text-xs leading-6 text-slate-600">تسري أي تغييرات من الطلب التالي للحساب</p>
         </header>
         <div class="grid gap-4 p-4 sm:grid-cols-2">
-          {{> staff/assignment-card heading="الحلقات" items=assignments.classes}}
-          {{> staff/assignment-card heading="الأنشطة" items=assignments.activities}}
-          {{> staff/assignment-card heading="قوالب الصلاحيات" items=assignments.templates}}
+          {{> staff/staff-assignment-card heading="الحلقات" items=assignments.classes}}
+          {{> staff/staff-assignment-card heading="الأنشطة" items=assignments.activities}}
+          {{> staff/staff-assignment-card heading="قوالب الصلاحيات" items=assignments.templates}}
           <div class="rounded-2xl bg-slate-50 p-4">
             <h3 class="text-xs text-slate-600">المنح المباشرة</h3>
             <p class="mt-1 text-sm">{{#if assignments.directGrantsLabel}}{{assignments.directGrantsLabel}}{{else}}تُتاح

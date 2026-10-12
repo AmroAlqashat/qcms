@@ -33,7 +33,7 @@ export class InviteStaffErrorFilter implements ExceptionFilter {
         : undefined;
 
     res.status(status).render(
-      'staff/invite-staff-error',
+      'staff/staff-invitation-error-page',
       staffShell({
         title: 'تعذّر إنشاء الحساب',
         form: req.body as Partial<InviteStaffDto>,

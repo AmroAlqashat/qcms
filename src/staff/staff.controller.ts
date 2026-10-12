@@ -20,7 +20,7 @@ export class StaffController {
   constructor(private readonly staffService: StaffService) { }
 
   @Get('invite')
-  @Render('staff/invite-staff')
+  @Render('staff/staff-invitation-page')
   showInviteForm() {
     return staffShell({
       title: 'دعوة موظف',
@@ -46,7 +46,7 @@ export class StaffController {
     }
 
     response.render(
-      'staff/invite-temp-password',
+      'staff/temporary-password-page',
       staffShell({
         title: 'تم إنشاء الحساب',
         // TODO: compute from the permissions service once the cancel route exists
