@@ -8,8 +8,19 @@
     </button>
     <nav aria-label="مسار الصفحة" class="flex items-center gap-2 text-xs sm:text-sm">
       <a href="{{#if (eq activeNav "roles")}}/roles{{else}}/staff{{/if}}" class="text-[#287a73]">QCMS</a>
-      <span aria-hidden="true">/</span>
+      {{> ui/icon name="chevron" class="h-3 w-3 text-slate-400"}}
       <span>{{#if sectionTitle}}{{sectionTitle}}{{else}}الموظفون{{/if}}</span>
     </nav>
+  </div>
+  <div class="flex max-w-full items-center gap-2">
+    <a href="/staff"
+      class="hidden min-h-9 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-600 sm:flex">
+      {{> ui/icon name="search" class="h-4 w-4"}}بحث عن موظف
+    </a>
+    {{#if currentUser.email}}
+      <span dir="ltr"
+        class="max-w-[220px] truncate rounded-full border border-[#a8dfdc] bg-[#f0faf9] px-3 py-1.5 text-xs text-[#286d6b]"
+        title="{{currentUser.email}}">{{currentUser.email}}</span>
+    {{/if}}
   </div>
 </header>

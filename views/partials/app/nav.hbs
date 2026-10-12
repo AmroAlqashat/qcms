@@ -1,4 +1,8 @@
 <nav aria-label="القائمة الرئيسية" class="flex flex-1 flex-col gap-1 p-2 text-sm">
+  <a href="/dashboard"
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
+    {{> ui/icon name="home"}}لوحة التحكم
+  </a>
   <p class="px-3 pb-1 pt-5 text-xs text-[#81aaa4]">الإدارة</p>
   <a href="/staff" {{#if (eq activeNav "staff")}}aria-current="page"{{/if}}
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "staff")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
@@ -8,4 +12,33 @@
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "roles")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
     {{> ui/icon name="layers"}}قوالب الصلاحيات
   </a>
+  <a href="/audit"
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
+    {{> ui/icon name="archive"}}سجل التدقيق
+  </a>
+  <a href="/settings"
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
+    {{> ui/icon name="settings"}}إعدادات المركز
+  </a>
+  <p class="px-3 pb-1 pt-5 text-xs text-[#81aaa4]">حسابي</p>
+  <a href="/account/permissions"
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
+    {{> ui/icon name="check-shield"}}صلاحياتي
+  </a>
+  <div class="mt-auto border-t border-white/10 pt-3">
+    <a href="/notifications"
+      class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
+      {{> ui/icon name="bell"}}الإشعارات
+      {{#if notificationCount}}
+        <span class="mr-auto rounded-full bg-[#c58a28] px-2 text-xs text-white">{{notificationCount}}</span>
+      {{/if}}
+    </a>
+    <form action="/auth/logout" method="post">
+      {{> ui/csrf}}
+      <button type="submit"
+        class="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
+        {{> ui/icon name="logout"}}تسجيل الخروج
+      </button>
+    </form>
+  </div>
 </nav>
