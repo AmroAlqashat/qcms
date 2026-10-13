@@ -3,7 +3,7 @@
 /node_modules
 /build
 /tmp
-/package-lock.json
+/public/css/source.css
 
 # Logs
 logs
