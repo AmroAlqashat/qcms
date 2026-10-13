@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
+  Query,
   Render,
   Req,
   Res,
@@ -14,6 +16,7 @@ import { StaffService } from './staff.service';
 import { wantsHtml } from '../common/wants-html';
 import { staffShell } from './helpers/staff-shell';
 import { InviteStaffErrorFilter } from './helpers/invite-staff-error.filter';
+import { FilteredStaffDto } from './dto/filter-staff.dto';
 
 @Controller('staff')
 export class StaffController {
@@ -21,11 +24,15 @@ export class StaffController {
 
   @Get()
   @Render('staff/staff-page')
-  async showStaffPage() {
-    const staffList = await this.staffService.showStaff();
-
+  async showStaffPage(@Query() filterDto: FilteredStaffDto) {
+    const [staffList, filterOptions] = await Promise.all([
+      this.staffService.showFilteredStaff(filterDto),
+      this.staffService.showStaffFilterOptions(filterDto.halaqa, filterDto.role),
+    ]);
     return {
       staffList,
+      filters: filterDto,
+      filterOptions,
       activeNav: 'staff'
     };
   }
@@ -51,6 +58,34 @@ export class StaffController {
       title: 'دعوة موظف',
       form: {},
     });
+  }
+
+  @Get(':id')
+  @Render('staff/staff-profile-page')
+  async showOneStaff(@Param('id') id: string) {
+    const staff = await this.staffService.showOneStaff(id);
+
+    return {
+      staff: {
+        ...staff,
+        initial: staff.fullName.trim().charAt(0),
+        dateOfBirthLabel: staff.dateOfBirth?.toLocaleDateString('ar'),
+      },
+      assignments: {
+        classes: staff.classAssignments.map(({ halaqa }) => halaqa),
+        activities: staff.activityAssignments.map(({ activity }) => activity),
+        templates: staff.roleGrants.map(({ role }) => role),
+        directGrantsLabel: 'تُتاح في إصدار لاحق',
+      },
+      permissions: {
+        canEditStaff: false,
+        canManageAssignments: false,
+        canDeactivate: false,
+        canDelete: false,
+      },
+      effectivePermissionCount: 0,
+      activeNav: 'staff',
+    };
   }
 
   @Post('invite')

@@ -1,10 +1,11 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
 import { AuditAction, AuditTarget, Prisma, StaffStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './helpers/generate-temp-password.util'
 import * as argon2 from 'argon2';
+import { FilteredStaffDto } from './dto/filter-staff.dto';
 
 
 @Injectable()
@@ -15,37 +16,123 @@ export class StaffService {
     private readonly audit: AuditService
   ) { }
 
-  async showStaff(staffId?: string) {
-    type selectType = {
-      id: boolean,
-      fullName: boolean,
-      email: boolean,
-      jobTitle: boolean,
-      status: boolean,
-    }
+  async showFilteredStaff(filterDto: FilteredStaffDto){
+    const {searchField, status, halaqa, role, page, limit} = filterDto;
+    const skip = (page! - 1) * limit!;
 
-    const select: selectType = {
-      id: true,
-      fullName: true,
-      email: true,
-      jobTitle: true,
-      status: true,
-    }
+    //validate foreign keys
+    await this.validateRelations(halaqa, role);
 
-    if (!staffId) {
-      const staff = await this.prisma.staff.findMany({
-        select,
+    const where: Prisma.StaffWhereInput = {};
+
+    //define search parameters
+    if(searchField){
+      where.OR = [
+        {fullName: {contains: searchField, mode: 'insensitive'}},
+        {jobTitle: {contains: searchField, mode: 'insensitive'}}
+      ]
+    }
+    if(status)
+      where.status = status;
+    else
+      where.status = { not: StaffStatus.PENDING };
+    if(halaqa)
+      where.classAssignments = {some: {halaqaId: halaqa}}
+    if(role)
+      where.roleGrants = {some: {roleId: role}}
+    //search
+    return this.prisma.staff.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async showStaffFilterOptions(selectedHalaqaId?: string, selectedRoleId?: string) {
+    const [classes, templates] = await Promise.all([
+      this.prisma.halaqa.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.role.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+
+    return {
+      classes: classes.map((item) => ({
+        ...item,
+        selected: item.id === selectedHalaqaId,
+      })),
+      templates: templates.map((item) => ({
+        ...item,
+        selected: item.id === selectedRoleId,
+      })),
+    };
+  }
+
+  private async validateRelations(halaqaId?: string, roleId?: string): Promise<void> {
+    if (halaqaId) {
+      const classExists = await this.prisma.halaqa.findUnique({
+        where: { id: halaqaId },
+        select: { id: true },
       });
-
-      return staff;
-    } else {
-      const staff = await this.prisma.staff.findUnique({
-        where: { id: staffId },
-        select,
-      });
-
-      return staff;
+      if (!classExists) throw new BadRequestException(`Class ID "${halaqaId}" does not exist.`);
     }
+
+    if (roleId) {
+      const roleExists = await this.prisma.role.findUnique({
+        where: { id: roleId },
+        select: { id: true },
+      });
+      if (!roleExists) throw new BadRequestException(`Role ID "${roleId}" does not exist.`);
+    }
+  }
+
+  async showOneStaff(staffId: string) {
+    const staff = await this.prisma.staff.findUnique({
+      where: { id: staffId },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        jobTitle: true,
+        status: true,
+        dateOfBirth: true,
+        nationalId: true,
+        phone: true,
+        classAssignments: {
+          select: {
+            halaqa: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+        activityAssignments: {
+          select: {
+            activity: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+        roleGrants: {
+          where: { revokedAt: null },
+          select: {
+            role: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!staff) {
+      throw new NotFoundException('الموظف غير موجود');
+    }
+
+    return staff;
   }
 
   async showPendingStaff() {
