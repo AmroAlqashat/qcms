@@ -1,22 +1,24 @@
 <section id="staff-results" aria-label="نتائج الموظفين" aria-live="polite">
-  {{#if deletedNotice}}
+  {{#if deletedNotice }}
     <div class="mb-4">
-      {{> ui/alert message="الحسابات المحذوفة مخفية افتراضيًا. تظهر هنا مع الاحتفاظ بتاريخها وسجل إجراءاتها."}}</div>
+      {{> ui/alert message="الحسابات المحذوفة مخفية افتراضيًا. تظهر هنا مع الاحتفاظ بتاريخها وسجل إجراءاتها."}}
+    </div>
   {{/if}}
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-    {{#each staffList}}
+    {{#each staffList }}
       <a href="/staff/{{id}}"
-        class="flex min-h-[88px] items-center gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0 hover:bg-[#f8fcfb] sm:px-5">
+         class="flex min-h-[88px] items-center gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0 hover:bg-[#f8fcfb] sm:px-5">
         <span aria-hidden="true"
-          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f0faf9] text-lg font-bold text-[#287a73]">{{initial}}</span>
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f0faf9] text-[#287a73]">{{> ui/icon name="user" class="h-6 w-6"}}</span>
         <div class="min-w-0 flex-1">
           <h2 class="font-bold">{{fullName}}</h2>
-          <p dir="ltr" class="break-anywhere text-right text-xs leading-6 text-slate-600">{{email}}</p>
-          <p class="text-xs leading-6 text-slate-600">{{jobTitle}}{{#if templatesSummary}} · قوالب:
-              {{templatesSummary}}{{/if}}{{#if classesSummary}} · الحلقات: {{classesSummary}}{{/if}}</p>
+          <p dir="ltr"
+             class="break-anywhere text-right text-xs leading-6 text-slate-600">{{email}}</p>
+          <p class="text-xs leading-6 text-slate-600">{{jobTitle}}</p>
         </div>
         <div class="flex shrink-0 flex-col items-center gap-2 sm:flex-row sm:gap-4">
-          {{> staff/staff-status-badge status=status}}{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}</div>
+          {{> staff/staff-status-badge status=status}}{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}
+        </div>
       </a>
     {{else}}
       <div class="px-5 py-12 text-center">
@@ -25,16 +27,21 @@
       </div>
     {{/each}}
   </div>
-  {{#if pagination}}
-    <nav aria-label="صفحات النتائج" class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+  {{#if pagination }}
+    <nav aria-label="صفحات النتائج"
+         class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
       <p class="text-slate-600">{{pagination.label}}</p>
-      <div class="flex gap-2">{{#if pagination.previousUrl}}<a href="{{pagination.previousUrl}}"
-            hx-get="{{pagination.previousUrl}}" hx-target="#staff-results" hx-select="#staff-results"
-            hx-swap="outerHTML"
-            class="rounded-lg border border-slate-200 bg-white px-4 py-2">السابق</a>{{/if}}{{#if pagination.nextUrl}}<a
-            href="{{pagination.nextUrl}}" hx-get="{{pagination.nextUrl}}" hx-target="#staff-results"
-            hx-select="#staff-results" hx-swap="outerHTML"
-            class="rounded-lg border border-slate-200 bg-white px-4 py-2">التالي</a>{{/if}}</div>
+      <div class="flex gap-2">{{#if pagination.previousUrl }}<a href="{{pagination.previousUrl}}"
+   hx-get="{{pagination.previousUrl}}"
+   hx-target="#staff-results"
+   hx-select="#staff-results"
+   hx-swap="outerHTML"
+   class="rounded-lg border border-slate-200 bg-white px-4 py-2">السابق</a>{{/if}}{{#if pagination.nextUrl }}<a href="{{pagination.nextUrl}}"
+   hx-get="{{pagination.nextUrl}}"
+   hx-target="#staff-results"
+   hx-select="#staff-results"
+   hx-swap="outerHTML"
+   class="rounded-lg border border-slate-200 bg-white px-4 py-2">التالي</a>{{/if}}</div>
     </nav>
   {{/if}}
 </section>

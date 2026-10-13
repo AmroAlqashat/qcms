@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './helpers/generate-temp-password.util'
 import * as argon2 from 'argon2';
 
+
 @Injectable()
 export class StaffService {
 
@@ -13,6 +14,54 @@ export class StaffService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService
   ) { }
+
+  async showStaff(staffId?: string) {
+    type selectType = {
+      id: boolean,
+      fullName: boolean,
+      email: boolean,
+      jobTitle: boolean,
+      status: boolean,
+    }
+
+    const select: selectType = {
+      id: true,
+      fullName: true,
+      email: true,
+      jobTitle: true,
+      status: true,
+    }
+
+    if (!staffId) {
+      const staff = await this.prisma.staff.findMany({
+        select,
+      });
+
+      return staff;
+    } else {
+      const staff = await this.prisma.staff.findUnique({
+        where: { id: staffId },
+        select,
+      });
+
+      return staff;
+    }
+  }
+
+  async showPendingStaff() {
+    const staff = await this.prisma.staff.findMany({
+      where: { status: 'PENDING', mustChangePassword: true },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        jobTitle: true,
+        status: true,
+      },
+    });
+
+    return staff;
+  }
 
   async inviteStaff(inviteStaffDto: InviteStaffDto) {
 

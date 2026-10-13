@@ -21,14 +21,27 @@ export class StaffController {
 
   @Get()
   @Render('staff/staff-page')
-  showStaffPage() {
-    return { activeNav: 'staff' };
+  async showStaffPage() {
+    const staffList = await this.staffService.showStaff();
+
+    return {
+      staffList,
+      activeNav: 'staff'
+    };
   }
 
   @Get('invitations')
   @Render('staff/pending-invitations-page')
-  showStaffInvitationPage() {
-    return { activeNav: 'staff' };
+  async showStaffInvitationPage() {
+    const invitations = await this.staffService.showPendingStaff();
+
+    return {
+      invitations: invitations.map((invite) => ({
+        ...invite,
+        canCancel: true,
+      })),
+      activeNav: 'staff',
+    };
   }
 
   @Get('invite')
