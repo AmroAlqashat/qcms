@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, UnprocessableEntityException } from '@nestjs/common';
+import { ValidationPipe, UnprocessableEntityException, Logger } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
@@ -58,4 +58,7 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  console.log(error);
+  process.exitCode = 1;
+});
