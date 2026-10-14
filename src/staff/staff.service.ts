@@ -11,6 +11,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './helpers/generate-temp-password.util';
 import * as argon2 from 'argon2';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
+import { EditStaffDto } from './dto/staff-edit.dto';
+import { error } from 'console';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class StaffService {
@@ -18,6 +21,43 @@ export class StaffService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
+
+  
+  async editStaff(id:string, editStaffDto: EditStaffDto) {
+    try{
+      return await this.prisma.$transaction(async (tx) => {
+        const staff = await tx.staff.update({
+          where: {id: id},
+          data: {
+            email: editStaffDto.email,
+            fullName: editStaffDto.fullName,
+            jobTitle: editStaffDto.jobTitle,
+            phone: editStaffDto.phoneNumber,
+            dateOfBirth: editStaffDto.dateOfBirth
+          }
+        });
+        await this.audit.record(tx, {
+          actorId: id,
+          actionType: 'STAFF_UPDATED',
+          targetType: 'STAFF',
+          targetId: id,
+          isSuccess: true
+        });
+        return staff;
+      });
+    }
+      catch(error: unknown){
+        if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new ConflictException({
+          message: 'البريد الإلكتروني مستخدم بالفعل',
+          errors: { name: 'البريد الإلكتروني مستخدم بالفعل' },
+        });
+        throw error;
+      }
+  }
 
   async cancelPendingInvitation(staffId: string) {
     // Using deleteMany here because prisma.staff.delete does not allow us to put more than one condition + deleteMany with unique id is the same.
@@ -60,6 +100,23 @@ export class StaffService {
       take: limit,
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async showStaffEditPage(staffId: string){
+    const staff = await this.prisma.staff.findUnique({
+      where: {id: staffId},
+      select: {
+        email: true,
+        fullName: true,
+        jobTitle: true,
+        dateOfBirth: true,
+        phone: true
+      }
+    })
+
+    if(!staff)
+      throw new NotFoundException('الموظف غير موجود');
+    return staff;
   }
 
   async showStaffFilterOptions(

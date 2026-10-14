@@ -17,6 +17,7 @@ import { wantsHtml } from '../common/wants-html';
 import { staffShell } from './helpers/staff-shell';
 import { InviteStaffErrorFilter } from './helpers/invite-staff-error.filter';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
+import { EditStaffDto } from './dto/staff-edit.dto';
 
 @Controller('staff')
 export class StaffController {
@@ -59,6 +60,24 @@ export class StaffController {
     await this.staffService.cancelPendingInvitation(staffId);
 
     return { success: true };
+  }
+
+  @Get(':id/edit')
+  @Render('staff/staff-edit-profile-page')
+  async showEditStaffForm(@Param('id') staffId:string){
+    const staff = await this.staffService.showStaffEditPage(staffId);
+
+    return{
+      staff: {
+        ...staff,
+        initial: staff.fullName.trim().charAt(0),
+        dateOfBirthLabel: staff.dateOfBirth?.toLocaleDateString('ar'),
+      },
+    }
+  }
+  @Post(':id/edit')
+  async editStaff(@Param('id') id: string, @Body() editStaffDto: EditStaffDto){
+    const newStaff = this.staffService.editStaff(id, editStaffDto)
   }
 
   @Get('invite')

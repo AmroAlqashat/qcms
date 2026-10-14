@@ -5,7 +5,8 @@
     {{> ui/field id="edit-full-name" name="fullName" label="الاسم الكامل" value=form.fullName required=true maxlength="120" error=errors.fullName}}
     {{> ui/field id="edit-job-title" name="jobTitle" label="المسمى الوظيفي" value=form.jobTitle required=true maxlength="80" hint="وصف فقط — تغييره لا يغيّر أي صلاحية." error=errors.jobTitle}}
     <div class="grid gap-4 sm:grid-cols-2">
-      {{> ui/field id="edit-phone" name="phone" label="الهاتف" type="tel" value=form.phone required=true dir="ltr" maxlength="20" error=errors.phone}}
+      {{> ui/field id="edit-phone" name="phone" label="الهاتف" type="tel" value=form.phone required=true dir="ltr" maxlength="15" error=errors.phone}}
+      {{> ui/field id="edit-email" name="email" label="البريد الإلكتروني" type="email" value=form.email required=true maxlength="254" error=errors.email}}
       {{> ui/field id="edit-birth" name="dateOfBirth" label="تاريخ الميلاد" type="date" value=form.dateOfBirth required=true dir="ltr" max=today error=errors.dateOfBirth}}
     </div>
     {{#if permissions.canChangeStatus}}<label
