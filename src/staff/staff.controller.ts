@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Query,
+  Redirect,
   Render,
   Req,
   Res,
@@ -76,6 +77,7 @@ export class StaffController {
     }
   }
   @Post(':id/edit')
+  @Redirect('/staff/:id')
   async editStaff(@Param('id') id: string, @Body() editStaffDto: EditStaffDto){
     const newStaff = this.staffService.editStaff(id, editStaffDto)
   }
