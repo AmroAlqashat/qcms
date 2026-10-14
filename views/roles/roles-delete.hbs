@@ -1,57 +1,60 @@
-<a href="/roles"
-   class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-[#287a73]">
-  {{> ui/icon name="arrow" class="h-4 w-4"}}قوالب الصلاحيات
-</a>
-<section id="roles-delete"
-         aria-labelledby="roles-delete-heading"
-         class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-  <header class="flex items-center justify-between gap-4 border-b-2 border-[#c68c2b] bg-[#195954] p-5 text-white">
-    <div>
-      <h1 id="roles-delete-heading" class="text-lg font-extrabold">تأكيد حذف قالب الصلاحيات</h1>
-      <p class="mt-1 text-xs leading-6 text-[#c0e3dc]">يرجى مراجعة تفاصيل القالب قبل تأكيد الحذف.</p>
-    </div>
-    <span class="rounded-xl bg-white/10 p-3 text-[#edbc5a]">{{> ui/icon name="folder"}}</span>
-  </header>
-  <div class="space-y-5 p-4 sm:p-5">
-    {{> ui/form-error error=error}}
-    <div class="rounded-xl border border-[#a8dfdc] bg-[#f0faf9] p-4">
-      <dl class="space-y-3">
-        <div>
-          <dt class="text-xs font-bold text-[#287a73]">اسم القالب</dt>
-          <dd class="mt-1 text-base font-extrabold text-[#12383b]">
-            {{role.name}}
-          </dd>
-        </div>
-        <div>
-          <dt class="text-xs font-bold text-[#287a73]">وصف القالب</dt>
-          {{#if role.description }}
-            <dd class="mt-1 whitespace-pre-line text-sm leading-7 text-slate-700">
-              {{role.description}}
+<div id="roles-delete">
+  {{#unless isHtmx}}
+    <a href="/roles"
+       class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-[#287a73]">
+      {{> ui/icon name="arrow" class="h-4 w-4"}}قوالب الصلاحيات
+    </a>
+  {{/unless}}
+  <section aria-labelledby="roles-delete-heading"
+           class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <header class="flex items-center justify-between gap-4 border-b-2 border-[#c68c2b] bg-[#195954] p-5 text-white">
+      <div>
+        <h1 id="roles-delete-heading" class="text-lg font-extrabold">تأكيد حذف قالب الصلاحيات</h1>
+        <p class="mt-1 text-xs leading-6 text-[#c0e3dc]">يرجى مراجعة تفاصيل القالب قبل تأكيد الحذف.</p>
+      </div>
+      <span class="rounded-xl bg-white/10 p-3 text-[#edbc5a]">{{> ui/icon name="folder"}}</span>
+    </header>
+    <div class="space-y-5 p-4 sm:p-5">
+      {{> ui/form-error error=error}}
+      <div class="rounded-xl border border-[#a8dfdc] bg-[#f0faf9] p-4">
+        <dl class="space-y-3">
+          <div>
+            <dt class="text-xs font-bold text-[#287a73]">اسم القالب</dt>
+            <dd class="mt-1 text-base font-extrabold text-[#12383b]">
+              {{role.name}}
             </dd>
-          {{else}}
-            <dd class="mt-1 text-sm leading-7 text-slate-500">
-              لا يوجد وصف لهذا القالب.
-            </dd>
-          {{/if}}
-        </div>
-      </dl>
+          </div>
+          <div>
+            <dt class="text-xs font-bold text-[#287a73]">وصف القالب</dt>
+            {{#if role.description }}
+              <dd class="mt-1 whitespace-pre-line text-sm leading-7 text-slate-700">
+                {{role.description}}
+              </dd>
+            {{else}}
+              <dd class="mt-1 text-sm leading-7 text-slate-500">
+                لا يوجد وصف لهذا القالب.
+              </dd>
+            {{/if}}
+          </div>
+        </dl>
+      </div>
+      <p class="text-sm leading-7 text-slate-600">هذا الإجراء نهائي ولا يمكن التراجع عنه.</p>
+      <div class="flex flex-wrap gap-2">
+        <form action="/roles/delete/{{role.id}}"
+              method="post"
+              hx-post="/roles/delete/{{role.id}}"
+              hx-target="#roles-delete"
+              hx-swap="outerHTML">
+          <button type="submit"
+                  class="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-800">
+            تأكيد الحذف
+          </button>
+        </form>
+        <a href="/roles/edit/{{role.id}}"
+           class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-5 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50">
+          إلغاء
+        </a>
+      </div>
     </div>
-    <p class="text-sm leading-7 text-slate-600">هذا الإجراء نهائي ولا يمكن التراجع عنه.</p>
-    <div class="flex flex-wrap gap-2">
-      <form action="/roles/delete/{{role.id}}"
-            method="post"
-            hx-post="/roles/delete/{{role.id}}"
-            hx-target="#roles-delete"
-            hx-swap="outerHTML">
-        <button type="submit"
-                class="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-800">
-          تأكيد الحذف
-        </button>
-      </form>
-      <a href="/roles/edit/{{role.id}}"
-         class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-5 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50">
-        إلغاء
-      </a>
-    </div>
-  </div>
-</section>
+  </section>
+</div>
