@@ -51,6 +51,13 @@ export class StaffController {
     };
   }
 
+  @Post('invitations/cancel/:id')
+  async cancelPendingInvitation(@Param('id') staffId: string) {
+    await this.staffService.cancelPendingInvitation(staffId);
+
+    return { success: true };
+  }
+
   @Get('invite')
   @Render('staff/staff-invitation-page')
   showInviteForm() {

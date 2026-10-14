@@ -16,8 +16,22 @@ export class StaffService {
     private readonly audit: AuditService
   ) { }
 
-  async showFilteredStaff(filterDto: FilteredStaffDto){
-    const {searchField, status, halaqa, role, page, limit} = filterDto;
+  async cancelPendingInvitation(staffId: string) {
+    // Using deleteMany here because prisma.staff.delete does not allow us to put more than one condition + deleteMany with unique id is the same.
+    const { count } = await this.prisma.staff.deleteMany({
+      where: {
+        id: staffId,
+        status: 'PENDING',
+      }
+    });
+
+    if (count === 0) {
+      throw new NotFoundException('لم يتم العثور على الحساب المعلق');
+    }
+  }
+
+  async showFilteredStaff(filterDto: FilteredStaffDto) {
+    const { searchField, status, halaqa, role, page, limit } = filterDto;
     const skip = (page! - 1) * limit!;
 
     //validate foreign keys
@@ -26,20 +40,20 @@ export class StaffService {
     const where: Prisma.StaffWhereInput = {};
 
     //define search parameters
-    if(searchField){
+    if (searchField) {
       where.OR = [
-        {fullName: {contains: searchField, mode: 'insensitive'}},
-        {jobTitle: {contains: searchField, mode: 'insensitive'}}
+        { fullName: { contains: searchField, mode: 'insensitive' } },
+        { jobTitle: { contains: searchField, mode: 'insensitive' } }
       ]
     }
-    if(status)
+    if (status)
       where.status = status;
     else
       where.status = { not: StaffStatus.PENDING };
-    if(halaqa)
-      where.classAssignments = {some: {halaqaId: halaqa}}
-    if(role)
-      where.roleGrants = {some: {roleId: role}}
+    if (halaqa)
+      where.classAssignments = { some: { halaqaId: halaqa } }
+    if (role)
+      where.roleGrants = { some: { roleId: role } }
     //search
     return this.prisma.staff.findMany({
       where,
