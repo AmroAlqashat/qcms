@@ -105,7 +105,7 @@ export class StaffService {
     }
   }
 
-  async showOneStaff(staffId: string) {
+  async showStaffProfile(staffId: string) {
     const staff = await this.prisma.staff.findUnique({
       where: { id: staffId },
       select: {

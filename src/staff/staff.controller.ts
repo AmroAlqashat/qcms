@@ -69,8 +69,8 @@ export class StaffController {
 
   @Get(':id')
   @Render('staff/staff-profile-page')
-  async showOneStaff(@Param('id') id: string) {
-    const staff = await this.staffService.showOneStaff(id);
+  async showStaffProfile(@Param('id') id: string) {
+    const staff = await this.staffService.showStaffProfile(id);
 
     return {
       staff: {
@@ -85,10 +85,10 @@ export class StaffController {
         directGrantsLabel: 'تُتاح في إصدار لاحق',
       },
       permissions: {
-        canEditStaff: false,
-        canManageAssignments: false,
-        canDeactivate: false,
-        canDelete: false,
+        canEditStaff: true,
+        canManageAssignments: true,
+        canDeactivate: true,
+        canDelete: true,
       },
       effectivePermissionCount: 0,
       activeNav: 'staff',
