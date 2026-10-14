@@ -1,9 +1,7 @@
 import { Transform } from 'class-transformer';
 import { StaffStatus } from '@prisma/client';
-import type { Halaqa, Role } from '@prisma/client';
 import {
   IsEnum,
-  IsIBAN,
   IsInt,
   IsOptional,
   Max,
@@ -17,7 +15,9 @@ export class FilteredStaffDto {
   searchField?: string; //can be emp or job title
 
   @IsOptional()
-  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' ? undefined : value,
+  )
   @IsEnum(StaffStatus, { message: 'invalid staff status' })
   status?: StaffStatus;
 
