@@ -1,21 +1,123 @@
 <script>
-  (() => {
-    const closeDialog = (dialog) => {
-      if (dialog?.open) dialog.close();
-    };
+  (() => { const updatePermissions = (form) => { const selected = (root) =>
+  root.querySelectorAll('input[name="permissions"]:checked').length;
+  form.querySelectorAll('[data-permission-group]').forEach((group) => { const
+  count = group.querySelector('[data-permission-count]'); if (count)
+  count.textContent = `${selected(group)} محددة`; }); const total =
+  form.querySelector('[data-permission-total]'); if (total) total.textContent =
+  `${selected(form)} محددة`;
+  form.querySelectorAll('[data-permission-action]').forEach((action) => {
+  const checkbox = action.querySelector('input[name="permissions"]'); const
+  scope = action.querySelector('[data-permission-scope]'); if (checkbox && scope)
+  scope.disabled = !checkbox.checked; }); }; const init = () => { document
+  .querySelectorAll('[data-permission-editor]') .forEach(updatePermissions); };
+  document.addEventListener('click', (event) => { const control =
+  event.target.closest('button, a'); if (!control) return; if
+  (control.matches('[data-dialog-open]')) { const dialog =
+  document.getElementById(control.dataset.dialogOpen); if (dialog &&
+  !dialog.open) dialog.showModal(); } if
+  (control.matches('[data-dialog-close]')) {
+  const dialog = control.closest('dialog'); if (dialog?.open) dialog.close(); } });
+  document.addEventListener('change', (event) => { const form =
+  event.target.closest('[data-permission-editor]'); if (form)
+  updatePermissions(form); }); document.addEventListener('htmx:configRequest',
+  (event) => { const form =
+  event.detail.elt.closest('[data-permission-editor]'); if (!form) return; const
+  permissions = [...form.querySelectorAll('input[name="permissions"]:checked')]
+  .map((input) => { const action =
+  input.closest('[data-permission-action]'); const scope =
+  action?.querySelector('[data-permission-scope]')?.value; return { resource:
+  input.dataset.resource, action: input.dataset.action, scope, }; });
+  event.detail.parameters.permissions = JSON.stringify(permissions); delete
+  event.detail.parameters.scopes; });
+  document.addEventListener('htmx:beforeSwap', (event) => { const xhr =
+  event.detail.xhr; if ( [400, 409, 422].includes(xhr.status) &&
+  xhr.getResponseHeader('X-QCMS-Fragment') === 'true' ) {
+  event.detail.shouldSwap = true; event.detail.isError = false; } }); if
+  (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init); } else { init(); } })();
 
-    document.addEventListener('click', (event) => {
-      const control = event.target.closest('button, a');
-      if (!control) return;
+document.addEventListener('change', (event) => {
+  const checkbox = event.target.closest('input[name="permissions"]');
 
-      if (control.matches('[data-dialog-open]')) {
-        const dialog = document.getElementById(control.dataset.dialogOpen);
-        if (dialog && !dialog.open) dialog.showModal();
-      }
+  if (!checkbox) return;
 
-      if (control.matches('[data-dialog-close]')) {
-        closeDialog(control.closest('dialog'));
-      }
+  const row = checkbox.closest('[data-permission-action]');
+  const scope = row?.querySelector('[data-permission-scope]');
+
+  if (scope) {
+    scope.disabled = !checkbox.checked;
+  }
+});
+
+(() => {
+  const initializeStaffUi = () => {
+    document.querySelectorAll('dialog[data-auto-open]:not([open])').forEach((dialog) => {
+      dialog.showModal();
+      const focusTarget = dialog.querySelector(
+        '[data-form-error], [aria-invalid="true"], input:not([type="hidden"]), button[data-dialog-close]',
+      );
+      focusTarget?.focus({ preventScroll: true });
     });
-  })();
+  };
+
+  document.addEventListener('click', async (event) => {
+    const control = event.target.closest('button, a');
+    if (!control) return;
+
+    if (control.hasAttribute('data-password-toggle')) {
+      const input = document.getElementById(control.dataset.passwordToggle);
+      if (!input) return;
+
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      control.setAttribute('aria-pressed', String(visible));
+      control.setAttribute(
+        'aria-label',
+        visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور',
+      );
+    }
+
+    if (control.hasAttribute('data-copy')) {
+      const input = document.getElementById(control.dataset.copy);
+      if (!input?.value) return;
+
+      const feedback = control
+        .closest('[data-sensitive-credentials]')
+        ?.querySelector('[data-copy-feedback]');
+
+      try {
+        await navigator.clipboard.writeText(input.value);
+        if (feedback) feedback.textContent = 'نُسخت كلمة المرور.';
+      } catch {
+        input.focus();
+        input.select();
+        if (feedback) feedback.textContent = 'تم تحديد النص؛ انسخه يدويًا.';
+      }
+    }
+  });
+
+  document.addEventListener('change', (event) => {
+    if (event.target.matches('[data-auto-submit]')) {
+      event.target.form?.requestSubmit();
+    }
+  });
+
+  document.addEventListener('close', (event) => {
+    const dialog = event.target;
+    if (!(dialog instanceof HTMLDialogElement)) return;
+
+    dialog
+      .querySelectorAll('[data-sensitive-credentials] input')
+      .forEach((input) => {
+        input.value = '';
+        input.removeAttribute('value');
+      });
+
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', initializeStaffUi);
+  document.addEventListener('htmx:afterSwap', initializeStaffUi);
+  initializeStaffUi();
+})();
 </script>

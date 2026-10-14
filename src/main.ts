@@ -6,13 +6,13 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { engine } from 'express-handlebars';
+import { NotFoundFilter } from './common/filters/not-found.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // To triger $disconnect in PrismaService.onModuleDestroy() and close the DB connection
   app.enableShutdownHooks();
-
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
   app.setBaseViewsDir(join(__dirname, '..', 'views'));
@@ -47,12 +47,20 @@ async function bootstrap() {
         new UnprocessableEntityException({
           message: 'Validation failed',
           errors: Object.fromEntries(
-            errors.map((e) => [e.property, Object.values(e.constraints ?? {})[0]]),
+            errors.map((e) => [
+              e.property,
+              Object.values(e.constraints ?? {})[0],
+            ]),
           ),
         }),
     }),
   );
 
+  app.useGlobalFilters(new NotFoundFilter());
+
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  console.log(error);
+  process.exitCode = 1;
+});

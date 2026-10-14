@@ -1,0 +1,16 @@
+{{#> ui/dialog id="deactivate-dialog" icon="pause" heading="إيقاف حساب الموظف؟" description="يمكن إعادة تفعيل الحساب لاحقًا" danger=true}}
+  <p class="mb-4 font-bold">{{staff.fullName}}</p>
+  <ul class="mb-5 space-y-3 text-sm">
+    <li class="flex gap-2">{{> ui/icon name="ban" class="h-4 w-4 text-orange-600"}}لن يتمكن من تسجيل الدخول.</li>
+    <li class="flex gap-2">{{> ui/icon name="logout" class="h-4 w-4 text-orange-600"}}تنتهي جلسته المفتوحة عند طلبه
+      التالي.</li>
+    <li class="flex gap-2">{{> ui/icon name="database" class="h-4 w-4 text-[#287a73]"}}تبقى بياناته وتعييناته كما هي.
+    </li>
+  </ul>
+  <form action="/staff/{{staff.id}}/deactivate" method="post" hx-post="/staff/{{staff.id}}/deactivate"
+    hx-target="#deactivate-dialog" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" class="space-y-4">
+    {{> ui/csrf}}{{> ui/form-error error=error}}
+    <div class="flex flex-wrap justify-end gap-2">
+      {{> ui/cancel label="تراجع"}}{{> ui/submit label="إيقاف الحساب" icon="pause" danger=true}}</div>
+  </form>
+{{/ui/dialog}}

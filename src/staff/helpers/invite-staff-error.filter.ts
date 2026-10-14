@@ -23,7 +23,11 @@ export class InviteStaffErrorFilter implements ExceptionFilter {
     if (!wantsHtml(req)) {
       res
         .status(status)
-        .json(typeof body === 'string' ? { statusCode: status, message: body } : body);
+        .json(
+          typeof body === 'string'
+            ? { statusCode: status, message: body }
+            : body,
+        );
       return;
     }
 
@@ -33,7 +37,7 @@ export class InviteStaffErrorFilter implements ExceptionFilter {
         : undefined;
 
     res.status(status).render(
-      'staff/invite-staff-error',
+      'staff/staff-invitation-error-page',
       staffShell({
         title: 'تعذّر إنشاء الحساب',
         form: req.body as Partial<InviteStaffDto>,

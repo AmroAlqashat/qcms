@@ -1,0 +1,23 @@
+{{#> ui/dialog id="delete-dialog" icon="trash" heading="حذف حساب الموظف؟" description="حذف مع الاحتفاظ بالسجلات والتاريخ" danger=true}}
+  <p class="mb-4 font-bold">{{staff.fullName}}</p>
+  <ul class="mb-5 space-y-3 text-sm leading-6">
+    <li class="flex gap-2">{{> ui/icon name="archive" class="mt-1 h-4 w-4 text-red-700"}}يُحتفظ بالحساب ويُوسم «محذوف»
+      مع تسجيل الوقت والمنفّذ.</li>
+    <li class="flex gap-2">{{> ui/icon name="ban" class="mt-1 h-4 w-4 text-red-700"}}لا يستطيع الدخول، وتنتهي جلسته عند
+      طلبه التالي.</li>
+    <li class="flex gap-2">{{> ui/icon name="layers" class="mt-1 h-4 w-4 text-red-700"}}تُلغى تعييناته مع الاحتفاظ
+      بتاريخ الإلغاء.</li>
+    <li class="flex gap-2">{{> ui/icon name="document" class="mt-1 h-4 w-4 text-[#287a73]"}}كل ما سجّله سابقًا يبقى
+      منسوبًا إليه.</li>
+  </ul>
+  <form action="/staff/{{staff.id}}/delete" method="post" hx-post="/staff/{{staff.id}}/delete"
+    hx-target="#delete-dialog" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" class="space-y-4">
+    {{> ui/csrf}}{{> ui/form-error error=error}}
+    <label
+      class="flex cursor-pointer items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm leading-7 text-red-700"><input
+        name="confirmDeletion" type="checkbox" value="true" required class="mt-1 h-5 w-5 shrink-0"><span>أفهم أن الحساب
+        سيختفي من القوائم إلا عند تصفية «محذوف».</span></label>
+    <div class="flex flex-wrap justify-end gap-2">
+      {{> ui/cancel label="تراجع"}}{{> ui/submit label="حذف الحساب" icon="trash" danger=true}}</div>
+  </form>
+{{/ui/dialog}}

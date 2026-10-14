@@ -1,0 +1,59 @@
+{{> staff/staff-page-header pendingTab=true}}
+<section id="pending-invitations"
+         aria-label="الدعوات المعلقة"
+         class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+  {{#each invitations }}
+    <article id="invitation-{{id}}"
+             class="border-b border-slate-100 p-4 last:border-0 sm:p-5">
+      <div class="flex items-start gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+          {{> ui/icon name="mail"}}
+        </span>
+        <div class="min-w-0 flex-1">
+          <h2 dir="ltr" class="break-anywhere text-right text-sm font-bold">{{email}}</h2>
+          <p class="mt-1 text-xs leading-6 text-slate-600">
+            {{fullName}}
+            <span class="rounded-full bg-amber-50 px-2 py-1 text-amber-800">بانتظار التفعيل</span>
+          </p>
+        </div>
+        {{#if canCancel }}
+          <form class="mr-auto shrink-0"
+                action="/staff/invitations/cancel/{{id}}"
+                method="post"
+                hx-post="/staff/invitations/cancel/{{id}}"
+                hx-target="#invitation-{{id}}"
+                hx-swap="delete"
+                hx-disabled-elt="find button[type='submit']">
+            <button type="button"
+                    class="min-h-11 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 hover:bg-red-50"
+                    data-dialog-open="cancel-invitation-{{id}}">إلغاء الدعوة</button>
+            <dialog id="cancel-invitation-{{id}}"
+                    class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-slate-900/40">
+              <div class="border-b border-slate-100 p-5">
+                <h2 class="text-lg font-extrabold text-slate-900">إلغاء الدعوة؟</h2>
+                <p class="mt-2 text-sm leading-7 text-slate-600">
+                  هل أنت متأكد أنك تريد إلغاء دعوة الموظف
+                  <span class="font-bold text-slate-900">{{fullName}}</span>؟
+                </p>
+              </div>
+              <div class="flex flex-wrap justify-start gap-2 p-4">
+                <button type="button"
+                        class="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                        data-dialog-close>تراجع</button>
+                <button type="submit"
+                        class="min-h-11 rounded-xl bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800">
+                  نعم، إلغاء الدعوة
+                </button>
+              </div>
+            </dialog>
+          </form>
+        {{/if}}
+      </div>
+      <div class="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-xs leading-6 text-slate-600">
+        لا يمكن عرض كلمة المرور.
+      </div>
+    </article>
+  {{else}}
+    <p class="p-10 text-center text-sm text-slate-600">لا توجد دعوات معلقة.</p>
+  {{/each}}
+</section>

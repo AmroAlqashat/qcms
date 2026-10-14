@@ -12,7 +12,8 @@
     "start:dev": "concurrently -k -n nest,css -c blue,magenta \"nest start --watch\" \"npm run css:dev\"",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
+    "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -36,6 +37,7 @@
     "class-validator": "^0.15.1",
     "express-handlebars": "^8.0.3",
     "reflect-metadata": "^0.2.2",
+    "restore-cursor": "^5.1.0",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
@@ -56,7 +58,8 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
-    "prettier": "^3.4.2",
+    "prettier": "^3.9.10",
+    "prettier-plugin-handlebars": "^0.0.1",
     "prisma": "^6.19.3",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",

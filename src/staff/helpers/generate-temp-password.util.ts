@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes } from 'node:crypto';
 
 export function generateTempPassword(): string {
   // Generate 12 char random temp string password.

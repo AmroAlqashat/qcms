@@ -1,0 +1,6 @@
+<button type="submit"
+  class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition {{#if danger}}bg-[#df262e] text-white hover:bg-red-700{{else}}bg-[#2b827a] text-white hover:bg-[#216c65]{{/if}} {{#if full}}w-full{{/if}}"
+  {{#if disabled}}disabled{{/if}}>
+  {{#if icon}}{{> ui/icon name=icon}}{{/if}}<span class="idle-label">{{label}}</span><span class="htmx-indicator"
+    role="status">جارٍ الإرسال…</span>
+</button>

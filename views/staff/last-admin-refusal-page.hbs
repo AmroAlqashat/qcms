@@ -1,0 +1,10 @@
+{{!-- Return this fragment for the protected last-admin action. Only pass auditRecorded=true after an actual audit write. --}}
+{{#unless isHtmx}}{{> staff/staff-profile}}{{/unless}}
+{{#> ui/dialog id="last-admin-dialog" icon="shield" heading="لا يمكن تنفيذ هذا الإجراء" description="هذا آخر حساب نشط يحمل صلاحيات الإدارة" danger=true}}
+  <p class="mb-4 text-sm font-bold">{{staff.fullName}}</p>
+  {{> ui/alert error=true message="يجب أن يبقى في النظام مدير نشط واحد على الأقل. امنح صلاحيات الإدارة لحساب نشط آخر ثم أعد المحاولة."}}
+  <p class="my-4 text-xs leading-6 text-slate-600">لم يتغيّر الحساب.{{#if auditRecorded}} سُجّلت المحاولة المرفوضة في
+      سجل التدقيق.{{/if}}</p>
+  <div class="flex justify-end"><button type="button" data-dialog-close
+      class="min-h-11 rounded-xl bg-[#2b827a] px-5 py-2 font-bold text-white">حسنًا</button></div>
+{{/ui/dialog}}
