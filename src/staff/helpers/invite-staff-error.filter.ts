@@ -23,7 +23,11 @@ export class InviteStaffErrorFilter implements ExceptionFilter {
     if (!wantsHtml(req)) {
       res
         .status(status)
-        .json(typeof body === 'string' ? { statusCode: status, message: body } : body);
+        .json(
+          typeof body === 'string'
+            ? { statusCode: status, message: body }
+            : body,
+        );
       return;
     }
 

@@ -1,20 +1,23 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
 import { AuditAction, AuditTarget, Prisma, StaffStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { generateTempPassword } from './helpers/generate-temp-password.util'
+import { generateTempPassword } from './helpers/generate-temp-password.util';
 import * as argon2 from 'argon2';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
 
-
 @Injectable()
 export class StaffService {
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
-  ) { }
+    private readonly audit: AuditService,
+  ) {}
 
   async cancelPendingInvitation(staffId: string) {
     // Using deleteMany here because prisma.staff.delete does not allow us to put more than one condition + deleteMany with unique id is the same.
@@ -22,7 +25,7 @@ export class StaffService {
       where: {
         id: staffId,
         status: 'PENDING',
-      }
+      },
     });
 
     if (count === 0) {
@@ -43,27 +46,26 @@ export class StaffService {
     if (searchField) {
       where.OR = [
         { fullName: { contains: searchField, mode: 'insensitive' } },
-        { jobTitle: { contains: searchField, mode: 'insensitive' } }
-      ]
+        { jobTitle: { contains: searchField, mode: 'insensitive' } },
+      ];
     }
-    if (status)
-      where.status = status;
-    else
-      where.status = { not: StaffStatus.PENDING };
-    if (halaqa)
-      where.classAssignments = { some: { halaqaId: halaqa } }
-    if (role)
-      where.roleGrants = { some: { roleId: role } }
+    if (status) where.status = status;
+    else where.status = { not: StaffStatus.PENDING };
+    if (halaqa) where.classAssignments = { some: { halaqaId: halaqa } };
+    if (role) where.roleGrants = { some: { roleId: role } };
     //search
     return this.prisma.staff.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
-  async showStaffFilterOptions(selectedHalaqaId?: string, selectedRoleId?: string) {
+  async showStaffFilterOptions(
+    selectedHalaqaId?: string,
+    selectedRoleId?: string,
+  ) {
     const [classes, templates] = await Promise.all([
       this.prisma.halaqa.findMany({
         select: { id: true, name: true },
@@ -87,13 +89,17 @@ export class StaffService {
     };
   }
 
-  private async validateRelations(halaqaId?: string, roleId?: string): Promise<void> {
+  private async validateRelations(
+    halaqaId?: string,
+    roleId?: string,
+  ): Promise<void> {
     if (halaqaId) {
       const classExists = await this.prisma.halaqa.findUnique({
         where: { id: halaqaId },
         select: { id: true },
       });
-      if (!classExists) throw new BadRequestException(`Class ID "${halaqaId}" does not exist.`);
+      if (!classExists)
+        throw new BadRequestException(`Class ID "${halaqaId}" does not exist.`);
     }
 
     if (roleId) {
@@ -101,7 +107,8 @@ export class StaffService {
         where: { id: roleId },
         select: { id: true },
       });
-      if (!roleExists) throw new BadRequestException(`Role ID "${roleId}" does not exist.`);
+      if (!roleExists)
+        throw new BadRequestException(`Role ID "${roleId}" does not exist.`);
     }
   }
 
@@ -165,7 +172,6 @@ export class StaffService {
   }
 
   async inviteStaff(inviteStaffDto: InviteStaffDto) {
-
     const { email, fullName, jobTitle } = inviteStaffDto;
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -176,9 +182,7 @@ export class StaffService {
 
     // Check if the Staff exist and not deleted.
     if (existingStaff && existingStaff.status !== StaffStatus.DELETED) {
-      throw new ConflictException(
-        'This email already exist.'
-      );
+      throw new ConflictException('This email already exist.');
     }
 
     const temporaryPassword = generateTempPassword();
@@ -205,7 +209,7 @@ export class StaffService {
     } satisfies Prisma.StaffSelect;
 
     type StaffSummary = Prisma.StaffGetPayload<{
-      select: typeof select
+      select: typeof select;
     }>;
 
     try {
@@ -219,7 +223,7 @@ export class StaffService {
             // We need the check here too, to prevent another invitation at the same time.
             where: {
               id: existingStaff.id,
-              status: StaffStatus.DELETED
+              status: StaffStatus.DELETED,
             },
             data,
             select,
@@ -240,24 +244,23 @@ export class StaffService {
         });
 
         return { staff, temporaryPassword };
-      })
+      });
     } catch (error: unknown) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           throw new ConflictException({
             message: 'هذا البريد الإلكتروني مسجّل بالفعل',
             errors: { email: 'هذا البريد الإلكتروني مسجّل بالفعل' },
-          }
-          );
+          });
         }
 
         if (existingStaff && error.code === 'P2025') {
           throw new ConflictException(
-            'تغيّر حساب الموظف أثناء الدعوة. حدّث الصفحة وأعد المحاولة'
-          )
+            'تغيّر حساب الموظف أثناء الدعوة. حدّث الصفحة وأعد المحاولة',
+          );
         }
       }
-      throw error
+      throw error;
     }
   }
 }

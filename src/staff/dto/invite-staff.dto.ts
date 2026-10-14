@@ -1,4 +1,10 @@
-import { IsEmail, IsString, MaxLength, MinLength, IsNotEmpty } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MaxLength,
+  MinLength,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class InviteStaffDto {
   @IsEmail({}, { message: 'أدخل بريدًا إلكترونيًا صالحًا' })

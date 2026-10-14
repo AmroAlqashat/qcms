@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, UnprocessableEntityException, Logger } from '@nestjs/common';
+import { ValidationPipe, UnprocessableEntityException } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
@@ -13,7 +13,6 @@ async function bootstrap() {
 
   // To triger $disconnect in PrismaService.onModuleDestroy() and close the DB connection
   app.enableShutdownHooks();
-
 
   app.useStaticAssets(join(__dirname, '..', 'public'));
   app.setBaseViewsDir(join(__dirname, '..', 'views'));
@@ -48,7 +47,10 @@ async function bootstrap() {
         new UnprocessableEntityException({
           message: 'Validation failed',
           errors: Object.fromEntries(
-            errors.map((e) => [e.property, Object.values(e.constraints ?? {})[0]]),
+            errors.map((e) => [
+              e.property,
+              Object.values(e.constraints ?? {})[0],
+            ]),
           ),
         }),
     }),

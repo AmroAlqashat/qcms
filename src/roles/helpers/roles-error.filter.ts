@@ -9,6 +9,7 @@ import {
 import type { Request, Response } from 'express';
 import { wantsHtml } from '../../common/wants-html';
 import { RolesService } from '../roles.service';
+import type { PermissionColumns } from '../helpers/roles.types';
 
 type SubmittedPermission = {
   resource: string;
@@ -18,7 +19,7 @@ type SubmittedPermission = {
 
 @Catch(ConflictException, UnprocessableEntityException)
 export class RolesErrorFilter implements ExceptionFilter {
-  constructor(private readonly rolesService: RolesService) { }
+  constructor(private readonly rolesService: RolesService) {}
 
   async catch(exception: HttpException, host: ArgumentsHost) {
     const context = host.switchToHttp();
@@ -67,19 +68,18 @@ export class RolesErrorFilter implements ExceptionFilter {
       return;
     }
 
-    // Nest does not catch errors thrown inside a filter, so load defensively.
     const editor = await this.loadEditor(roleId);
     if (!editor) {
       this.redirectToList(request, response);
       return;
     }
+
     const { role, permissionsData } = editor;
 
-    permissionsData.selectedPermissionCount =
-      this.restoreSubmittedPermissions(
-        permissionsData.permissionColumns,
-        requestBody,
-      );
+    permissionsData.selectedPermissionCount = this.restoreSubmittedPermissions(
+      permissionsData.permissionColumns,
+      requestBody,
+    );
 
     response
       .status(status)
@@ -121,7 +121,6 @@ export class RolesErrorFilter implements ExceptionFilter {
         ? await this.rolesService.getRoleById(roleId)
         : undefined;
 
-      // Editing a role that no longer exists
       if (roleId && !role) {
         return null;
       }
@@ -144,21 +143,9 @@ export class RolesErrorFilter implements ExceptionFilter {
   }
 
   private restoreSubmittedPermissions(
-    permissionColumns: Array<
-      Array<{
-        selectedCount: number;
-        resources: Array<{
-          actions: Array<{
-            resource: string;
-            action: string;
-            selected: boolean;
-            selectedScope?: string;
-          }>;
-        }>;
-      }>
-    >,
+    permissionColumns: PermissionColumns,
     requestBody: Record<string, unknown>,
-  ) {
+  ): number {
     const submitted = this.parseSubmittedPermissions(
       requestBody.permissions,
       requestBody.scopes,
@@ -215,6 +202,7 @@ export class RolesErrorFilter implements ExceptionFilter {
     return values.flatMap((entry): SubmittedPermission[] => {
       if (typeof entry === 'object' && entry !== null) {
         const permission = entry as Record<string, unknown>;
+
         if (
           typeof permission.resource === 'string' &&
           typeof permission.action === 'string'
@@ -236,16 +224,17 @@ export class RolesErrorFilter implements ExceptionFilter {
         return [];
       }
 
-      // Accept "resource::action" and "resource:action"
       const parts = entry.includes('::')
         ? entry.split('::', 2)
         : entry.split(':', 2);
       const [resource, action] = parts;
+
       if (!resource || !action) {
         return [];
       }
 
       const scope = scopes[`${resource}:${action}`] ?? scopes[resource];
+
       return [
         {
           resource,

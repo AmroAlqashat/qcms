@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Render, Redirect, UseFilters, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Render,
+  Redirect,
+  UseFilters,
+} from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { CreateNewRoleDto } from './dto/create-new-role.dto';
 import { EditRoleDto } from './dto/edit-role.dto';
@@ -7,7 +16,7 @@ import { RolesErrorFilter } from './helpers/roles-error.filter';
 
 @Controller('roles')
 export class RolesController {
-  constructor(private readonly rolesService: RolesService) { }
+  constructor(private readonly rolesService: RolesService) {}
 
   @Get()
   @Render('roles/roles-list')
@@ -26,7 +35,8 @@ export class RolesController {
   @Get('create')
   @Render('roles/roles-editor')
   async showCreateRolePage() {
-    const permissionsData = await this.rolesService.getPermissionsWithCategory();
+    const permissionsData =
+      await this.rolesService.getPermissionsWithCategory();
 
     return {
       ...permissionsData,
@@ -37,13 +47,11 @@ export class RolesController {
   @Get('edit/:id')
   @Render('roles/roles-editor')
   async showEditRolePage(@Param('id') roleId: string) {
-
     const [role, permissionsData, accountCount] = await Promise.all([
       this.rolesService.getRoleById(roleId),
       this.rolesService.getPermissionsWithCategory(roleId),
       this.rolesService.getRoleAccountCount(roleId),
-    ])
-
+    ]);
 
     return {
       role,
@@ -67,21 +75,31 @@ export class RolesController {
   @Post('create')
   @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
-  async newRole(@Body() createRoleDto: CreateNewRoleDto, @CurrentUser() user: { id: string }) {
+  async newRole(
+    @Body() createRoleDto: CreateNewRoleDto,
+    @CurrentUser() user: { id: string },
+  ) {
     await this.rolesService.createRole(createRoleDto, user.id);
   }
 
   @Post('edit/:id')
   @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
-  async editedRole(@Body() editRoleDto: EditRoleDto, @Param('id') roleId: string, @CurrentUser() user: { id: string }) {
+  async editedRole(
+    @Body() editRoleDto: EditRoleDto,
+    @Param('id') roleId: string,
+    @CurrentUser() user: { id: string },
+  ) {
     await this.rolesService.editRole(editRoleDto, roleId, user.id);
   }
 
   @Post('delete/:id')
   @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
-  async deletedRole(@Param('id') roleId: string, @CurrentUser() user: { id: string }) {
+  async deletedRole(
+    @Param('id') roleId: string,
+    @CurrentUser() user: { id: string },
+  ) {
     await this.rolesService.deleteRole(roleId, user.id);
   }
 }

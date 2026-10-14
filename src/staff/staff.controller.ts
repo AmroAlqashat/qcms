@@ -20,20 +20,23 @@ import { FilteredStaffDto } from './dto/filter-staff.dto';
 
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) { }
+  constructor(private readonly staffService: StaffService) {}
 
   @Get()
   @Render('staff/staff-page')
   async showStaffPage(@Query() filterDto: FilteredStaffDto) {
     const [staffList, filterOptions] = await Promise.all([
       this.staffService.showFilteredStaff(filterDto),
-      this.staffService.showStaffFilterOptions(filterDto.halaqa, filterDto.role),
+      this.staffService.showStaffFilterOptions(
+        filterDto.halaqa,
+        filterDto.role,
+      ),
     ]);
     return {
       staffList,
       filters: filterDto,
       filterOptions,
-      activeNav: 'staff'
+      activeNav: 'staff',
     };
   }
 
@@ -102,7 +105,6 @@ export class StaffController {
     @Req() request: Request,
     @Res() response: Response,
   ) {
-
     response.setHeader('Cache-Control', 'no-store');
 
     const result = await this.staffService.inviteStaff(inviteStaffDto);
