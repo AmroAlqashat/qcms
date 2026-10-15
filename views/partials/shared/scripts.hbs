@@ -56,6 +56,10 @@
           dialog.close();
         }
       }
+
+      if (control.matches('[data-toast-close]')) {
+        control.closest('[data-toast]')?.remove();
+      }
     });
 
     document.addEventListener('change', (event) => {
@@ -95,8 +99,9 @@
       const isFragmentError = [400, 409, 422].includes(xhr.status);
       const isMarkedFragment =
         xhr.getResponseHeader('X-QCMS-Fragment') === 'true';
+      const isMarkedToast = xhr.getResponseHeader('X-QCMS-Toast') === 'true';
 
-      if (isFragmentError && isMarkedFragment) {
+      if (isFragmentError && (isMarkedFragment || isMarkedToast)) {
         event.detail.shouldSwap = true;
         event.detail.isError = false;
       }
@@ -125,6 +130,15 @@
   });
 
   (() => {
+    const initializeToasts = () => {
+      document
+        .querySelectorAll('[data-toast]:not([data-toast-initialized])')
+        .forEach((toast) => {
+          toast.dataset.toastInitialized = 'true';
+          window.setTimeout(() => toast.remove(), 5000);
+        });
+    };
+
     const initializeStaffUi = () => {
       document
         .querySelectorAll('dialog[data-auto-open]:not([open])')
@@ -218,6 +232,9 @@
 
     document.addEventListener('DOMContentLoaded', initializeStaffUi);
     document.addEventListener('htmx:afterSwap', initializeStaffUi);
+    document.addEventListener('DOMContentLoaded', initializeToasts);
+    document.addEventListener('htmx:afterSwap', initializeToasts);
     initializeStaffUi();
+    initializeToasts();
   })();
 </script>

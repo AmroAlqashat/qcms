@@ -1,0 +1,16 @@
+<div
+  data-toast
+  role="alert"
+  class="flex w-full items-start gap-3 rounded-2xl border border-red-200 bg-white p-4 text-sm leading-7 text-red-700 shadow-lg"
+>
+  {{> ui/icon name="info" class="mt-1 h-5 w-5 shrink-0"}}
+  <p class="min-w-0 flex-1">{{message}}</p>
+  <button
+    type="button"
+    data-toast-close
+    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-red-700 hover:bg-red-50"
+    aria-label="إغلاق التنبيه"
+  >
+    {{> ui/icon name="close" class="h-4 w-4"}}
+  </button>
+</div>

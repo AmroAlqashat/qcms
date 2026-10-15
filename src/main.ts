@@ -7,6 +7,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { engine } from 'express-handlebars';
 import { NotFoundFilter } from './common/filters/not-found.filter';
+import { BadRequestFilter } from './common/filters/bad-request.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -56,7 +57,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new NotFoundFilter());
+  app.useGlobalFilters(new NotFoundFilter(), new BadRequestFilter());
 
   await app.listen(process.env.PORT ?? 3000);
 }
