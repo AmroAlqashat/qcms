@@ -117,8 +117,8 @@ export class StaffService {
 
     if (!staff)
       throw new NotFoundException('الموظف غير موجود');
-    if(staff.status !== "PENDING")
-      throw new BadRequestException('staff member is pending')
+    if (staff.status === "PENDING")
+      throw new BadRequestException('لا يمكن التعديل: دعوة معلّقة')
     return staff;
   }
 
@@ -231,10 +231,10 @@ export class StaffService {
     return staff;
   }
 
-  
+
   async deactivateStaff(staffId: string, actorId: string) {
     const staff = await this.prisma.staff.findUnique({
-      where: {id: staffId},
+      where: { id: staffId },
       select: {
         id: true,
         status: true,
@@ -243,17 +243,17 @@ export class StaffService {
       }
     })
     //validations
-    if(!staff)
+    if (!staff)
       throw new NotFoundException('can\'t find this employee')
-    if(staff.status !== "ACTIVE")
+    if (staff.status !== "ACTIVE")
       throw new ConflictException('staff member can\'t be deactivated')
     await this.validateStaffNotAloneInClassesAndActivities(staffId, staff.classAssignments, staff.activityAssignments);
     //changes
-    try{
+    try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staff.update({
-          where: {id: staffId},
-          data: {status: StaffStatus.INACTIVE}
+          where: { id: staffId },
+          data: { status: StaffStatus.INACTIVE }
         });
         await this.audit.record(tx, {
           actorId: actorId,
@@ -278,23 +278,23 @@ export class StaffService {
 
   async activateStaff(staffId: string, actorId: string) {
     const staff = await this.prisma.staff.findUnique({
-      where: {id: staffId},
+      where: { id: staffId },
       select: {
         id: true,
         status: true
       }
     })
     //validations
-    if(!staff)
+    if (!staff)
       throw new NotFoundException('can\'t find this employee')
-    if(staff.status !== "INACTIVE")
+    if (staff.status !== "INACTIVE")
       throw new ConflictException('staff member can\'t be activated')
     //changes
-    try{
+    try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staff.update({
-          where: {id: staffId},
-          data: {status: StaffStatus.ACTIVE}
+          where: { id: staffId },
+          data: { status: StaffStatus.ACTIVE }
         });
         await this.audit.record(tx, {
           actorId: actorId,
@@ -319,7 +319,7 @@ export class StaffService {
 
   async deleteStaff(staffId: string, actorId: string) {
     const staff = await this.prisma.staff.findUnique({
-      where: {id: staffId},
+      where: { id: staffId },
       select: {
         id: true,
         status: true,
@@ -328,17 +328,17 @@ export class StaffService {
       }
     })
     //validations
-    if(!staff)
+    if (!staff)
       throw new NotFoundException('can\'t find this employee')
-    if(staff.status !== StaffStatus.ACTIVE && staff.status !==  StaffStatus.INACTIVE)
+    if (staff.status !== StaffStatus.ACTIVE && staff.status !== StaffStatus.INACTIVE)
       throw new ConflictException('staff member can\'t be deleted')
     await this.validateStaffNotAloneInClassesAndActivities(staffId, staff.classAssignments, staff.activityAssignments);
     //changes
-    try{
+    try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staff.update({
-          where: {id: staffId},
-          data: {status: StaffStatus.DELETED}
+          where: { id: staffId },
+          data: { status: StaffStatus.DELETED }
         });
         await this.audit.record(tx, {
           actorId: actorId,
@@ -454,50 +454,50 @@ export class StaffService {
     }
   }
   private async validateStaffNotAloneInClassesAndActivities(staffId: string, classAssignments: StaffClassAssignment[],
-    activityAssignments: StaffActivityAssignment[]){
-      const [halaqas, activities] = await Promise.all([
-        this.prisma.halaqa.findMany({
-          where: {
-            id: { in: classAssignments.map(({ halaqaId }) => halaqaId) },
-            staffAssignments: { some: { staffId } },
-          },
-          select: {
-            name: true,
-            _count: { select: { staffAssignments: true } },
-          },
-        }),
-        this.prisma.activity.findMany({
-          where: {
-            id: { in: activityAssignments.map(({ activityId }) => activityId) },
-            staffAssignments: { some: { staffId } },
-          },
-          select: {
-            name: true,
-            _count: { select: { staffAssignments: true } },
-          },
-        }),
-      ]);
+    activityAssignments: StaffActivityAssignment[]) {
+    const [halaqas, activities] = await Promise.all([
+      this.prisma.halaqa.findMany({
+        where: {
+          id: { in: classAssignments.map(({ halaqaId }) => halaqaId) },
+          staffAssignments: { some: { staffId } },
+        },
+        select: {
+          name: true,
+          _count: { select: { staffAssignments: true } },
+        },
+      }),
+      this.prisma.activity.findMany({
+        where: {
+          id: { in: activityAssignments.map(({ activityId }) => activityId) },
+          staffAssignments: { some: { staffId } },
+        },
+        select: {
+          name: true,
+          _count: { select: { staffAssignments: true } },
+        },
+      }),
+    ]);
 
-      const soleStaffHalaqas = halaqas
-        .filter(({ _count }) => _count.staffAssignments === 1)
-        .map(({ name }) => name);
-      const soleStaffActivities = activities
-        .filter(({ _count }) => _count.staffAssignments === 1)
-        .map(({ name }) => name);
+    const soleStaffHalaqas = halaqas
+      .filter(({ _count }) => _count.staffAssignments === 1)
+      .map(({ name }) => name);
+    const soleStaffActivities = activities
+      .filter(({ _count }) => _count.staffAssignments === 1)
+      .map(({ name }) => name);
 
-      if (soleStaffHalaqas.length || soleStaffActivities.length) {
-        const assignments = [
-          ...(soleStaffHalaqas.length
-            ? [`halaqa(s): ${soleStaffHalaqas.join(', ')}`]
-            : []),
-          ...(soleStaffActivities.length
-            ? [`activity/activities: ${soleStaffActivities.join(', ')}`]
-            : []),
-        ];
+    if (soleStaffHalaqas.length || soleStaffActivities.length) {
+      const assignments = [
+        ...(soleStaffHalaqas.length
+          ? [`halaqa(s): ${soleStaffHalaqas.join(', ')}`]
+          : []),
+        ...(soleStaffActivities.length
+          ? [`activity/activities: ${soleStaffActivities.join(', ')}`]
+          : []),
+      ];
 
-        throw new ForbiddenException(
-          `Cannot remove the only assigned staff member from ${assignments.join('; ')}.`,
-        );
-      }
+      throw new ForbiddenException(
+        `Cannot remove the only assigned staff member from ${assignments.join('; ')}.`,
+      );
     }
+  }
 }
