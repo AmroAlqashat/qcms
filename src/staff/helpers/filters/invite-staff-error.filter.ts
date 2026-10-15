@@ -7,9 +7,9 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { wantsHtml } from '../../common/wants-html';
-import { InviteStaffDto } from '../dto/invite-staff.dto';
-import { staffShell } from './staff-shell';
+import { wantsHtml } from '../../../common/wants-html';
+import { InviteStaffDto } from '../../dto/invite-staff.dto';
+import { staffShell } from '../staff-shell';
 
 @Catch(ConflictException, UnprocessableEntityException)
 export class InviteStaffErrorFilter implements ExceptionFilter {

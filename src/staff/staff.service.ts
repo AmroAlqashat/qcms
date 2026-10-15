@@ -12,22 +12,19 @@ import { generateTempPassword } from './helpers/generate-temp-password.util';
 import * as argon2 from 'argon2';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
 import { EditStaffDto } from './dto/staff-edit.dto';
-import { error } from 'console';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class StaffService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-  ) {}
+  ) { }
 
-  
-  async editStaff(id:string, editStaffDto: EditStaffDto) {
-    try{
+  async editStaff(staffId: string, editStaffDto: EditStaffDto) {
+    try {
       return await this.prisma.$transaction(async (tx) => {
         const staff = await tx.staff.update({
-          where: {id: id},
+          where: { id: staffId },
           data: {
             email: editStaffDto.email,
             fullName: editStaffDto.fullName,
@@ -37,26 +34,26 @@ export class StaffService {
           }
         });
         await this.audit.record(tx, {
-          actorId: id,
+          actorId: staffId,
           actionType: 'STAFF_UPDATED',
           targetType: 'STAFF',
-          targetId: id,
+          targetId: staffId,
           isSuccess: true
         });
         return staff;
       });
     }
-      catch(error: unknown){
-        if (
+    catch (error: unknown) {
+      if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       )
         throw new ConflictException({
           message: 'البريد الإلكتروني مستخدم بالفعل',
-          errors: { name: 'البريد الإلكتروني مستخدم بالفعل' },
+          errors: { email: 'البريد الإلكتروني مستخدم بالفعل' },
         });
-        throw error;
-      }
+      throw error;
+    }
   }
 
   async cancelPendingInvitation(staffId: string) {
@@ -102,19 +99,21 @@ export class StaffService {
     });
   }
 
-  async showStaffEditPage(staffId: string){
+  async showStaffEditPage(staffId: string) {
     const staff = await this.prisma.staff.findUnique({
-      where: {id: staffId},
+      where: { id: staffId },
       select: {
+        id: true,
         email: true,
         fullName: true,
         jobTitle: true,
+        nationalId: true,
         dateOfBirth: true,
         phone: true
       }
     })
 
-    if(!staff)
+    if (!staff)
       throw new NotFoundException('الموظف غير موجود');
     return staff;
   }

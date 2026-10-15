@@ -5,7 +5,6 @@ import {
   Param,
   Post,
   Query,
-  Redirect,
   Render,
   Req,
   Res,
@@ -16,9 +15,15 @@ import { InviteStaffDto } from './dto/invite-staff.dto';
 import { StaffService } from './staff.service';
 import { wantsHtml } from '../common/wants-html';
 import { staffShell } from './helpers/staff-shell';
-import { InviteStaffErrorFilter } from './helpers/invite-staff-error.filter';
+import { EditStaffErrorFilter } from './helpers/filters/edit-staff-error.filter';
+import { InviteStaffErrorFilter } from './helpers/filters/invite-staff-error.filter';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
 import { EditStaffDto } from './dto/staff-edit.dto';
+import {
+  formatStaffDate,
+  formatStaffPhone,
+  formatStaffStatus,
+} from './helpers/staff-profile-formatters';
 
 @Controller('staff')
 export class StaffController {
@@ -63,23 +68,46 @@ export class StaffController {
     return { success: true };
   }
 
-  @Get(':id/edit')
+  @Get('edit/:id')
   @Render('staff/staff-edit-profile-page')
-  async showEditStaffForm(@Param('id') staffId:string){
+  async showEditStaffForm(@Param('id') staffId: string) {
     const staff = await this.staffService.showStaffEditPage(staffId);
 
-    return{
+    return {
       staff: {
         ...staff,
         initial: staff.fullName.trim().charAt(0),
-        dateOfBirthLabel: staff.dateOfBirth?.toLocaleDateString('ar'),
+        dateOfBirthValue: staff.dateOfBirth?.toISOString().slice(0, 10) ?? '',
+        permissions: {
+          canChangeStatus: true,
+        },
       },
-    }
+    };
   }
-  @Post(':id/edit')
-  @Redirect('/staff/:id')
-  async editStaff(@Param('id') id: string, @Body() editStaffDto: EditStaffDto){
-    const newStaff = this.staffService.editStaff(id, editStaffDto)
+
+  @Post('edit/:id')
+  @UseFilters(EditStaffErrorFilter)
+  async editStaff(
+    @Param('id') id: string,
+    @Body() editStaffDto: EditStaffDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.editStaff(id, editStaffDto);
+
+    const location = `/staff/${encodeURIComponent(id)}`;
+
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
   }
 
   @Get('invite')
@@ -100,7 +128,10 @@ export class StaffController {
       staff: {
         ...staff,
         initial: staff.fullName.trim().charAt(0),
-        dateOfBirthLabel: staff.dateOfBirth?.toLocaleDateString('ar'),
+        dateOfBirthLabel: formatStaffDate(staff.dateOfBirth),
+        nationalIdLabel: staff.nationalId,
+        phoneLabel: formatStaffPhone(staff.phone),
+        statusLabel: formatStaffStatus(staff.status),
       },
       assignments: {
         classes: staff.classAssignments.map(({ halaqa }) => halaqa),
@@ -111,7 +142,7 @@ export class StaffController {
       permissions: {
         canEditStaff: true,
         canManageAssignments: true,
-        canDeactivate: true,
+        canChangeStatus: true,
         canDelete: true,
       },
       effectivePermissionCount: 0,
