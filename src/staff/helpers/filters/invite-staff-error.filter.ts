@@ -36,14 +36,17 @@ export class InviteStaffErrorFilter implements ExceptionFilter {
         ? (body as { errors?: Record<string, string> }).errors
         : undefined;
 
-    res.status(status).render(
-      'staff/staff-invitation-error-page',
-      staffShell({
-        title: 'تعذّر إنشاء الحساب',
-        form: req.body as Partial<InviteStaffDto>,
-        errors,
-        error: errors ? undefined : exception.message,
-      }),
-    );
+    res
+      .status(status)
+      .setHeader('X-QCMS-Fragment', 'true')
+      .render(
+        'staff/staff-invitation-dialog',
+        staffShell({
+          title: 'تعذّر إنشاء الحساب',
+          form: req.body as Partial<InviteStaffDto>,
+          errors,
+          error: errors ? undefined : exception.message,
+        }),
+      );
   }
 }

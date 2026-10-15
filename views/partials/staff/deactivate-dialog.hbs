@@ -10,7 +10,7 @@
   <form action="/staff/deactivate/{{staff.id}}" method="post" hx-post="/staff/deactivate/{{staff.id}}"
     hx-target="#deactivate-dialog" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" class="space-y-4">
     {{> ui/csrf}}{{> ui/form-error error=error}}
-    <div class="flex flex-wrap justify-end gap-2">
+    <div class="flex flex-wrap justify-start gap-2">
       {{> ui/cancel label="تراجع"}}{{> ui/submit label="إيقاف الحساب" icon="pause" danger=true}}</div>
   </form>
 {{/ui/dialog}}

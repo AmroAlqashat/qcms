@@ -8,7 +8,7 @@
   <form action="/staff/activate/{{staff.id}}" method="post" hx-post="/staff/activate/{{staff.id}}"
     hx-target="#activate-dialog" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" class="space-y-4">
     {{> ui/csrf}}{{> ui/form-error error=error}}
-    <div class="flex flex-wrap justify-end gap-2">
+    <div class="flex flex-wrap justify-start gap-2">
       {{> ui/cancel label="تراجع"}}{{> ui/submit label="تفعيل الحساب" icon="continue" danger=true}}</div>
   </form>
 {{/ui/dialog}}
