@@ -179,27 +179,88 @@ export class StaffController {
   @Render('staff/staff-deactivate-page')
   async showDeactivateStaffDialog(@Param('id') staffId: string) {
     return {
-      staffId: staffId
+      staff: {id: staffId}
     };
   }
   @Post('deactivate/:id')
   @Render('staff/staff-page')
-  async deactivateStaff(@Param('id') staffId: string, @CurrentUser() actor: {id: string}){
+  async deactivateStaff(@Param('id') staffId: string,
+  @CurrentUser() actor: { id: string },
+  @Req() request: Request,
+  @Res() response: Response){
     await this.staffService.deactivateStaff(staffId, actor.id);
-    return;
+    const location = '/staff';
+
+      if (!wantsHtml(request)) {
+        response.json({ success: true });
+        return;
+      }
+
+      if (request.get('HX-Request') === 'true') {
+        response.setHeader('HX-Redirect', location).status(204).end();
+        return;
+      }
+
+      response.redirect(303, location);
   }
 
   @Get('delete/:id')
   @Render('staff/staff-delete-page')
   async showDeleteStaffDialog(@Param('id') staffId: string) {
     return {
-      staffId: staffId
+      staff: {id: staffId}
     };
   }
   @Post('delete/:id')
   @Render('staff/staff-page')
-  async deleteStaff(@Param('id') staffId: string, @CurrentUser() actor: {id: string}){
+  async deleteStaff(@Param('id') staffId: string,
+  @CurrentUser() actor: { id: string },
+  @Req() request: Request,
+  @Res() response: Response){
     await this.staffService.deleteStaff(staffId, actor.id);
+    const location = '/staff';
+
+  if (!wantsHtml(request)) {
+    response.json({ success: true });
+    return;
+  }
+
+  if (request.get('HX-Request') === 'true') {
+    response.setHeader('HX-Redirect', location).status(204).end();
+    return;
+  }
+
+  response.redirect(303, location);
+    return;
+  }
+
+  @Get('activate/:id')
+  @Render('staff/staff-activate-page')
+  async showactivateStaffDialog(@Param('id') staffId: string) {
+    return {
+      staff: {id: staffId}
+    };
+  }
+  @Post('activate/:id')
+  @Render('staff/staff-page')
+  async activateStaff(@Param('id') staffId: string,
+  @CurrentUser() actor: { id: string },
+  @Req() request: Request,
+  @Res() response: Response,) {
+    await this.staffService.activateStaff(staffId, actor.id);
+    const location = '/staff';
+
+  if (!wantsHtml(request)) {
+    response.json({ success: true });
+    return;
+  }
+
+  if (request.get('HX-Request') === 'true') {
+    response.setHeader('HX-Redirect', location).status(204).end();
+    return;
+  }
+
+  response.redirect(303, location);
     return;
   }
 }

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -33,9 +34,8 @@ export class StaffService {
             dateOfBirth: editStaffDto.dateOfBirth
           }
         });
-        this.updateUpdatedAt(staffId)
         await this.audit.record(tx, {
-          actorId: ,
+          actorId: 'staff_admin', //TODO: change to current user
           actionType: 'STAFF_UPDATED',
           targetType: 'STAFF',
           targetId: staffId,
@@ -247,19 +247,59 @@ export class StaffService {
       throw new NotFoundException('can\'t find this employee')
     if(staff.status !== "ACTIVE")
       throw new ConflictException('staff member can\'t be deactivated')
-    this.validateStaffNotAloneInClassesAndActivities(staffId, staff.classAssignments, staff.activityAssignments);
+    await this.validateStaffNotAloneInClassesAndActivities(staffId, staff.classAssignments, staff.activityAssignments);
     //changes
     try{
       return await this.prisma.$transaction(async (tx) => {
-        tx.staff.update({
+        await tx.staff.update({
           where: {id: staffId},
           data: {status: StaffStatus.INACTIVE}
         });
-        this.updateUpdatedAt(staffId);
-        this.audit.record(tx, {
+        await this.audit.record(tx, {
           actorId: actorId,
           targetType: 'STAFF',
           actionType: 'STAFF_DEACTIVATED',
+          targetId: staffId,
+          isSuccess: true
+        })
+      })
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new ConflictException({
+          message: 'a conflict has occured',
+          errors: { email: 'a conflict has occured' },
+        });
+      throw error;
+    }
+  }
+
+  async activateStaff(staffId: string, actorId: string) {
+    const staff = await this.prisma.staff.findUnique({
+      where: {id: staffId},
+      select: {
+        id: true,
+        status: true
+      }
+    })
+    //validations
+    if(!staff)
+      throw new NotFoundException('can\'t find this employee')
+    if(staff.status !== "INACTIVE")
+      throw new ConflictException('staff member can\'t be activated')
+    //changes
+    try{
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.staff.update({
+          where: {id: staffId},
+          data: {status: StaffStatus.ACTIVE}
+        });
+        await this.audit.record(tx, {
+          actorId: actorId,
+          targetType: 'STAFF',
+          actionType: 'STAFF_ACTIVATED',
           targetId: staffId,
           isSuccess: true
         })
@@ -290,18 +330,17 @@ export class StaffService {
     //validations
     if(!staff)
       throw new NotFoundException('can\'t find this employee')
-    if(!(staff.status in [StaffStatus.ACTIVE, StaffStatus.INACTIVE]))
+    if(staff.status !== StaffStatus.ACTIVE && staff.status !==  StaffStatus.INACTIVE)
       throw new ConflictException('staff member can\'t be deleted')
-    this.validateStaffNotAloneInClassesAndActivities(staffId, staff.classAssignments, staff.activityAssignments);
+    await this.validateStaffNotAloneInClassesAndActivities(staffId, staff.classAssignments, staff.activityAssignments);
     //changes
     try{
       return await this.prisma.$transaction(async (tx) => {
-        tx.staff.update({
+        await tx.staff.update({
           where: {id: staffId},
           data: {status: StaffStatus.DELETED}
         });
-        this.updateUpdatedAt(staffId);
-        this.audit.record(tx, {
+        await this.audit.record(tx, {
           actorId: actorId,
           targetType: 'STAFF',
           actionType: 'STAFF_DELETED',
@@ -414,15 +453,51 @@ export class StaffService {
       throw error;
     }
   }
-
-  private async updateUpdatedAt(staffId: string){ //used inside $transaction so should be fine to write plainly
-    await this.prisma.staff.update({
-      where: {id: staffId},
-      data: {updatedAt: new Date()}
-    });
-  }
   private async validateStaffNotAloneInClassesAndActivities(staffId: string, classAssignments: StaffClassAssignment[],
     activityAssignments: StaffActivityAssignment[]){
-     
+      const [halaqas, activities] = await Promise.all([
+        this.prisma.halaqa.findMany({
+          where: {
+            id: { in: classAssignments.map(({ halaqaId }) => halaqaId) },
+            staffAssignments: { some: { staffId } },
+          },
+          select: {
+            name: true,
+            _count: { select: { staffAssignments: true } },
+          },
+        }),
+        this.prisma.activity.findMany({
+          where: {
+            id: { in: activityAssignments.map(({ activityId }) => activityId) },
+            staffAssignments: { some: { staffId } },
+          },
+          select: {
+            name: true,
+            _count: { select: { staffAssignments: true } },
+          },
+        }),
+      ]);
+
+      const soleStaffHalaqas = halaqas
+        .filter(({ _count }) => _count.staffAssignments === 1)
+        .map(({ name }) => name);
+      const soleStaffActivities = activities
+        .filter(({ _count }) => _count.staffAssignments === 1)
+        .map(({ name }) => name);
+
+      if (soleStaffHalaqas.length || soleStaffActivities.length) {
+        const assignments = [
+          ...(soleStaffHalaqas.length
+            ? [`halaqa(s): ${soleStaffHalaqas.join(', ')}`]
+            : []),
+          ...(soleStaffActivities.length
+            ? [`activity/activities: ${soleStaffActivities.join(', ')}`]
+            : []),
+        ];
+
+        throw new ForbiddenException(
+          `Cannot remove the only assigned staff member from ${assignments.join('; ')}.`,
+        );
+      }
     }
 }

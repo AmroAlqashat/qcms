@@ -1,0 +1,14 @@
+{{#> ui/dialog id="activate-dialog" icon="pause" heading="تفعيل حساب الموظف؟" description="يمكن إعادة توقيف الحساب لاحقًا" danger=true}}
+  <p class="mb-4 font-bold">{{staff.fullName}}</p>
+  <ul class="mb-5 space-y-3 text-sm">
+    <li class="flex gap-2">{{> ui/icon name="ban" class="h-4 w-4 text-orange-600"}}سيتمكن من تسجيل الدخول.</li>
+    <li class="flex gap-2">{{> ui/icon name="database" class="h-4 w-4 text-[#287a73]"}}تبقى بياناته وتعييناته كما هي.
+    </li>
+  </ul>
+  <form action="/staff/activate/{{staff.id}}" method="post" hx-post="/staff/activate/{{staff.id}}"
+    hx-target="#activate-dialog" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" class="space-y-4">
+    {{> ui/csrf}}{{> ui/form-error error=error}}
+    <div class="flex flex-wrap justify-end gap-2">
+      {{> ui/cancel label="تراجع"}}{{> ui/submit label="تفعيل الحساب" icon="continue" danger=true}}</div>
+  </form>
+{{/ui/dialog}}
