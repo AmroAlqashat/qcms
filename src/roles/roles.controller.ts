@@ -43,6 +43,15 @@ export class RolesController {
       activeNav: 'roles',
     };
   }
+  @Post('create')
+  @Redirect('/roles', 303)
+  @UseFilters(RolesErrorFilter)
+  async newRole(
+    @Body() createRoleDto: CreateNewRoleDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    await this.rolesService.createRole(createRoleDto, user.id);
+  }
 
   @Get('edit/:id')
   @Render('roles/roles-editor')
@@ -60,28 +69,6 @@ export class RolesController {
       accountCount,
     };
   }
-
-  @Get('delete/:id')
-  @Render('roles/roles-delete')
-  async showDeleteRolePage(@Param('id') roleId: string) {
-    const role = await this.rolesService.getRoleById(roleId);
-
-    return {
-      role,
-      activeNav: 'roles',
-    };
-  }
-
-  @Post('create')
-  @Redirect('/roles', 303)
-  @UseFilters(RolesErrorFilter)
-  async newRole(
-    @Body() createRoleDto: CreateNewRoleDto,
-    @CurrentUser() user: { id: string },
-  ) {
-    await this.rolesService.createRole(createRoleDto, user.id);
-  }
-
   @Post('edit/:id')
   @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
@@ -93,6 +80,16 @@ export class RolesController {
     await this.rolesService.editRole(editRoleDto, roleId, user.id);
   }
 
+  @Get('delete/:id')
+  @Render('roles/roles-delete')
+  async showDeleteRolePage(@Param('id') roleId: string) {
+    const role = await this.rolesService.getRoleById(roleId);
+
+    return {
+      role,
+      activeNav: 'roles',
+    };
+  }
   @Post('delete/:id')
   @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)

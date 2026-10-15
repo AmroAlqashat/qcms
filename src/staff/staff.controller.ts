@@ -24,6 +24,7 @@ import {
   formatStaffPhone,
   formatStaffStatus,
 } from './helpers/staff-profile-formatters';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @Controller('staff')
 export class StaffController {
@@ -60,7 +61,6 @@ export class StaffController {
       activeNav: 'staff',
     };
   }
-
   @Post('invitations/cancel/:id')
   async cancelPendingInvitation(@Param('id') staffId: string) {
     await this.staffService.cancelPendingInvitation(staffId);
@@ -84,7 +84,6 @@ export class StaffController {
       },
     };
   }
-
   @Post('edit/:id')
   @UseFilters(EditStaffErrorFilter)
   async editStaff(
@@ -118,6 +117,32 @@ export class StaffController {
       form: {},
     });
   }
+  @Post('invite')
+  @UseFilters(InviteStaffErrorFilter)
+  async inviteStaff(
+    @Body() inviteStaffDto: InviteStaffDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+
+    const result = await this.staffService.inviteStaff(inviteStaffDto);
+
+    if (!wantsHtml(request)) {
+      response.json(result);
+      return;
+    }
+
+    response.render(
+      'staff/temporary-password-page',
+      staffShell({
+        title: 'تم إنشاء الحساب',
+        // TODO: compute from the permissions service once the cancel route exists
+        permissions: { canCancelInvitation: false },
+        ...result,
+      }),
+    );
+  }
 
   @Get(':id')
   @Render('staff/staff-profile-page')
@@ -150,30 +175,31 @@ export class StaffController {
     };
   }
 
-  @Post('invite')
-  @UseFilters(InviteStaffErrorFilter)
-  async inviteStaff(
-    @Body() inviteStaffDto: InviteStaffDto,
-    @Req() request: Request,
-    @Res() response: Response,
-  ) {
-    response.setHeader('Cache-Control', 'no-store');
+  @Get('deactivate/:id')
+  @Render('staff/staff-deactivate-page')
+  async showDeactivateStaffDialog(@Param('id') staffId: string) {
+    return {
+      staffId: staffId
+    };
+  }
+  @Post('deactivate/:id')
+  @Render('staff/staff-page')
+  async deactivateStaff(@Param('id') staffId: string, @CurrentUser() actor: {id: string}){
+    await this.staffService.deactivateStaff(staffId, actor.id);
+    return;
+  }
 
-    const result = await this.staffService.inviteStaff(inviteStaffDto);
-
-    if (!wantsHtml(request)) {
-      response.json(result);
-      return;
-    }
-
-    response.render(
-      'staff/temporary-password-page',
-      staffShell({
-        title: 'تم إنشاء الحساب',
-        // TODO: compute from the permissions service once the cancel route exists
-        permissions: { canCancelInvitation: false },
-        ...result,
-      }),
-    );
+  @Get('delete/:id')
+  @Render('staff/staff-delete-page')
+  async showDeleteStaffDialog(@Param('id') staffId: string) {
+    return {
+      staffId: staffId
+    };
+  }
+  @Post('delete/:id')
+  @Render('staff/staff-page')
+  async deleteStaff(@Param('id') staffId: string, @CurrentUser() actor: {id: string}){
+    await this.staffService.deleteStaff(staffId, actor.id);
+    return;
   }
 }
