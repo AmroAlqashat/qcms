@@ -1,0 +1,54 @@
+<fieldset class="p-5" data-permission-resource>
+  <legend class="sr-only">{{name}}</legend>
+  <h3 class="mb-4 flex items-center gap-2 text-sm font-extrabold text-slate-900">
+    <span class="h-2.5 w-2.5 rounded-full bg-[#a8dfdc]"></span>
+    {{name}}
+  </h3>
+  {{#if @partial-block}}
+    <div class="grid gap-3">
+      {{> @partial-block}}
+    </div>
+  {{else}}
+    <div class="grid gap-3">
+      {{#each actions}}
+        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-[#8fd8d2] hover:shadow-md"
+             data-permission-action>
+          <div class="flex flex-wrap items-center gap-3">
+            <label for="permission-{{id}}"
+                   class="flex min-h-12 flex-1 cursor-pointer items-center gap-3 rounded-xl px-2">
+              <input id="permission-{{id}}"
+                     type="checkbox"
+                     name="permissions"
+                     value="{{#if ../directGrants}}{{id}}{{else}}{{resource}}::{{action}}{{/if}}"
+                     data-permission-id="{{id}}"
+                     data-resource="{{resource}}"
+                     data-action="{{action}}"
+                     class="peer sr-only"
+                     {{#if selected}}checked{{/if}}
+                     {{#if disabled}}disabled{{/if}}>
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-transparent transition duration-75 peer-checked:border-[#2b827a] peer-checked:bg-[#2b827a] peer-checked:text-white">
+                {{> ui/icon name="check" class="h-4 w-4"}}
+              </span>
+              <span class="min-w-0">
+                <span class="block text-sm font-extrabold text-slate-900 transition peer-checked:text-[#195954]">{{action}}</span>
+                <span class="mt-0.5 block text-xs text-slate-500">{{resource}} / {{action}}</span>
+              </span>
+            </label>
+            <label class="flex min-h-12 items-center gap-2 rounded-xl bg-slate-50 px-3 text-xs font-bold text-slate-600"
+                   for="scope-{{id}}">
+              <span>النطاق</span>
+              <select id="scope-{{id}}"
+                      name="scopes[{{#if ../directGrants}}{{id}}{{else}}{{resource}}::{{action}}{{/if}}]"
+                      data-permission-scope
+                      {{#unless selected}}disabled{{/unless}}>
+                {{#each scopes}}
+                  <option value="{{this}}" {{#if (eq this ../selectedScope)}}selected{{/if}}>{{this}}</option>
+                {{/each}}
+              </select>
+            </label>
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  {{/if}}
+</fieldset>

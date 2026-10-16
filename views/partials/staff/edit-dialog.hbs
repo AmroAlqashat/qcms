@@ -1,27 +1,106 @@
 {{#> ui/dialog id="edit-staff-dialog" icon="edit" heading="تعديل ملف الموظف" description="كل حقل يُعدّل مستقلًا عن الصلاحيات"}}
-<form action="/staff/edit/{{staff.id}}"
-      method="post"
-      hx-post="/staff/edit/{{staff.id}}"
-      hx-target="#edit-staff-dialog"
-      hx-swap="outerHTML"
-      hx-disabled-elt="find button[type='submit']"
-      class="space-y-4">
-  {{> ui/csrf}}{{> ui/form-error error=error}}
-  {{> ui/field id="edit-full-name" name="fullName" label="الاسم الكامل" value=staff.fullName required=true maxlength="120" error=errors.fullName}}
-  {{> ui/field id="edit-email" name="email" label="البريد الإلكتروني" type="email" value=staff.email required=true maxlength="254" error=errors.email}}
-  {{> ui/field id="edit-nationalId" name="nationalId" label="الرقم الوطني" value=staff.nationalId required=true maxlength="15" error=errors.nationalId}}
-  {{> ui/field id="edit-job-title" name="jobTitle" label="المسمى الوظيفي" value=staff.jobTitle required=true maxlength="80" hint="وصف فقط — تغييره لا يغيّر أي صلاحية." error=errors.jobTitle}}
-  <div class="grid gap-4 sm:grid-cols-2">
-    {{> ui/field id="edit-phone" name="phoneNumber" label="الهاتف" type="tel" value=staff.phone required=true dir="ltr" maxlength="15" error=errors.phoneNumber}}
-    {{> ui/field id="edit-birth" name="dateOfBirth" label="تاريخ الميلاد" type="date" value=staff.dateOfBirthValue required=true dir="ltr" max=today error=errors.dateOfBirth}}
-  </div>
-  {{#if permissions.canChangeStatus }}<label class="flex min-h-16 cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 p-3"><span><span class="block text-sm">الحساب نشط</span><span class="text-xs leading-6 text-slate-600">إيقافه يمنع الدخول
-    وينهي الجلسة عند الطلب التالي</span></span><input type="checkbox"
-       name="isActive"
-       value="true"
-       role="switch"
-       class="h-6 w-10 shrink-0"
-       {{#if eq staff.status 'ACTIVE' }}checked{{/if}}></label>{{/if}}
-<div class="flex flex-wrap justify-start gap-2">{{> ui/cancel}}{{> ui/submit label="حفظ"}}</div>
-</form>
+  <form
+    class='space-y-4'
+    action='/staff/edit/{{ staff.id }}'
+    method='post'
+    hx-post='/staff/edit/{{ staff.id }}'
+    hx-target='#edit-staff-dialog'
+    hx-swap='outerHTML'
+    hx-disabled-elt="find button[type='submit']"
+  >
+    {{> ui/csrf}}
+    {{> ui/form-error
+      error=error
+    }}
+    {{> ui/field
+      id="edit-full-name"
+      name="fullName"
+      label="الاسم الكامل"
+      value=staff.fullName
+      required=true
+      maxlength="120"
+      error=errors.fullName
+    }}
+    {{> ui/field
+      id="edit-email"
+      name="email"
+      label="البريد الإلكتروني"
+      type="email"
+      value=staff.email
+      required=true
+      maxlength="254"
+      error=errors.email
+    }}
+    {{> ui/field
+      id="edit-nationalId"
+      name="nationalId"
+      label="الرقم الوطني"
+      value=staff.nationalId
+      required=true
+      maxlength="15"
+      error=errors.nationalId
+    }}
+    {{> ui/field
+      id="edit-job-title"
+      name="jobTitle"
+      label="المسمى الوظيفي"
+      value=staff.jobTitle
+      required=true
+      maxlength="80"
+      hint="وصف فقط — تغييره لا يغيّر أي صلاحية."
+      error=errors.jobTitle
+    }}
+    <div class='grid gap-4 sm:grid-cols-2'>
+      {{> ui/field
+        id="edit-phone"
+        name="phoneNumber"
+        label="الهاتف"
+        type="tel"
+        value=staff.phone
+        required=true
+        dir="ltr"
+        maxlength="15"
+        error=errors.phoneNumber
+      }}
+      {{> ui/field
+        id="edit-birth"
+        name="dateOfBirth"
+        label="تاريخ الميلاد"
+        type="date"
+        value=staff.dateOfBirthValue
+        required=true
+        dir="ltr"
+        max=today
+        error=errors.dateOfBirth
+      }}
+    </div>
+    {{#if permissions.canChangeStatus}}
+      <label
+        class='flex min-h-16 cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 p-3'
+      >
+        <span>
+          <span class='block text-sm'>الحساب نشط</span>
+          <span class='text-xs leading-6 text-slate-600'>
+            إيقافه يمنع الدخول وينهي الجلسة عند الطلب التالي
+          </span>
+        </span>
+        <input
+          class='h-6 w-10 shrink-0'
+          type='checkbox'
+          name='isActive'
+          value='true'
+          role='switch'
+          {{#if eq staff.status 'ACTIVE'}}
+            checked
+          {{/if}}
+        />
+      </label>
+    {{/if}}
+    <div class='flex flex-wrap justify-start gap-2'>
+      {{> ui/submit
+        label="حفظ"
+      }}
+      {{> ui/cancel}}
+    </div>
+  </form>
 {{/ui/dialog}}
