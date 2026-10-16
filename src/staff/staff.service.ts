@@ -26,6 +26,7 @@ export class StaffService {
   ) { }
 
   async getRoleOptionsForStaff(staffId: string) {
+    // Show all roles, checking only those returned by the active-grants lookup.
     const [roles, usedRoles] = await Promise.all([
       this.rolesSerive.getRoles(),
       this.rolesSerive.getUsedRoles(staffId),
@@ -40,6 +41,8 @@ export class StaffService {
   }
 
   async getPermissionOptionsForStaff(staffId: string) {
+    // Combine the permission catalog with active direct grants. Revoked rows
+    // remain in the database but must not appear checked when reopening.
     const [permissionsData, grants] = await Promise.all([
       this.rolesSerive.getPermissionsWithCategory(),
       this.prisma.directPermissionGrant.findMany({
@@ -48,6 +51,8 @@ export class StaffService {
       }),
     ]);
 
+    // The same permission can have historical rows for different scopes,
+    // so identify a selection by both the permission ID and its scope.
     const selectedKeys = new Set(
       grants.map((grant) => `${grant.permissionId}:${grant.scopeType}`)
     );
@@ -60,6 +65,9 @@ export class StaffService {
 
         for (const resource of group.resources) {
           for (const action of resource.actions) {
+            // One dropdown can display one scope per action. For legacy data
+            // with several active scopes, show the first in allowedScopes order;
+            // saving that selection will revoke the other active scope rows.
             const selectedScope = action.scopes.find((scope) =>
               selectedKeys.has(`${action.id}:${scope}`),
             );
@@ -75,6 +83,7 @@ export class StaffService {
       }
     }
 
+    // Count checked actions, not historical grant rows, for the UI badges.
     permissionsData.selectedPermissionCount = total;
     return permissionsData;
   }
@@ -84,17 +93,25 @@ export class StaffService {
     editPermissionsDto: EditPermissionsDto,
     actorId: string,
   ) {
+    // The form submits the complete desired selection, not just changes.
+    // Empty arrays therefore remove all roles and revoke all active direct grants.
     const { roleIds = [], permissions = [] } = editPermissionsDto;
 
     try {
+      // All reads and writes below share one transaction. Any thrown error
+      // rolls back role replacement and direct-grant changes together.
       await this.prisma.$transaction(
         async (tx) => {
+          // Check existence even when both selections are empty and no new
+          // grant would otherwise trigger a foreign-key check.
           const staff = await tx.staff.findUnique({
             where: { id: staffId },
             select: { id: true },
           });
           if (!staff) throw new NotFoundException('الموظف غير موجود');
 
+          // Validate duplicate pairs and enforce the UI's one-scope-per-action
+          // rule on the server too; callers can bypass the browser form.
           const selectedKeys = new Set<string>();
           const permissionIds = new Set<string>();
           for (const { permissionId, scope } of permissions) {
@@ -112,6 +129,8 @@ export class StaffService {
             permissionIds.add(permissionId);
           }
 
+          // UUID/enum DTO validation does not prove that a permission exists
+          // or supports this scope. Check the catalog before making any writes.
           const catalog = await tx.permission.findMany({
             where: { id: { in: [...permissionIds] } },
             select: { id: true, allowedScopes: true },
@@ -127,6 +146,8 @@ export class StaffService {
             }
           }
 
+          // Compare the requested pairs with active grants. Matching pairs
+          // stay untouched; absent pairs are revoked; new pairs are upserted.
           const activeGrants = await tx.directPermissionGrant.findMany({
             where: { staffId, revokedAt: null },
             select: { id: true, permissionId: true, scopeType: true },
@@ -139,6 +160,9 @@ export class StaffService {
             .map((g) => g.id);
           const now = new Date();
 
+          // Keep the existing role replacement behavior: delete this staff
+          // member's role rows, then recreate only the submitted roleIds.
+          // An empty role selection deliberately skips creation.
           await tx.roleStaff.deleteMany({ where: { staffId } });
           if (roleIds.length) {
             await tx.roleStaff.createMany({
@@ -150,6 +174,8 @@ export class StaffService {
             });
           }
 
+          // Soft-revoke unchecked pairs, preserving their original grantor
+          // and grant time. Changing a dropdown also revokes the old scope.
           if (revokedIds.length) {
             await tx.directPermissionGrant.updateMany({
               where: { staffId, id: { in: revokedIds }, revokedAt: null },
@@ -158,8 +184,12 @@ export class StaffService {
           }
 
           for (const { permissionId, scope: scopeType } of permissions) {
+            // Retaining a grant must not overwrite its attribution or timestamp.
             if (activeKeys.has(`${permissionId}:${scopeType}`)) continue;
 
+            // The composite unique key includes revoked rows. Upsert creates
+            // a missing pair or reuses its revoked row without a uniqueness error.
+            // Reactivation starts a new grant period with the current actor/time.
             await tx.directPermissionGrant.upsert({
               where: {
                 staffId_permissionId_scopeType: {
@@ -187,6 +217,8 @@ export class StaffService {
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
     } catch (error: unknown) {
+      // A serialization conflict aborts the transaction; ask the caller to
+      // retry instead of reporting success. Other errors also propagate.
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2034'

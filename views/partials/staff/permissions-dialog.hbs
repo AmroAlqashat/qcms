@@ -34,6 +34,8 @@
       </button>
     </header>
 
+    {{!-- The shared permission script recognizes data-direct-grant-editor and
+         builds permissionId/scope objects for this staff form only. --}}
     <form
       class='space-y-5'
       action='/staff/edit/permissions/{{ staffId }}'
@@ -62,6 +64,8 @@
           </div>
         </header>
         <div class='grid gap-3 p-4 sm:grid-cols-2'>
+          {{!-- Checked roleIds are the complete replacement selection. Unchecked
+               checkboxes are omitted; the DTO turns a missing field into []. --}}
           {{#each roles}}
             <label
               class='flex min-h-20 cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-[#a8dfdc]'
@@ -111,6 +115,8 @@
               {{#each this}}
                 {{#> permissions/folder category=category selectedCount=selectedCount open=true}}
                   {{#each resources}}
+                    {{!-- Use permission IDs for native form values while keeping
+                         the same checkbox/scope UI used by role editors. --}}
                     {{> permissions/resource directGrants=true}}
                   {{/each}}
                 {{/permissions/folder}}

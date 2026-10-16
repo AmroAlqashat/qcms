@@ -77,6 +77,8 @@ export class StaffController {
   @Get('edit/permissions/:id')
   @Render('partials/staff/permissions-dialog')
   async showPermissionsDialog(@Param('id') staffId: string) {
+    // GET: load the available choices and the staff member's active selections.
+    // The partial uses selected/selectedScope to reopen the saved state.
     const [roles, permissions] = await Promise.all([
       this.staffService.getRoleOptionsForStaff(staffId),
       this.staffService.getPermissionOptionsForStaff(staffId),
@@ -90,6 +92,8 @@ export class StaffController {
   }
 
   @Post('edit/permissions/:id')
+  // The global ValidationPipe transforms and validates the submitted DTO
+  // before this handler passes the target staff ID and acting user's ID onward.
   async editPermissions(
     @Param('id') staffId: string,
     @Body() editPermissionsDto: EditPermissionsDto,
@@ -99,11 +103,14 @@ export class StaffController {
   ) {
     await this.staffService.editPermissions(staffId, editPermissionsDto, user.id);
 
+    // Respond only after the transaction succeeds. HX-Redirect navigates the
+    // full page instead of swapping the profile HTML into the permissions dialog.
     const location = `/staff/${encodeURIComponent(staffId)}`;
     if (request.get('HX-Request') === 'true') {
       response.setHeader('HX-Redirect', location).status(204).end();
       return;
     }
+    // API callers receive JSON; ordinary form submissions use a GET redirect.
     if (!wantsHtml(request)) {
       response.json({ success: true });
       return;

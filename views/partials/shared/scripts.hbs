@@ -18,6 +18,8 @@
         total.textContent = `${selected(form)} محددة`;
       }
 
+      // A scope belongs to a checked action; disable it while unchecked so
+      // ordinary form submissions do not send an unused scope field.
       form.querySelectorAll('[data-permission-action]').forEach((action) => {
         const checkbox = action.querySelector('input[name="permissions"]');
         const scope = action.querySelector('[data-permission-scope]');
@@ -74,6 +76,8 @@
       }
     });
 
+    // Assemble the permissions payload immediately before HTMX sends the form,
+    // so it reflects the latest checkbox and dropdown values.
     document.addEventListener('htmx:configRequest', (event) => {
       const form = event.detail.elt.closest('[data-permission-editor]');
 
@@ -81,16 +85,19 @@
         return;
       }
 
+      // Only checked actions become entries. With none checked, map returns [].
       const permissions = [
         ...form.querySelectorAll('input[name="permissions"]:checked'),
       ].map((input) => {
         const action = input.closest('[data-permission-action]');
         const scope = action?.querySelector('[data-permission-scope]')?.value;
 
+        // Staff direct grants use the database ID and the row's single scope.
         if (form.hasAttribute('data-direct-grant-editor')) {
           return { permissionId: input.dataset.permissionId, scope };
         }
 
+        // Role create/edit forms keep the payload expected by RolePermissionDto.
         return {
           resource: input.dataset.resource,
           action: input.dataset.action,
@@ -98,6 +105,9 @@
         };
       });
 
+      // Send one JSON form field, including "[]" when clearing direct grants.
+      // EditPermissionsDto parses it; scopes are already included in each entry.
+      // roleIds remain ordinary checkbox fields and are normalized by the DTO.
       event.detail.parameters.permissions = JSON.stringify(permissions);
       delete event.detail.parameters.scopes;
     });

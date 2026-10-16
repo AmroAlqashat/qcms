@@ -16,6 +16,9 @@
           <div class="flex flex-wrap items-center gap-3">
             <label for="permission-{{id}}"
                    class="flex min-h-12 flex-1 cursor-pointer items-center gap-3 rounded-xl px-2">
+              {{!-- Staff forms use the catalog ID; role forms retain resource/action.
+                   data-permission-id lets the HTMX handler build the staff payload.
+                   selected comes from active grants when the dialog is loaded. --}}
               <input id="permission-{{id}}"
                      type="checkbox"
                      name="permissions"
@@ -37,6 +40,9 @@
             <label class="flex min-h-12 items-center gap-2 rounded-xl bg-slate-50 px-3 text-xs font-bold text-slate-600"
                    for="scope-{{id}}">
               <span>النطاق</span>
+              {{!-- Each action has one chosen scope. Unchecked actions disable
+                   this field; shared scripts update it as the checkbox changes.
+                   selectedScope restores the saved choice when reopening. --}}
               <select id="scope-{{id}}"
                       name="scopes[{{#if ../directGrants}}{{id}}{{else}}{{resource}}::{{action}}{{/if}}]"
                       data-permission-scope
