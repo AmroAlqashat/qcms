@@ -18,17 +18,20 @@ import { staffShell } from './helpers/staff-shell';
 import { EditStaffErrorFilter } from './helpers/filters/edit-staff-error.filter';
 import { InviteStaffErrorFilter } from './helpers/filters/invite-staff-error.filter';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
-import { EditStaffDto } from './dto/staff-edit.dto';
+import { EditStaffDto } from './dto/edit-staff.dto';
 import {
   formatStaffDate,
   formatStaffPhone,
   formatStaffStatus,
 } from './helpers/staff-profile-formatters';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { EditPermissionsDto } from './dto/edit-permissions.dto';
 
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) { }
+  constructor(
+    private readonly staffService: StaffService,
+  ) { }
 
   @Get()
   @Render('staff/staff-page')
@@ -69,6 +72,43 @@ export class StaffController {
     await this.staffService.cancelPendingInvitation(staffId);
 
     return { success: true };
+  }
+
+  @Get('edit/permissions/:id')
+  @Render('partials/staff/permissions-dialog')
+  async showPermissionsDialog(@Param('id') staffId: string) {
+    const [roles, permissions] = await Promise.all([
+      this.staffService.getRoleOptionsForStaff(staffId),
+      this.staffService.getPermissionOptionsForStaff(staffId),
+    ]);
+
+    return {
+      roles,
+      ...permissions,
+      staffId,
+    }
+  }
+
+  @Post('edit/permissions/:id')
+  async editPermissions(
+    @Param('id') staffId: string,
+    @Body() editPermissionsDto: EditPermissionsDto,
+    @CurrentUser() user: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.editPermissions(staffId, editPermissionsDto, user.id);
+
+    const location = `/staff/${encodeURIComponent(staffId)}`;
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+    response.redirect(303, location);
   }
 
   @Get('edit/:id')
@@ -169,7 +209,7 @@ export class StaffController {
       },
       permissions: {
         canEditStaff: true,
-        canManageAssignments: true,
+        canManagePermissions: true,
         canChangeStatus: true,
         canDelete: true,
       },

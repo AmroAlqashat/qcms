@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { wantsHtml } from '../../../common/wants-html';
-import { EditStaffDto } from '../../dto/staff-edit.dto';
+import { EditStaffDto } from '../../dto/edit-staff.dto';
 import { StaffService } from '../../staff.service';
 import { staffShell } from '../staff-shell';
 

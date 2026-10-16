@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
 import { AuditAction, AuditTarget, Prisma, StaffActivityAssignment, StaffClassAssignment, StaffStatus } from '@prisma/client';
@@ -12,14 +13,189 @@ import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './helpers/generate-temp-password.util';
 import * as argon2 from 'argon2';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
-import { EditStaffDto } from './dto/staff-edit.dto';
+import { EditStaffDto } from './dto/edit-staff.dto';
+import { RolesService } from '../roles/roles.service';
+import { EditPermissionsDto } from './dto/edit-permissions.dto';
 
 @Injectable()
 export class StaffService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly rolesSerive: RolesService,
   ) { }
+
+  async getRoleOptionsForStaff(staffId: string) {
+    const [roles, usedRoles] = await Promise.all([
+      this.rolesSerive.getRoles(),
+      this.rolesSerive.getUsedRoles(staffId),
+    ]);
+
+    const selectedRoles = new Set(usedRoles.map((role) => role.roleId));
+
+    return roles.map((role) => ({
+      ...role,
+      selected: selectedRoles.has(role.id),
+    }));
+  }
+
+  async getPermissionOptionsForStaff(staffId: string) {
+    const [permissionsData, grants] = await Promise.all([
+      this.rolesSerive.getPermissionsWithCategory(),
+      this.prisma.directPermissionGrant.findMany({
+        where: { staffId, revokedAt: null },
+        select: { permissionId: true, scopeType: true },
+      }),
+    ]);
+
+    const selectedKeys = new Set(
+      grants.map((grant) => `${grant.permissionId}:${grant.scopeType}`)
+    );
+
+    let total = 0;
+
+    for (const column of permissionsData.permissionColumns) {
+      for (const group of column) {
+        group.selectedCount = 0;
+
+        for (const resource of group.resources) {
+          for (const action of resource.actions) {
+            const selectedScope = action.scopes.find((scope) =>
+              selectedKeys.has(`${action.id}:${scope}`),
+            );
+
+            action.selected = selectedScope !== undefined;
+            action.selectedScope = selectedScope;
+
+            if (action.selected) group.selectedCount++;
+          }
+        }
+
+        total += group.selectedCount;
+      }
+    }
+
+    permissionsData.selectedPermissionCount = total;
+    return permissionsData;
+  }
+
+  async editPermissions(
+    staffId: string,
+    editPermissionsDto: EditPermissionsDto,
+    actorId: string,
+  ) {
+    const { roleIds = [], permissions = [] } = editPermissionsDto;
+
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          const staff = await tx.staff.findUnique({
+            where: { id: staffId },
+            select: { id: true },
+          });
+          if (!staff) throw new NotFoundException('الموظف غير موجود');
+
+          const selectedKeys = new Set<string>();
+          const permissionIds = new Set<string>();
+          for (const { permissionId, scope } of permissions) {
+            const key = `${permissionId}:${scope}`;
+            if (selectedKeys.has(key)) {
+              throw new UnprocessableEntityException('صلاحيات مكررة');
+            }
+            // The editor has one scope dropdown per action.
+            if (permissionIds.has(permissionId)) {
+              throw new UnprocessableEntityException(
+                'اختر نطاقًا واحدًا فقط لكل صلاحية',
+              );
+            }
+            selectedKeys.add(key);
+            permissionIds.add(permissionId);
+          }
+
+          const catalog = await tx.permission.findMany({
+            where: { id: { in: [...permissionIds] } },
+            select: { id: true, allowedScopes: true },
+          });
+          const permissionsById = new Map(catalog.map((p) => [p.id, p]));
+          for (const { permissionId, scope } of permissions) {
+            const permission = permissionsById.get(permissionId);
+            if (!permission) {
+              throw new UnprocessableEntityException('صلاحية غير موجودة');
+            }
+            if (!permission.allowedScopes.includes(scope)) {
+              throw new UnprocessableEntityException('نطاق غير مسموح للصلاحية');
+            }
+          }
+
+          const activeGrants = await tx.directPermissionGrant.findMany({
+            where: { staffId, revokedAt: null },
+            select: { id: true, permissionId: true, scopeType: true },
+          });
+          const activeKeys = new Set(
+            activeGrants.map((g) => `${g.permissionId}:${g.scopeType}`),
+          );
+          const revokedIds = activeGrants
+            .filter((g) => !selectedKeys.has(`${g.permissionId}:${g.scopeType}`))
+            .map((g) => g.id);
+          const now = new Date();
+
+          await tx.roleStaff.deleteMany({ where: { staffId } });
+          if (roleIds.length) {
+            await tx.roleStaff.createMany({
+              data: roleIds.map((roleId) => ({
+                roleId,
+                staffId,
+                grantedById: actorId,
+              })),
+            });
+          }
+
+          if (revokedIds.length) {
+            await tx.directPermissionGrant.updateMany({
+              where: { staffId, id: { in: revokedIds }, revokedAt: null },
+              data: { revokedAt: now },
+            });
+          }
+
+          for (const { permissionId, scope: scopeType } of permissions) {
+            if (activeKeys.has(`${permissionId}:${scopeType}`)) continue;
+
+            await tx.directPermissionGrant.upsert({
+              where: {
+                staffId_permissionId_scopeType: {
+                  staffId,
+                  permissionId,
+                  scopeType,
+                },
+              },
+              create: {
+                staffId,
+                permissionId,
+                scopeType,
+                grantedById: actorId,
+                grantedAt: now,
+              },
+              update: {
+                revokedAt: null,
+                grantedById: actorId,
+                grantedAt: now,
+              },
+            });
+          }
+        },
+        // Concurrent saves must not merge different scopes for the same action.
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
+        throw new ConflictException('تغيّرت الصلاحيات أثناء الحفظ. أعد المحاولة');
+      }
+      throw error;
+    }
+  }
 
   async editStaff(staffId: string, editStaffDto: EditStaffDto) {
     try {

@@ -22,7 +22,7 @@ export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-  ) {}
+  ) { }
 
   async getRoleAccountCount(roleId: string) {
     const accountCount = await this.prisma.role.findFirst({
@@ -70,6 +70,26 @@ export class RolesService {
     }
   }
 
+  async getRoles() {
+    return await this.prisma.role.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async getUsedRoles(staffId: string) {
+    const usedRoles = await this.prisma.roleStaff.findMany({
+      where: { staffId, revokedAt: null },
+      select: { roleId: true },
+    });
+
+    return usedRoles;
+  }
+
   async listRoles() {
     const roles = await this.prisma.role.findMany({
       orderBy: { createdAt: 'asc' },
@@ -104,12 +124,12 @@ export class RolesService {
 
     const selectedRolePermissions = roleId
       ? await this.prisma.rolePermission.findMany({
-          where: { roleId },
-          select: {
-            permissionId: true,
-            scopeType: true,
-          },
-        })
+        where: { roleId },
+        select: {
+          permissionId: true,
+          scopeType: true,
+        },
+      })
       : [];
 
     const selectedKeys = new Set(
