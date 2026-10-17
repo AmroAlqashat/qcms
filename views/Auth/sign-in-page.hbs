@@ -1,81 +1,39 @@
-<!DOCTYPE html>
-<html lang='ar' dir='rtl'>
-  <head>
-    {{> shared/head}}
-  </head>
-  <body class='min-h-screen bg-[#f5f6f8] text-[#12383b] antialiased'>
-    {{> shared/icons}}
-    <main class='flex min-h-screen items-center justify-center px-4 py-10 sm:px-6'>
-      <section class='w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-xl shadow-[#12383b]/10'>
-        <header class='bg-[#12383b] px-6 py-8 text-center text-white sm:px-10'>
-          <span
-            class='mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#2b827a] text-2xl font-extrabold'
-            aria-hidden='true'
-          >
-            ق
-          </span>
-          <p class='text-lg font-extrabold'>QCMS</p>
-          <p class='mt-1 text-sm text-[#b8d8d3]'>مركز القرآن الكريم</p>
-        </header>
-
-        <div class='p-6 sm:p-10'>
-          <header class='mb-7'>
-            <p class='mb-2 text-sm font-semibold text-[#287a73]'>مرحباً بعودتك</p>
-            <h1 class='text-2xl font-extrabold'>تسجيل الدخول</h1>
-            <p class='mt-2 text-sm leading-7 text-slate-600'>أدخل بيانات حسابك للوصول إلى لوحة الإدارة.</p>
-          </header>
-
-          {{#if error}}
-            <div
-              class='mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-700'
-              role='alert'
-            >
-              {{ error }}
-            </div>
-          {{/if}}
-
-          <form class='space-y-5' action='/auth/sign-in' method='post'>
-            {{> ui/csrf}}
-            <div>
-              <label class='mb-2 block text-sm font-semibold' for='sign-in-email'>البريد الإلكتروني</label>
-              <input
-                id='sign-in-email'
-                class='block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-left text-sm text-[#12383b] focus:border-[#2b827a] focus:outline-none focus:ring-2 focus:ring-[#2b827a]/20'
-                name='email'
-                type='email'
-                autocomplete='username'
-                maxlength='254'
-                dir='ltr'
-                required
-                aria-describedby='sign-in-email-error'
-              />
-              <p id='sign-in-email-error' class='mt-1 text-xs text-red-700' {{#unless errors.email}}hidden{{/unless}}>{{ errors.email }}</p>
-            </div>
-
-            <div>
-              <label class='mb-2 block text-sm font-semibold' for='sign-in-password'>كلمة المرور</label>
-              <input
-                id='sign-in-password'
-                class='block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-left text-sm text-[#12383b] focus:border-[#2b827a] focus:outline-none focus:ring-2 focus:ring-[#2b827a]/20'
-                name='password'
-                type='password'
-                autocomplete='current-password'
-                required
-                aria-describedby='sign-in-password-error'
-              />
-              <p id='sign-in-password-error' class='mt-1 text-xs text-red-700' {{#unless errors.password}}hidden{{/unless}}>{{ errors.password }}</p>
-            </div>
-
-            <button
-              class='inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#216c65] focus:outline-none focus:ring-2 focus:ring-[#2b827a] focus:ring-offset-2'
-              type='submit'
-            >
-              تسجيل الدخول
-            </button>
-          </form>
-        </div>
-      </section>
-    </main>
-    {{> shared/scripts}}
-  </body>
-</html>
+{{#> auth/card}}
+  {{> auth/heading
+    heading="تسجيل الدخول"
+    description="أدخل بريدك الإلكتروني وكلمة المرور للوصول إلى حسابك."
+  }}
+  <form class='space-y-5' action='/auth/sign-in' method='post'>
+    {{> ui/csrf}}
+    {{> ui/form-error
+      error=error
+    }}
+    {{> ui/field
+      id="sign-in-email"
+      name="email"
+      label="البريد الإلكتروني"
+      type="email"
+      value=form.email
+      required=true
+      autocomplete="username"
+      dir="ltr"
+      maxlength="254"
+      error=errors.email
+    }}
+    {{> ui/field
+      id="sign-in-password"
+      name="password"
+      label="كلمة المرور"
+      type="password"
+      password=true
+      required=true
+      autocomplete="current-password"
+      dir="ltr"
+      error=errors.password
+    }}
+    {{> ui/submit
+      label="تسجيل الدخول"
+      full=true
+    }}
+  </form>
+{{/auth/card}}

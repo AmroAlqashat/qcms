@@ -38,7 +38,7 @@ export class AuthController {
   showSignInPage() {
     return {
       title: 'تسجيل الدخول',
-      layout: false,
+      layout: 'auth',
     };
   }
 
@@ -63,7 +63,7 @@ export class AuthController {
     res.setHeader('Cache-Control', 'no-store');
     res.render('Auth/onboarding-otp-page', {
       title: 'التحقق من البريد',
-      layout: false,
+      layout: 'auth',
     });
   }
 
@@ -85,7 +85,7 @@ export class AuthController {
     res.setHeader('Cache-Control', 'no-store');
     res.render('Auth/onboarding-password-page', {
       title: 'تغيير كلمة المرور',
-      layout: false,
+      layout: 'auth',
     });
   }
 
@@ -117,7 +117,7 @@ export class AuthController {
     res.setHeader('Cache-Control', 'no-store');
     res.render('Auth/onboarding-profile-page', {
       title: 'استكمال البيانات',
-      layout: false,
+      layout: 'auth',
       form,
     });
   }
