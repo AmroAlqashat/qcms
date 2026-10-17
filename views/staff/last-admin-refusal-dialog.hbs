@@ -1,5 +1,4 @@
 {{!-- Return this fragment for the protected last-admin action. Only pass auditRecorded=true after an actual audit write. --}}
-{{#unless isHtmx}}{{> staff/staff-profile}}{{/unless}}
 {{#> ui/dialog id="last-admin-dialog" icon="shield" heading="لا يمكن تنفيذ هذا الإجراء" description="هذا آخر حساب نشط يحمل صلاحيات الإدارة" danger=true}}
   <p class="mb-4 text-sm font-bold">{{staff.fullName}}</p>
   {{> ui/alert error=true message="يجب أن يبقى في النظام مدير نشط واحد على الأقل. امنح صلاحيات الإدارة لحساب نشط آخر ثم أعد المحاولة."}}

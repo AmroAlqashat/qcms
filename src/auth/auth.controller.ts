@@ -31,7 +31,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   @Get('sign-in')
   @Render('Auth/sign-in-page')

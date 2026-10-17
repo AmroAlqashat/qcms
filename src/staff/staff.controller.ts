@@ -184,7 +184,7 @@ export class StaffController {
     }
 
     response.render(
-      'staff/temporary-password-page',
+      'partials/staff/credentials-dialog',
       staffShell({
         title: 'تم إنشاء الحساب',
         // TODO: compute from the permissions service once the cancel route exists
