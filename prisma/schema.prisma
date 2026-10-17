@@ -22,10 +22,11 @@ model Staff {
   nationalId             String?                   @db.VarChar(30)
   phone                  String?                   @db.VarChar(20)
   auditEvents            AuditEvent[]
+  directPermissionGrants DirectPermissionGrant[]
+  OTP                    OTP?
   roleGrants             RoleStaff[]
   activityAssignments    StaffActivityAssignment[]
   classAssignments       StaffClassAssignment[]
-  directPermissionGrants DirectPermissionGrant[]
 }
 
 model Permission {
@@ -34,23 +35,22 @@ model Permission {
   action                 String
   category               String
   allowedScopes          ScopeType[]
-  rolePermissions        RolePermission[]
   directPermissionGrants DirectPermissionGrant[]
+  rolePermissions        RolePermission[]
 
   @@unique([resource, action])
 }
 
 model DirectPermissionGrant {
-  id           String    @id @default(uuid())
+  id           String     @id @default(uuid())
   staffId      String
   permissionId String
   scopeType    ScopeType
   grantedById  String
-  grantedAt    DateTime  @default(now())
+  grantedAt    DateTime   @default(now())
   revokedAt    DateTime?
-
-  staff      Staff      @relation(fields: [staffId], references: [id])
-  permission Permission @relation(fields: [permissionId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  staff        Staff      @relation(fields: [staffId], references: [id])
 
   @@unique([staffId, permissionId, scopeType])
 }
@@ -253,6 +253,16 @@ model Setting {
   setAt   DateTime @default(now())
 
   @@index([key, setAt])
+}
+
+model OTP {
+  id        String   @id @default(uuid())
+  staffId   String   @unique
+  codeHash  String   @db.VarChar(64)
+  expiresAt DateTime
+  sentAt    DateTime @default(now())
+  attempts  Int      @default(0)
+  Staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade, map: "otp_staff_frk")
 }
 
 enum StaffStatus {

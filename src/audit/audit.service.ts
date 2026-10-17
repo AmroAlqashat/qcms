@@ -22,7 +22,7 @@ export class AuditService {
 
     return db.auditEvent.create({
       data: {
-        actorId: event.actorId,
+        actorId: "bcd31a44-7ba6-479f-8feb-691a5ccc4266",
         actionType: event.actionType,
         targetType: event.targetType,
         targetId: event.targetId,

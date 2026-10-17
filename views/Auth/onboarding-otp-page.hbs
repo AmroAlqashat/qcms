@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang='ar' dir='rtl'>
+  <head>
+    {{> shared/head}}
+  </head>
+  <body class='min-h-screen bg-[#f5f6f8] text-[#12383b] antialiased'>
+    {{> shared/icons}}
+    <main class='flex min-h-screen items-center justify-center px-4 py-10'>
+      <section class='w-full max-w-md rounded-3xl bg-white p-6 shadow-xl shadow-[#12383b]/10 sm:p-10'>
+        <p class='mb-2 text-sm font-semibold text-[#287a73]'>إعداد الحساب</p>
+        <h1 class='text-2xl font-extrabold'>تحقق من بريدك الإلكتروني</h1>
+        <p class='mt-2 text-sm leading-7 text-slate-600'>
+          أدخل رمز التحقق المكوّن من ستة أرقام. الرمز صالح لمدة عشر دقائق.
+        </p>
+        <form class='mt-6 space-y-5' action='/auth/onboarding/verify-otp' method='post'>
+          {{> ui/csrf}}
+          <div>
+            <label class='mb-2 block text-sm font-semibold' for='otp-code'>رمز التحقق</label>
+            <input
+              id='otp-code'
+              class='block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-center font-mono text-lg tracking-[0.4em] text-[#12383b]'
+              name='code'
+              type='text'
+              inputmode='numeric'
+              autocomplete='one-time-code'
+              pattern='[0-9]{6}'
+              minlength='6'
+              maxlength='6'
+              required
+              dir='ltr'
+            />
+          </div>
+          <button
+            class='inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white hover:bg-[#216c65]'
+            type='submit'
+          >
+            تحقق ومتابعة
+          </button>
+        </form>
+      </section>
+    </main>
+    {{> shared/scripts}}
+  </body>
+</html>

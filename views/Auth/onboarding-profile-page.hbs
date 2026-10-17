@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang='ar' dir='rtl'>
+  <head>
+    {{> shared/head}}
+  </head>
+  <body class='min-h-screen bg-[#f5f6f8] text-[#12383b] antialiased'>
+    {{> shared/icons}}
+    <main class='mx-auto max-w-2xl px-4 py-10 sm:px-6'>
+      <section class='rounded-3xl bg-white p-6 shadow-xl shadow-[#12383b]/10 sm:p-10'>
+        <p class='mb-2 text-sm font-semibold text-[#287a73]'>الخطوة الأخيرة</p>
+        <h1 class='text-2xl font-extrabold'>استكمل بيانات حسابك</h1>
+        <p class='mt-2 text-sm leading-7 text-slate-600'>
+          راجع بياناتك وأكمل المعلومات الاختيارية قبل تفعيل الحساب.
+        </p>
+        <form class='mt-6 grid gap-5 sm:grid-cols-2' action='/auth/onboarding/complete-profile' method='post'>
+          {{> ui/csrf}}
+          <div>
+            <label class='mb-2 block text-sm font-semibold' for='full-name'>الاسم الكامل</label>
+            <input
+              id='full-name'
+              class='block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm'
+              name='fullName'
+              type='text'
+              value='{{ form.fullName }}'
+              minlength='2'
+              maxlength='100'
+              required
+            />
+          </div>
+          <div>
+            <label class='mb-2 block text-sm font-semibold' for='job-title'>المسمى الوظيفي</label>
+            <input
+              id='job-title'
+              class='block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm'
+              name='jobTitle'
+              type='text'
+              value='{{ form.jobTitle }}'
+              minlength='2'
+              maxlength='100'
+              required
+            />
+          </div>
+          <div>
+            <label class='mb-2 block text-sm font-semibold' for='phone'>رقم الهاتف (اختياري)</label>
+            <input
+              id='phone'
+              class='block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-left text-sm'
+              name='phone'
+              type='tel'
+              value='{{ form.phone }}'
+              maxlength='20'
+              dir='ltr'
+            />
+          </div>
+          <div>
+            <label class='mb-2 block text-sm font-semibold' for='national-id'>رقم الهوية (اختياري)</label>
+            <input
+              id='national-id'
+              class='block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-left text-sm'
+              name='nationalId'
+              type='text'
+              value='{{ form.nationalId }}'
+              maxlength='30'
+              dir='ltr'
+            />
+          </div>
+          <div>
+            <label class='mb-2 block text-sm font-semibold' for='date-of-birth'>
+              تاريخ الميلاد (اختياري)
+            </label>
+            <input
+              id='date-of-birth'
+              class='block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm'
+              name='dateOfBirth'
+              type='date'
+              value='{{ form.dateOfBirth }}'
+            />
+          </div>
+          <button
+            class='inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white hover:bg-[#216c65] sm:col-span-2'
+            type='submit'
+          >
+            إكمال وتفعيل الحساب
+          </button>
+        </form>
+      </section>
+    </main>
+    {{> shared/scripts}}
+  </body>
+</html>

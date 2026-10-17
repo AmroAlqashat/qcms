@@ -8,9 +8,12 @@ import { join } from 'path';
 import { engine } from 'express-handlebars';
 import { NotFoundFilter } from './common/filters/not-found.filter';
 import { BadRequestFilter } from './common/filters/bad-request.filter';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.use(cookieParser());
 
   // To triger $disconnect in PrismaService.onModuleDestroy() and close the DB connection
   app.enableShutdownHooks();
