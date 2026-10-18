@@ -33,8 +33,8 @@ export class AuthController {
     private readonly jwtService: JwtService,
   ) { }
 
-  @Get('sign-in')
-  @Render('Auth/sign-in-page')
+  @Get('signIn')
+  @Render('auth/sign-in-page')
   showSignInPage() {
     return {
       title: 'تسجيل الدخول',
@@ -42,10 +42,10 @@ export class AuthController {
     };
   }
 
-  @Post('sign-in')
+  @Post('signIn')
   async signInStaff(@Res() res: Response, @Body() signInDto: SignInDto) {
     res.setHeader('Cache-Control', 'no-store');
-    const result = await this.authService.signInHelper(signInDto);
+    const result = await this.authService.signIn(signInDto);
 
     if (result.kind === 'onboarding') {
       this.setOnboardingCookie(res, result.token);
@@ -61,7 +61,7 @@ export class AuthController {
   async showOtpForm(@Req() req: Request, @Res() res: Response) {
     await this.getOnboardingPayload(req, 'verify-otp');
     res.setHeader('Cache-Control', 'no-store');
-    res.render('Auth/onboarding-otp-page', {
+    res.render('auth/onboarding-otp-page', {
       title: 'التحقق من البريد',
       layout: 'auth',
     });
@@ -83,7 +83,7 @@ export class AuthController {
   async showPasswordForm(@Req() req: Request, @Res() res: Response) {
     await this.getOnboardingPayload(req, 'change-password');
     res.setHeader('Cache-Control', 'no-store');
-    res.render('Auth/onboarding-password-page', {
+    res.render('auth/onboarding-password-page', {
       title: 'تغيير كلمة المرور',
       layout: 'auth',
     });
@@ -115,7 +115,7 @@ export class AuthController {
     const { sub } = await this.getOnboardingPayload(req, 'complete-profile');
     const form = await this.authService.getOnboardingProfile(sub);
     res.setHeader('Cache-Control', 'no-store');
-    res.render('Auth/onboarding-profile-page', {
+    res.render('auth/onboarding-profile-page', {
       title: 'استكمال البيانات',
       layout: 'auth',
       form,

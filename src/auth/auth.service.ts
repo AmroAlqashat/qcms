@@ -30,10 +30,14 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
-  async signInHelper(signInDto: SignInDto) {
+  async signIn(signInDto: SignInDto) {
+    const { email, password } = signInDto;
+    const normalizedEmail = email.trim().toLowerCase();
+
     const staff = await this.prisma.staff.findUnique({
+      where: { email: normalizedEmail },
       select: {
         id: true,
         email: true,
@@ -41,13 +45,9 @@ export class AuthService {
         status: true,
         mustChangePassword: true,
       },
-      where: { email: signInDto.email.trim().toLowerCase() },
     });
 
-    if (
-      !staff ||
-      !(await this.verifyPassword(staff.passwordHash, signInDto.password))
-    ) {
+    if (!staff || !(await this.verifyPassword(staff.passwordHash, password))) {
       throw new UnauthorizedException('bad credentials');
     }
 
@@ -55,6 +55,7 @@ export class AuthService {
       if (!staff.mustChangePassword) {
         throw new UnauthorizedException('Pending account state is invalid');
       }
+
       await this.issueOnboardingOtp(staff.id, staff.email);
       return this.createOnboardingResult(staff.id, 'verify-otp');
     }
