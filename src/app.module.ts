@@ -7,6 +7,7 @@ import { AuditModule } from './audit/audit.module';
 import { RolesModule } from './roles/roles.module';
 import { StaffModule } from './staff/staff.module';
 import { AuthModule } from './auth/auth.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -18,8 +19,9 @@ import { AuthModule } from './auth/auth.module';
     RolesModule,
     StaffModule,
     AuthModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
