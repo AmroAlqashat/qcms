@@ -7,7 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
-import { AuditAction, AuditTarget, Prisma, StaffActivityAssignment, StaffClassAssignment, StaffStatus } from '@prisma/client';
+import { AuditAction, AuditTarget, Prisma, StaffActivityAssignments, StaffClassAssignments, StaffStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './helpers/generate-temp-password.util';
@@ -45,7 +45,7 @@ export class StaffService {
     // remain in the database but must not appear checked when reopening.
     const [permissionsData, grants] = await Promise.all([
       this.rolesSerive.getPermissionsWithCategory(),
-      this.prisma.directPermissionGrant.findMany({
+      this.prisma.directPermissionGrants.findMany({
         where: { staffId, revokedAt: null },
         select: { permissionId: true, scopeType: true },
       }),
@@ -104,7 +104,7 @@ export class StaffService {
         async (tx) => {
           // Check existence even when both selections are empty and no new
           // grant would otherwise trigger a foreign-key check.
-          const staff = await tx.staff.findUnique({
+          const staff = await tx.staffMembers.findUnique({
             where: { id: staffId },
             select: { id: true },
           });
@@ -131,7 +131,7 @@ export class StaffService {
 
           // UUID/enum DTO validation does not prove that a permission exists
           // or supports this scope. Check the catalog before making any writes.
-          const catalog = await tx.permission.findMany({
+          const catalog = await tx.permissions.findMany({
             where: { id: { in: [...permissionIds] } },
             select: { id: true, allowedScopes: true },
           });
@@ -148,7 +148,7 @@ export class StaffService {
 
           // Compare the requested pairs with active grants. Matching pairs
           // stay untouched; absent pairs are revoked; new pairs are upserted.
-          const activeGrants = await tx.directPermissionGrant.findMany({
+          const activeGrants = await tx.directPermissionGrants.findMany({
             where: { staffId, revokedAt: null },
             select: { id: true, permissionId: true, scopeType: true },
           });
@@ -163,9 +163,9 @@ export class StaffService {
           // Keep the existing role replacement behavior: delete this staff
           // member's role rows, then recreate only the submitted roleIds.
           // An empty role selection deliberately skips creation.
-          await tx.roleStaff.deleteMany({ where: { staffId } });
+          await tx.roleStaffAssignments.deleteMany({ where: { staffId } });
           if (roleIds.length) {
-            await tx.roleStaff.createMany({
+            await tx.roleStaffAssignments.createMany({
               data: roleIds.map((roleId) => ({
                 roleId,
                 staffId,
@@ -177,7 +177,7 @@ export class StaffService {
           // Soft-revoke unchecked pairs, preserving their original grantor
           // and grant time. Changing a dropdown also revokes the old scope.
           if (revokedIds.length) {
-            await tx.directPermissionGrant.updateMany({
+            await tx.directPermissionGrants.updateMany({
               where: { staffId, id: { in: revokedIds }, revokedAt: null },
               data: { revokedAt: now },
             });
@@ -190,7 +190,7 @@ export class StaffService {
             // The composite unique key includes revoked rows. Upsert creates
             // a missing pair or reuses its revoked row without a uniqueness error.
             // Reactivation starts a new grant period with the current actor/time.
-            await tx.directPermissionGrant.upsert({
+            await tx.directPermissionGrants.upsert({
               where: {
                 staffId_permissionId_scopeType: {
                   staffId,
@@ -232,7 +232,7 @@ export class StaffService {
   async editStaff(staffId: string, editStaffDto: EditStaffDto) {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const staff = await tx.staff.update({
+        const staff = await tx.staffMembers.update({
           where: { id: staffId },
           data: {
             email: editStaffDto.email,
@@ -266,8 +266,8 @@ export class StaffService {
   }
 
   async cancelPendingInvitation(staffId: string) {
-    // Using deleteMany here because prisma.staff.delete does not allow us to put more than one condition + deleteMany with unique id is the same.
-    const { count } = await this.prisma.staff.deleteMany({
+    // Using deleteMany here because prisma.staffMembers.delete does not allow us to put more than one condition + deleteMany with unique id is the same.
+    const { count } = await this.prisma.staffMembers.deleteMany({
       where: {
         id: staffId,
         status: 'PENDING',
@@ -286,7 +286,7 @@ export class StaffService {
     //validate foreign keys
     await this.validateRelations(halaqa, role);
 
-    const where: Prisma.StaffWhereInput = {};
+    const where: Prisma.StaffMembersWhereInput = {};
 
     //define search parameters
     if (searchField) {
@@ -300,7 +300,7 @@ export class StaffService {
     if (halaqa) where.classAssignments = { some: { halaqaId: halaqa } };
     if (role) where.roleGrants = { some: { roleId: role } };
     //search
-    return this.prisma.staff.findMany({
+    return this.prisma.staffMembers.findMany({
       where,
       skip,
       take: limit,
@@ -309,7 +309,7 @@ export class StaffService {
   }
 
   async showStaffEditPage(staffId: string) {
-    const staff = await this.prisma.staff.findUnique({
+    const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
       select: {
         id: true,
@@ -335,11 +335,11 @@ export class StaffService {
     selectedRoleId?: string,
   ) {
     const [classes, templates] = await Promise.all([
-      this.prisma.halaqa.findMany({
+      this.prisma.halaqas.findMany({
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),
-      this.prisma.role.findMany({
+      this.prisma.roles.findMany({
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),
@@ -362,7 +362,7 @@ export class StaffService {
     roleId?: string,
   ): Promise<void> {
     if (halaqaId) {
-      const classExists = await this.prisma.halaqa.findUnique({
+      const classExists = await this.prisma.halaqas.findUnique({
         where: { id: halaqaId },
         select: { id: true },
       });
@@ -371,7 +371,7 @@ export class StaffService {
     }
 
     if (roleId) {
-      const roleExists = await this.prisma.role.findUnique({
+      const roleExists = await this.prisma.roles.findUnique({
         where: { id: roleId },
         select: { id: true },
       });
@@ -381,7 +381,7 @@ export class StaffService {
   }
 
   async showStaffProfile(staffId: string) {
-    const staff = await this.prisma.staff.findUnique({
+    const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
       select: {
         id: true,
@@ -425,7 +425,7 @@ export class StaffService {
   }
 
   async showPendingStaff() {
-    const staff = await this.prisma.staff.findMany({
+    const staff = await this.prisma.staffMembers.findMany({
       where: { status: 'PENDING', mustChangePassword: true },
       select: {
         id: true,
@@ -441,7 +441,7 @@ export class StaffService {
 
 
   async deactivateStaff(staffId: string, actorId: string) {
-    const staff = await this.prisma.staff.findUnique({
+    const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
       select: {
         id: true,
@@ -459,7 +459,7 @@ export class StaffService {
     //changes
     try {
       return await this.prisma.$transaction(async (tx) => {
-        await tx.staff.update({
+        await tx.staffMembers.update({
           where: { id: staffId },
           data: { status: StaffStatus.INACTIVE }
         });
@@ -485,7 +485,7 @@ export class StaffService {
   }
 
   async activateStaff(staffId: string, actorId: string) {
-    const staff = await this.prisma.staff.findUnique({
+    const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
       select: {
         id: true,
@@ -500,7 +500,7 @@ export class StaffService {
     //changes
     try {
       return await this.prisma.$transaction(async (tx) => {
-        await tx.staff.update({
+        await tx.staffMembers.update({
           where: { id: staffId },
           data: { status: StaffStatus.ACTIVE }
         });
@@ -526,7 +526,7 @@ export class StaffService {
   }
 
   async deleteStaff(staffId: string, actorId: string) {
-    const staff = await this.prisma.staff.findUnique({
+    const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
       select: {
         id: true,
@@ -544,7 +544,7 @@ export class StaffService {
     //changes
     try {
       return await this.prisma.$transaction(async (tx) => {
-        await tx.staff.update({
+        await tx.staffMembers.update({
           where: { id: staffId },
           data: { status: StaffStatus.DELETED }
         });
@@ -574,7 +574,7 @@ export class StaffService {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const existingStaff = await this.prisma.staff.findUnique({
+    const existingStaff = await this.prisma.staffMembers.findUnique({
       where: { email: normalizedEmail },
     });
 
@@ -604,9 +604,9 @@ export class StaffService {
       fullName: true,
       jobTitle: true,
       status: true,
-    } satisfies Prisma.StaffSelect;
+    } satisfies Prisma.StaffMembersSelect;
 
-    type StaffSummary = Prisma.StaffGetPayload<{
+    type StaffSummary = Prisma.StaffMembersGetPayload<{
       select: typeof select;
     }>;
 
@@ -617,7 +617,7 @@ export class StaffService {
         // Check if the staff exist and deleted
         if (existingStaff && existingStaff.status === StaffStatus.DELETED) {
           // Change the status to pending
-          staff = await tx.staff.update({
+          staff = await tx.staffMembers.update({
             // We need the check here too, to prevent another invitation at the same time.
             where: {
               id: existingStaff.id,
@@ -627,7 +627,7 @@ export class StaffService {
             select,
           });
         } else {
-          staff = await tx.staff.create({
+          staff = await tx.staffMembers.create({
             data,
             select,
           });
@@ -661,10 +661,10 @@ export class StaffService {
       throw error;
     }
   }
-  private async validateStaffNotAloneInClassesAndActivities(staffId: string, classAssignments: StaffClassAssignment[],
-    activityAssignments: StaffActivityAssignment[]) {
+  private async validateStaffNotAloneInClassesAndActivities(staffId: string, classAssignments: StaffClassAssignments[],
+    activityAssignments: StaffActivityAssignments[]) {
     const [halaqas, activities] = await Promise.all([
-      this.prisma.halaqa.findMany({
+      this.prisma.halaqas.findMany({
         where: {
           id: { in: classAssignments.map(({ halaqaId }) => halaqaId) },
           staffAssignments: { some: { staffId } },
@@ -674,7 +674,7 @@ export class StaffService {
           _count: { select: { staffAssignments: true } },
         },
       }),
-      this.prisma.activity.findMany({
+      this.prisma.activities.findMany({
         where: {
           id: { in: activityAssignments.map(({ activityId }) => activityId) },
           staffAssignments: { some: { staffId } },

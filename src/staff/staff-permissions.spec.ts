@@ -5,7 +5,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma, ScopeType } from '@prisma/client';
-import type { DirectPermissionGrant } from '@prisma/client';
+import type { DirectPermissionGrants } from '@prisma/client';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -24,7 +24,7 @@ const secondPermissionId = '20000000-0000-4000-8000-000000000002';
 const actorId = '30000000-0000-4000-8000-000000000001';
 const roleId = '40000000-0000-4000-8000-000000000001';
 const scope = ScopeType.OWN_ACCOUNT;
-const otherScope = ScopeType.CENTRE_WIDE;
+const otherScope = ScopeType.CENTER_WIDE;
 
 function permissionData(): PermissionsData {
   return {
@@ -57,18 +57,18 @@ function permissionData(): PermissionsData {
 
 function setup() {
   const tx = {
-    staff: { findUnique: jest.fn().mockResolvedValue({ id: staffId }) },
-    permission: {
+    staffMembers: { findUnique: jest.fn().mockResolvedValue({ id: staffId }) },
+    permissions: {
       findMany: jest.fn().mockResolvedValue([
         { id: permissionId, allowedScopes: [scope, otherScope] },
         { id: secondPermissionId, allowedScopes: [scope] },
       ]),
     },
-    roleStaff: {
+    roleStaffAssignments: {
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       createMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
-    directPermissionGrant: {
+    directPermissionGrants: {
       findMany: jest.fn().mockResolvedValue([]),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       upsert: jest.fn().mockResolvedValue({}),
@@ -78,7 +78,7 @@ function setup() {
     $transaction: jest.fn((callback: (client: typeof tx) => Promise<void>) =>
       callback(tx),
     ),
-    directPermissionGrant: tx.directPermissionGrant,
+    directPermissionGrants: tx.directPermissionGrants,
   };
   const roles = {
     getPermissionsWithCategory: jest.fn().mockResolvedValue(permissionData()),
@@ -93,7 +93,7 @@ function setup() {
 
 const existingGrant = (
   scopeType: ScopeType = scope,
-): DirectPermissionGrant => ({
+): DirectPermissionGrants => ({
   id: `grant-${scopeType}`,
   staffId,
   permissionId,
@@ -106,7 +106,7 @@ const existingGrant = (
 describe('StaffService permissions', () => {
   it('leaves unchanged direct grants and their attribution alone', async () => {
     const { service, tx, prisma } = setup();
-    tx.directPermissionGrant.findMany.mockResolvedValue([existingGrant()]);
+    tx.directPermissionGrants.findMany.mockResolvedValue([existingGrant()]);
 
     await service.editPermissions(
       staffId,
@@ -114,12 +114,12 @@ describe('StaffService permissions', () => {
       actorId,
     );
 
-    expect(tx.directPermissionGrant.upsert).not.toHaveBeenCalled();
-    expect(tx.directPermissionGrant.updateMany).not.toHaveBeenCalled();
-    expect(tx.roleStaff.deleteMany).toHaveBeenCalledWith({
+    expect(tx.directPermissionGrants.upsert).not.toHaveBeenCalled();
+    expect(tx.directPermissionGrants.updateMany).not.toHaveBeenCalled();
+    expect(tx.roleStaffAssignments.deleteMany).toHaveBeenCalledWith({
       where: { staffId },
     });
-    expect(tx.roleStaff.createMany).toHaveBeenCalledWith({
+    expect(tx.roleStaffAssignments.createMany).toHaveBeenCalledWith({
       data: [{ roleId, staffId, grantedById: actorId }],
     });
     expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
@@ -129,21 +129,21 @@ describe('StaffService permissions', () => {
 
   it('clears both selections by revoking direct grants and removing roles', async () => {
     const { service, tx } = setup();
-    tx.directPermissionGrant.findMany.mockResolvedValue([existingGrant()]);
+    tx.directPermissionGrants.findMany.mockResolvedValue([existingGrant()]);
     await service.editPermissions(
       staffId,
       { roleIds: [], permissions: [] },
       actorId,
     );
-    expect(tx.roleStaff.deleteMany).toHaveBeenCalledWith({
+    expect(tx.roleStaffAssignments.deleteMany).toHaveBeenCalledWith({
       where: { staffId },
     });
-    expect(tx.roleStaff.createMany).not.toHaveBeenCalled();
-    expect(tx.directPermissionGrant.updateMany).toHaveBeenCalledWith({
+    expect(tx.roleStaffAssignments.createMany).not.toHaveBeenCalled();
+    expect(tx.directPermissionGrants.updateMany).toHaveBeenCalledWith({
       where: { staffId, id: { in: [`grant-${scope}`] }, revokedAt: null },
       data: { revokedAt: expect.any(Date) as Date },
     });
-    expect(tx.directPermissionGrant.upsert).not.toHaveBeenCalled();
+    expect(tx.directPermissionGrants.upsert).not.toHaveBeenCalled();
   });
 
   it('creates a new grant or reactivates its unique revoked row', async () => {
@@ -153,8 +153,8 @@ describe('StaffService permissions', () => {
       { roleIds: [], permissions: [{ permissionId, scope }] },
       actorId,
     );
-    expect(tx.roleStaff.createMany).not.toHaveBeenCalled();
-    expect(tx.directPermissionGrant.upsert).toHaveBeenCalledWith({
+    expect(tx.roleStaffAssignments.createMany).not.toHaveBeenCalled();
+    expect(tx.directPermissionGrants.upsert).toHaveBeenCalledWith({
       where: {
         staffId_permissionId_scopeType: {
           staffId,
@@ -179,17 +179,17 @@ describe('StaffService permissions', () => {
 
   it('revokes the old scope when changing an action to another scope', async () => {
     const { service, tx } = setup();
-    tx.directPermissionGrant.findMany.mockResolvedValue([existingGrant()]);
+    tx.directPermissionGrants.findMany.mockResolvedValue([existingGrant()]);
     await service.editPermissions(
       staffId,
       { roleIds: [], permissions: [{ permissionId, scope: otherScope }] },
       actorId,
     );
-    expect(tx.directPermissionGrant.updateMany).toHaveBeenCalledWith({
+    expect(tx.directPermissionGrants.updateMany).toHaveBeenCalledWith({
       where: { staffId, id: { in: [`grant-${scope}`] }, revokedAt: null },
       data: { revokedAt: expect.any(Date) as Date },
     });
-    expect(tx.directPermissionGrant.upsert).toHaveBeenCalledWith(
+    expect(tx.directPermissionGrants.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           staffId_permissionId_scopeType: {
@@ -226,16 +226,16 @@ describe('StaffService permissions', () => {
           actorId,
         ),
       ).rejects.toThrow(UnprocessableEntityException);
-      expect(tx.roleStaff.deleteMany).not.toHaveBeenCalled();
-      expect(tx.roleStaff.createMany).not.toHaveBeenCalled();
-      expect(tx.directPermissionGrant.updateMany).not.toHaveBeenCalled();
-      expect(tx.directPermissionGrant.upsert).not.toHaveBeenCalled();
+      expect(tx.roleStaffAssignments.deleteMany).not.toHaveBeenCalled();
+      expect(tx.roleStaffAssignments.createMany).not.toHaveBeenCalled();
+      expect(tx.directPermissionGrants.updateMany).not.toHaveBeenCalled();
+      expect(tx.directPermissionGrants.upsert).not.toHaveBeenCalled();
     },
   );
 
   it('rejects a nonexistent staff member even with empty selections', async () => {
     const { service, tx } = setup();
-    tx.staff.findUnique.mockResolvedValue(null);
+    tx.staffMembers.findUnique.mockResolvedValue(null);
     await expect(
       service.editPermissions(
         staffId,
@@ -243,13 +243,13 @@ describe('StaffService permissions', () => {
         actorId,
       ),
     ).rejects.toThrow(NotFoundException);
-    expect(tx.roleStaff.deleteMany).not.toHaveBeenCalled();
+    expect(tx.roleStaffAssignments.deleteMany).not.toHaveBeenCalled();
   });
 
   it('propagates a direct-grant failure out of the transaction', async () => {
     const { service, tx, prisma } = setup();
     const failure = new Error('database write failed');
-    tx.directPermissionGrant.upsert.mockRejectedValue(failure);
+    tx.directPermissionGrants.upsert.mockRejectedValue(failure);
     await expect(
       service.editPermissions(
         staffId,
@@ -257,14 +257,14 @@ describe('StaffService permissions', () => {
         actorId,
       ),
     ).rejects.toBe(failure);
-    expect(tx.roleStaff.createMany).toHaveBeenCalled();
+    expect(tx.roleStaffAssignments.createMany).toHaveBeenCalled();
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 
   it('does not save direct grants if role replacement fails', async () => {
     const { service, tx } = setup();
     const failure = new Error('role does not exist');
-    tx.roleStaff.createMany.mockRejectedValue(failure);
+    tx.roleStaffAssignments.createMany.mockRejectedValue(failure);
     await expect(
       service.editPermissions(
         staffId,
@@ -272,7 +272,7 @@ describe('StaffService permissions', () => {
         actorId,
       ),
     ).rejects.toBe(failure);
-    expect(tx.directPermissionGrant.upsert).not.toHaveBeenCalled();
+    expect(tx.directPermissionGrants.upsert).not.toHaveBeenCalled();
   });
 
   it('reports a serialization conflict instead of silently succeeding', async () => {
@@ -294,7 +294,7 @@ describe('StaffService permissions', () => {
 
   it('reopens with the active scope checked and keeps only that scope on save', async () => {
     const { service, tx } = setup();
-    tx.directPermissionGrant.findMany.mockResolvedValue([
+    tx.directPermissionGrants.findMany.mockResolvedValue([
       existingGrant(scope),
       existingGrant(otherScope),
     ]);
@@ -303,7 +303,7 @@ describe('StaffService permissions', () => {
     expect(action.selected).toBe(true);
     expect(action.selectedScope).toBe(scope);
     expect(data.selectedPermissionCount).toBe(1);
-    expect(tx.directPermissionGrant.findMany).toHaveBeenCalledWith({
+    expect(tx.directPermissionGrants.findMany).toHaveBeenCalledWith({
       where: { staffId, revokedAt: null },
       select: { permissionId: true, scopeType: true },
     });
@@ -313,11 +313,11 @@ describe('StaffService permissions', () => {
       { roleIds: [], permissions: [{ permissionId, scope }] },
       actorId,
     );
-    expect(tx.directPermissionGrant.updateMany).toHaveBeenCalledWith({
+    expect(tx.directPermissionGrants.updateMany).toHaveBeenCalledWith({
       where: { staffId, id: { in: [`grant-${otherScope}`] }, revokedAt: null },
       data: { revokedAt: expect.any(Date) as Date },
     });
-    expect(tx.directPermissionGrant.upsert).not.toHaveBeenCalled();
+    expect(tx.directPermissionGrants.upsert).not.toHaveBeenCalled();
   });
 
   it('reopens without checking an action that has no active grant', async () => {

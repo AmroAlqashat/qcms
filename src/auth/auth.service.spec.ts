@@ -30,11 +30,11 @@ function setup(
     mustChangePassword,
   };
   const tx = {
-    staff: {
+    staffMembers: {
       findUnique: jest.fn().mockResolvedValue(staff),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
-    oTP: {
+    oTPs: {
       findUnique: jest.fn().mockResolvedValue(null),
       upsert: jest.fn().mockResolvedValue({}),
       deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -97,10 +97,10 @@ describe('AuthService sign-in decisions and onboarding', () => {
       { sub: staffId, tokenUse: 'refresh' },
       { expiresIn: '7d' },
     );
-    expect(prisma.staff.findUnique).toHaveBeenCalledWith(
+    expect(prisma.staffMembers.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { email: credentials.email } }),
     );
-    expect(prisma.oTP.upsert).not.toHaveBeenCalled();
+    expect(prisma.oTPs.upsert).not.toHaveBeenCalled();
   });
 
   it('sends pending staff to email verification without granting a session', async () => {
@@ -119,7 +119,7 @@ describe('AuthService sign-in decisions and onboarding', () => {
     );
     expect(jwt.signAsync).toHaveBeenCalledTimes(1);
     expect(result).not.toHaveProperty('accessToken');
-    expect(prisma.oTP.upsert).toHaveBeenCalledTimes(1);
+    expect(prisma.oTPs.upsert).toHaveBeenCalledTimes(1);
   });
 
   it('sends active staff with a required password change directly to that stage', async () => {
@@ -127,7 +127,7 @@ describe('AuthService sign-in decisions and onboarding', () => {
     expect(await service.signInHelper(credentials)).toEqual(
       expect.objectContaining({ kind: 'onboarding', stage: 'change-password' }),
     );
-    expect(prisma.oTP.upsert).not.toHaveBeenCalled();
+    expect(prisma.oTPs.upsert).not.toHaveBeenCalled();
   });
 
   it.each([StaffStatus.INACTIVE, StaffStatus.DELETED])(
@@ -145,12 +145,12 @@ describe('AuthService sign-in decisions and onboarding', () => {
     await expect(
       service.signInHelper({ ...credentials, password: 'wrong-password' }),
     ).rejects.toThrow(UnauthorizedException);
-    expect(prisma.oTP.upsert).not.toHaveBeenCalled();
+    expect(prisma.oTPs.upsert).not.toHaveBeenCalled();
   });
 
   it('rejects an unknown account', async () => {
     const { service, prisma } = setup();
-    prisma.staff.findUnique.mockResolvedValue(null);
+    prisma.staffMembers.findUnique.mockResolvedValue(null);
     await expect(service.signInHelper(credentials)).rejects.toThrow(
       UnauthorizedException,
     );
@@ -159,7 +159,7 @@ describe('AuthService sign-in decisions and onboarding', () => {
   it('advances a verified pending account to password setup', async () => {
     const { service, prisma } = setup(StaffStatus.PENDING, true);
     const code = '123456';
-    prisma.oTP.findUnique.mockResolvedValue({
+    prisma.oTPs.findUnique.mockResolvedValue({
       id: 'test-otp',
       staffId,
       attempts: 0,
@@ -169,7 +169,7 @@ describe('AuthService sign-in decisions and onboarding', () => {
     expect(await service.verifyOnboardingOtp(staffId, code)).toEqual(
       expect.objectContaining({ kind: 'onboarding', stage: 'change-password' }),
     );
-    expect(prisma.oTP.deleteMany).toHaveBeenCalledTimes(1);
+    expect(prisma.oTPs.deleteMany).toHaveBeenCalledTimes(1);
   });
 
   it('keeps pending staff in onboarding after setting their password', async () => {
@@ -201,7 +201,7 @@ describe('AuthService sign-in decisions and onboarding', () => {
     const { service, prisma, audit } = setup(StaffStatus.PENDING, true);
     const result = await service.completePendingOnboarding(staffId, profile);
     expect(result.kind).toBe('signed-in');
-    expect(prisma.staff.updateMany).toHaveBeenCalledWith(
+    expect(prisma.staffMembers.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: StaffStatus.ACTIVE,

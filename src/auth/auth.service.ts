@@ -36,7 +36,7 @@ export class AuthService {
     const { email, password } = signInDto;
     const normalizedEmail = email.trim().toLowerCase();
 
-    const staff = await this.prisma.staff.findUnique({
+    const staff = await this.prisma.staffMembers.findUnique({
       where: { email: normalizedEmail },
       select: {
         id: true,
@@ -76,11 +76,11 @@ export class AuthService {
 
   async verifyOnboardingOtp(staffId: string, code: string) {
     const [staff, otp] = await Promise.all([
-      this.prisma.staff.findUnique({
+      this.prisma.staffMembers.findUnique({
         where: { id: staffId },
         select: { status: true, mustChangePassword: true },
       }),
-      this.prisma.oTP.findUnique({ where: { staffId } }),
+      this.prisma.oTPs.findUnique({ where: { staffId } }),
     ]);
 
     if (
@@ -92,7 +92,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired verification code');
     }
     if (otp.expiresAt.getTime() <= Date.now()) {
-      await this.prisma.oTP.deleteMany({ where: { id: otp.id } });
+      await this.prisma.oTPs.deleteMany({ where: { id: otp.id } });
       throw new UnauthorizedException('Invalid or expired verification code');
     }
     if (otp.attempts >= OTP_MAX_ATTEMPTS) {
@@ -107,7 +107,7 @@ export class AuthService {
       timingSafeEqual(storedHash, submittedHashBytes);
 
     if (!valid) {
-      const updated = await this.prisma.oTP.updateMany({
+      const updated = await this.prisma.oTPs.updateMany({
         where: { id: otp.id, attempts: { lt: OTP_MAX_ATTEMPTS } },
         data: { attempts: { increment: 1 } },
       });
@@ -117,7 +117,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired verification code');
     }
 
-    const consumed = await this.prisma.oTP.deleteMany({
+    const consumed = await this.prisma.oTPs.deleteMany({
       where: {
         id: otp.id,
         codeHash: otp.codeHash,
@@ -144,7 +144,7 @@ export class AuthService {
       type: argon2.argon2id,
     });
 
-    const staff = await this.prisma.staff.findUnique({
+    const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
       select: { status: true, mustChangePassword: true },
     });
@@ -160,7 +160,7 @@ export class AuthService {
     }
 
     if (staff.status === StaffStatus.PENDING) {
-      const changed = await this.prisma.staff.updateMany({
+      const changed = await this.prisma.staffMembers.updateMany({
         where: {
           id: staffId,
           status: StaffStatus.PENDING,
@@ -175,7 +175,7 @@ export class AuthService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      const changed = await tx.staff.updateMany({
+      const changed = await tx.staffMembers.updateMany({
         where: {
           id: staffId,
           status: StaffStatus.ACTIVE,
@@ -207,7 +207,7 @@ export class AuthService {
   ) {
     try {
       await this.prisma.$transaction(async (tx) => {
-        const updated = await tx.staff.updateMany({
+        const updated = await tx.staffMembers.updateMany({
           where: {
             id: staffId,
             status: StaffStatus.PENDING,
@@ -226,7 +226,7 @@ export class AuthService {
         if (updated.count !== 1) {
           throw new ConflictException('The account state has changed');
         }
-        await tx.oTP.deleteMany({ where: { staffId } });
+        await tx.oTPs.deleteMany({ where: { staffId } });
         await this.audit.record(tx, {
           actorId: staffId,
           actionType: AuditAction.STAFF_ONBOARDING_COMPLETED,
@@ -252,7 +252,7 @@ export class AuthService {
   }
 
   async getOnboardingProfile(staffId: string) {
-    const staff = await this.prisma.staff.findFirst({
+    const staff = await this.prisma.staffMembers.findFirst({
       where: {
         id: staffId,
         status: StaffStatus.PENDING,
@@ -284,7 +284,7 @@ export class AuthService {
 
   private async issueOnboardingOtp(staffId: string, email: string) {
     const now = new Date();
-    const existing = await this.prisma.oTP.findUnique({ where: { staffId } });
+    const existing = await this.prisma.oTPs.findUnique({ where: { staffId } });
     if (
       existing &&
       existing.expiresAt > now &&
@@ -307,7 +307,7 @@ export class AuthService {
     const codeHash = this.hashOtp(code);
     const attempts =
       existing && existing.expiresAt > now ? existing.attempts : 0;
-    await this.prisma.oTP.upsert({
+    await this.prisma.oTPs.upsert({
       where: { staffId },
       create: {
         staffId,
