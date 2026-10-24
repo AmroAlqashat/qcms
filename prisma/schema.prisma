@@ -271,6 +271,14 @@ model OTPs {
   Staff     StaffMembers @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
+model sessions {
+  sid    String   @id @db.VarChar(255)
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
+}
+
 enum StaffStatus {
   ACTIVE
   INACTIVE
