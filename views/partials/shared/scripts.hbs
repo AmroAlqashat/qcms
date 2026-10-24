@@ -114,12 +114,12 @@
 
     document.addEventListener('htmx:beforeSwap', (event) => {
       const xhr = event.detail.xhr;
-      const isFragmentError = [400, 409, 422].includes(xhr.status);
+      const isFragmentError = xhr.status >= 400 && xhr.status < 500;
       const isMarkedFragment =
         xhr.getResponseHeader('X-QCMS-Fragment') === 'true';
       const isMarkedToast = xhr.getResponseHeader('X-QCMS-Toast') === 'true';
 
-      if (isFragmentError && (isMarkedFragment || isMarkedToast)) {
+      if ((isFragmentError && isMarkedFragment) || (xhr.status >= 400 && xhr.status < 600 && isMarkedToast)) {
         event.detail.shouldSwap = true;
         event.detail.isError = false;
       }

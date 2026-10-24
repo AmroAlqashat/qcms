@@ -1,4 +1,4 @@
-<a class='mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-[#287a73]' href='/staff'>
+<a class='mb-5 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-[#287a73]' href='/staff'>
   {{> ui/icon
     name="arrow"
     class="h-4 w-4"
@@ -6,29 +6,36 @@
   الموظفون
 </a>
 <section id='staff-profile' aria-labelledby='staff-name'>
-  <header
-    class='mb-4 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-slate-200 bg-white p-5'
-  >
-    <div class='flex min-w-0 items-center gap-3'>
-      <span class='flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f0faf9] text-xl font-bold text-[#287a73]' aria-hidden='true'>{{ staff.initial }}</span>
-      <div class='min-w-0'>
-        <h1 id='staff-name' class='text-xl font-extrabold'>{{ staff.fullName }}</h1>
-        <p class='break-anywhere text-right text-xs leading-7 text-slate-600' dir='ltr'>{{ staff.email }}</p>
-        <div class='mt-1 flex flex-wrap items-center gap-2'>
-          {{> staff/staff-status-badge
-            status=staff.status
-          }}
-          <span class='rounded-full bg-slate-100 px-3 py-1 text-xs'>{{ staff.jobTitle }}</span>
-          <span class='text-xs text-slate-600'>المسمى وصف فقط ولا يمنح صلاحيات</span>
+  <header class='mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm'>
+    <div class='relative bg-[#195954] px-5 py-7 text-white sm:px-8 sm:py-9'>
+      <div class='absolute inset-x-0 top-0 h-1 bg-[#edbc5a]' aria-hidden='true'></div>
+      <p class='mb-5 text-xs font-bold tracking-wide text-[#c0e3dc]'>ملف الموظف</p>
+      <div class='flex min-w-0 flex-wrap items-center gap-5'>
+        <span class='flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl border border-white/20 bg-white/10 text-3xl font-extrabold text-[#edbc5a] sm:h-24 sm:w-24' aria-hidden='true'>
+          {{#if staff.initial}}{{staff.initial}}{{else}}{{> ui/icon name="user" class="h-9 w-9"}}{{/if}}
+        </span>
+        <div class='min-w-0 flex-1'>
+          <h1 id='staff-name' class='break-words text-2xl font-extrabold leading-relaxed sm:text-3xl'>{{staff.fullName}}</h1>
+          <div class='mt-2 flex flex-wrap items-center gap-3'>
+            <span class='text-sm text-[#d7ebe6]'>{{staff.jobTitle}}</span>
+            {{> staff/staff-status-badge status=staff.status}}
+          </div>
+          <p class='mt-3 flex min-w-0 items-start gap-2 text-sm text-[#d7ebe6]'>
+            <span aria-hidden='true'>{{> ui/icon name="mail" class="mt-1 h-4 w-4"}}</span>
+            <bdi class='min-w-0 break-all' dir='ltr'>{{staff.email}}</bdi>
+          </p>
         </div>
       </div>
     </div>
-    <div class='flex flex-wrap gap-2'>
+    <div class='flex flex-wrap items-center justify-between gap-4 p-4 sm:px-8 sm:py-5'>
+    <div class='flex flex-wrap gap-3'>
+
       {{#if permissions.canEditStaff}}
         <a
-          class='inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold'
+          class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#216c65] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
           href='/staff/edit/{{ staff.id }}'
           hx-get='/staff/edit/{{ staff.id }}'
+          aria-haspopup='dialog'
           hx-target='#modal-root'
         >
           {{> ui/icon
@@ -40,12 +47,12 @@
       {{/if}}
       {{#if permissions.canManagePermissions}}
         <a
-          class='inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 text-xs font-bold text-[#287a73]'
+          class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
           href='/staff/edit/permissions/{{ staff.id }}'
           hx-get='/staff/edit/permissions/{{ staff.id }}'
+          aria-haspopup='dialog'
           hx-target='#modal-root'
           hx-swap='innerHTML'
-          type='button'
         >
           {{> ui/icon
             name="sliders"
@@ -54,11 +61,14 @@
           تعديل الصلاحيات
         </a>
       {{/if}}
+    </div>
+    <div class='flex flex-wrap gap-2' aria-label='إجراءات الحساب'>
       {{#if permissions.canChangeStatus}}
         <a
-          class='inline-flex min-h-11 items-center gap-2 rounded-lg border border-amber-200 px-3 text-xs font-bold text-amber-800'
+          class='inline-flex min-h-11 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-bold text-amber-800 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-amber-700'
           href="/staff/{{#if (eq staff.status 'ACTIVE')}}deactivate{{else}}activate{{/if}}/{{ staff.id }}"
           hx-get="/staff/{{#if (eq staff.status 'ACTIVE')}}deactivate{{else}}activate{{/if}}/{{ staff.id }}"
+          aria-haspopup='dialog'
           hx-target='#modal-root'
         >
           {{#if (eq staff.status 'ACTIVE')}}
@@ -70,9 +80,10 @@
       {{/if}}
       {{#if permissions.canDelete}}
         <a
-          class='inline-flex min-h-11 items-center gap-2 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700'
+          class='inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-bold text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700'
           href='/staff/delete/{{ staff.id }}'
           hx-get='/staff/delete/{{ staff.id }}'
+          aria-haspopup='dialog'
           hx-target='#modal-root'
         >
           {{> ui/icon
@@ -83,41 +94,49 @@
         </a>
       {{/if}}
     </div>
+    </div>
   </header>
-  <div class='grid items-start gap-5 xl:grid-cols-5'>
-    <div class='space-y-4 xl:col-span-3'>
-      <section class='overflow-hidden rounded-2xl border border-slate-200 bg-white'>
-        <header class='border-b border-slate-100 p-4'>
-          <h2 class='font-extrabold'>ملخص التعيينات</h2>
-          <p class='text-xs leading-6 text-slate-600'>تسري أي تغييرات من الطلب التالي للحساب</p>
+  <div class='grid items-start gap-6 xl:grid-cols-5'>
+    <div class='space-y-6 xl:col-span-3'>
+      <section class='overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm'>
+        <header class='border-b border-slate-100 p-5 sm:p-6'>
+          <h2 class='text-lg font-extrabold'>التعيينات والصلاحيات</h2>
+          <p class='mt-1 text-sm leading-7 text-slate-500'>الحلقات والأنشطة وقوالب الصلاحيات المرتبطة بالموظف.</p>
         </header>
-        <div class='grid gap-4 p-4 sm:grid-cols-2'>
+        <div class='grid gap-4 p-5 sm:grid-cols-2 sm:p-6'>
           {{> staff/staff-assignment-card
             heading="الحلقات"
+            icon="users"
+            emptyLabel="لم تُسند حلقات بعد"
             items=assignments.classes
           }}
           {{> staff/staff-assignment-card
             heading="الأنشطة"
+            icon="calendar"
+            emptyLabel="لم تُسند أنشطة بعد"
             items=assignments.activities
           }}
           {{> staff/staff-assignment-card
             heading="قوالب الصلاحيات"
+            icon="layers"
+            emptyLabel="لا توجد قوالب مسندة"
             items=assignments.templates
           }}
-          <div class='rounded-2xl bg-slate-50 p-4'>
-            <h3 class='text-xs text-slate-600'>المنح المباشرة</h3>
-            <p class='mt-1 text-sm'>
+          <div class='rounded-2xl border border-slate-200 bg-slate-50 p-5'>
+            <span class='mb-4 inline-flex rounded-xl bg-[#e3f2ef] p-2.5 text-[#287a73]' aria-hidden='true'>{{> ui/icon name="check-shield"}}</span>
+            <h3 class='text-sm font-bold'>المنح المباشرة</h3>
+            <p class='mt-3 text-sm leading-7 text-slate-600'>
               {{#if assignments.directGrantsLabel}}
                 {{ assignments.directGrantsLabel }}
               {{else}}
-                تُتاح في إصدار لاحق
+                لا توجد معلومات متاحة
               {{/if}}
             </p>
           </div>
         </div>
       </section>
       <a
-        class='flex min-h-16 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4'
+        class='group flex min-h-16 items-center gap-4 rounded-2xl border border-[#a8dfdc] bg-[#edf7f4] p-5 transition hover:bg-[#e0f1eb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
         href='/staff/permissions/{{ staff.id }}'
       >
         <span class='rounded-xl bg-[#f0faf9] p-2 text-[#287a73]'>
@@ -135,12 +154,12 @@
         }}
       </a>
     </div>
-    <section class='overflow-hidden rounded-2xl border border-slate-200 bg-white xl:col-span-2'>
-      <h2 class='border-b border-slate-100 p-4 font-extrabold'>البيانات الشخصية</h2>
-      <dl class='px-4 py-2 text-sm'>
-        <div class='flex flex-wrap justify-between gap-3 border-b border-dashed border-slate-200 py-4'>
-          <dt class='text-slate-600'>تاريخ الميلاد</dt>
-          <dd class='font-bold' dir='ltr'>
+    <section class='overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm xl:col-span-2'>
+      <div class='border-b border-slate-100 p-5 sm:p-6'><h2 class='text-lg font-extrabold'>البيانات الشخصية</h2><p class='mt-1 text-sm leading-7 text-slate-500'>معلومات الهوية والتواصل</p></div>
+      <dl class='px-5 py-2 text-sm sm:px-6'>
+        <div class='flex flex-wrap justify-between gap-3 border-b border-slate-100 py-5'>
+          <dt class='flex items-center gap-2 text-slate-500'><span aria-hidden='true'>{{> ui/icon name="calendar" class="h-4 w-4 text-[#287a73]"}}</span>تاريخ الميلاد</dt>
+          <dd class='min-w-0 break-all font-bold' dir='ltr'>
             {{#if staff.dateOfBirthLabel}}
               {{ staff.dateOfBirthLabel }}
             {{else}}
@@ -148,9 +167,9 @@
             {{/if}}
           </dd>
         </div>
-        <div class='flex flex-wrap justify-between gap-3 border-b border-dashed border-slate-200 py-4'>
-          <dt class='text-slate-600'>الرقم الوطني</dt>
-          <dd class='break-anywhere font-bold' dir='ltr'>
+        <div class='flex flex-wrap justify-between gap-3 border-b border-slate-100 py-5'>
+          <dt class='flex items-center gap-2 text-slate-500'><span aria-hidden='true'>{{> ui/icon name="document" class="h-4 w-4 text-[#287a73]"}}</span>الرقم الوطني</dt>
+          <dd class='min-w-0 break-all font-bold' dir='ltr'>
             <bdi>
               {{#if staff.nationalIdLabel}}
                 {{ staff.nationalIdLabel }}
@@ -160,9 +179,9 @@
             </bdi>
           </dd>
         </div>
-        <div class='flex flex-wrap justify-between gap-3 border-b border-dashed border-slate-200 py-4'>
-          <dt class='text-slate-600'>الهاتف</dt>
-          <dd class='font-bold' dir='ltr'>
+        <div class='flex flex-wrap justify-between gap-3 border-b border-slate-100 py-5'>
+          <dt class='flex items-center gap-2 text-slate-500'><span aria-hidden='true'>{{> ui/icon name="phone" class="h-4 w-4 text-[#287a73]"}}</span>الهاتف</dt>
+          <dd class='min-w-0 break-all font-bold' dir='ltr'>
             <bdi>
               {{#if staff.phoneLabel}}
                 {{ staff.phoneLabel }}
@@ -173,7 +192,7 @@
           </dd>
         </div>
         <div class='flex flex-wrap justify-between gap-3 py-4'>
-          <dt class='text-slate-600'>تفعيل الحساب</dt>
+          <dt class='flex items-center gap-2 text-slate-500'><span aria-hidden='true'>{{> ui/icon name="check-shield" class="h-4 w-4 text-[#287a73]"}}</span>تفعيل الحساب</dt>
           <dd class='font-bold'>
             {{#if staff.statusLabel}}
               {{ staff.statusLabel }}

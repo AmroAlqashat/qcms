@@ -1,7 +1,7 @@
 {{#> auth/card}}
   {{> auth/heading
     heading="أكمل ملفك الشخصي"
-    description="راجع اسمك ومسمّاك الوظيفي، وأكمل المعلومات الاختيارية قبل تفعيل الحساب."
+    description="أكمل بياناتك المطلوبة، ثم تابع لإنشاء كلمة مرورك وتفعيل الحساب."
   }}
   {{> auth/steps-profile}}
   <form class='space-y-5' action='/auth/onboarding/complete-profile' method='post'>
@@ -36,7 +36,7 @@
       label="تاريخ الميلاد"
       type="date"
       value=form.dateOfBirth
-      optional=true
+      required=true
       autocomplete="bday"
       dir="ltr"
       error=errors.dateOfBirth
@@ -46,7 +46,7 @@
       name="nationalId"
       label="الرقم الوطني أو رقم الهوية"
       value=form.nationalId
-      optional=true
+      required=true
       dir="ltr"
       maxlength="30"
       error=errors.nationalId
@@ -57,14 +57,14 @@
       label="رقم الهاتف"
       type="tel"
       value=form.phone
-      optional=true
+      required=true
       autocomplete="tel"
       dir="ltr"
       maxlength="20"
       error=errors.phone
     }}
     {{> ui/submit
-      label="تفعيل الحساب"
+      label="المتابعة إلى كلمة المرور"
       icon="users"
       full=true
     }}
