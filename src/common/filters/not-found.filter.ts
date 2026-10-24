@@ -14,8 +14,24 @@ export class NotFoundFilter implements ExceptionFilter {
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
 
+    if (request.get('HX-Request') === 'true') {
+      response
+        .status(404)
+        .set({
+          'X-QCMS-Toast': 'true',
+          'HX-Retarget': '#toast-root',
+          'HX-Reswap': 'beforeend',
+        })
+        .render('partials/ui/toast', {
+          layout: false,
+          message: 'تعذر العثور على الصفحة أو المورد المطلوب',
+        });
+      return;
+    }
+
     if (wantsHtml(request)) {
       response.status(404).render('errors/404', {
+        layout: false,
         title: 'الصفحة غير موجودة',
         sectionTitle: 'الصفحة غير موجودة',
       });

@@ -21,7 +21,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "css:dev": "tailwindcss -i ./assets/styles/tailwind.css -o ./public/css/source.css --watch",
     "css:build": "tailwindcss -i ./assets/styles/tailwind.css -o ./public/css/source.css --minify",
-    "postinstall": "prisma skills sync || exit 0"
+    "postinstall": "prisma skills sync || exit 0",
+    "admin:create": "npx tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "@emnapi/core": "^1.11.3",
@@ -38,8 +39,9 @@
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-    "cookie-parser": "^1.4.7",
+    "connect-pg-simple": "^10.0.0",
     "express-handlebars": "^8.0.3",
+    "express-session": "^1.19.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
@@ -55,8 +57,10 @@
     "@poliklot/prettier-plugin-handlebars": "^0.4.1",
     "@tailwindcss/cli": "^4.3.3",
     "@types/bcrypt": "^6.0.0",
+    "@types/connect-pg-simple": "^7.0.3",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/express-session": "^1.19.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
