@@ -59,7 +59,7 @@ export class RolesErrorFilter implements ExceptionFilter {
       response
         .status(status)
         .setHeader('X-QCMS-Fragment', 'true')
-        .render('roles/roles-delete', {
+        .render('roles/roles-delete-dialog', {
           activeNav: 'roles',
           role,
           errors: details.errors,

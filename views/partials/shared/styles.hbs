@@ -19,6 +19,10 @@
     cursor: pointer;
   }
 
+  button:disabled {
+    cursor: not-allowed;
+  }
+
   svg {
     flex-shrink: 0;
   }
@@ -40,6 +44,20 @@
 
   dialog::backdrop {
     background: rgb(12 46 41 / 48%);
+  }
+
+  .htmx-indicator {
+    display: none;
+  }
+
+  .htmx-request .idle-label,
+  .idle-label.htmx-request {
+    display: none;
+  }
+
+  .htmx-request .htmx-indicator,
+  .htmx-indicator.htmx-request {
+    display: inline;
   }
 
   .skip-link {

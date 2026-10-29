@@ -16,8 +16,8 @@
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
     {{> ui/icon name="archive"}}سجل التدقيق
   </a>
-  <a href="/settings"
-    class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
+  <a href="/settings" {{#if (eq activeNav "settings")}}aria-current="page"{{/if}}
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "settings")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
     {{> ui/icon name="settings"}}إعدادات المركز
   </a>
   <p class="px-3 pb-1 pt-5 text-xs text-[#81aaa4]">حسابي</p>

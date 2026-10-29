@@ -6,10 +6,44 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { engine } from 'express-handlebars';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { NotFoundFilter } from './common/filters/not-found.filter';
+import { BadRequestFilter } from './common/filters/bad-request.filter';
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const sessionSecret = process.env.SESSION_SECRET;
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!sessionSecret) throw new Error('SESSION_SECRET is required');
+  if (!databaseUrl) throw new Error('DATABASE_URL is required');
+
+  const PgSession = connectPgSimple(session);
+
+  app.use(
+    session({
+      name: isProduction ? '__Host-qcms.sid' : 'qcms.sid',
+      secret: sessionSecret,
+      store: new PgSession({
+        conString: databaseUrl,
+        tableName: 'sessions',
+        createTableIfMissing: false,
+      }),
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      cookie: {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 30 * 60 * 1000, // 30 minutes of inactivity
+      },
+    }),
+  );
 
   // To triger $disconnect in PrismaService.onModuleDestroy() and close the DB connection
   app.enableShutdownHooks();
@@ -56,7 +90,12 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new NotFoundFilter());
+  // Nest resolves global filters in reverse order; specialized filters win.
+  app.useGlobalFilters(
+    new HttpExceptionFilter(),
+    new NotFoundFilter(),
+    new BadRequestFilter(),
+  );
 
   await app.listen(process.env.PORT ?? 3000);
 }

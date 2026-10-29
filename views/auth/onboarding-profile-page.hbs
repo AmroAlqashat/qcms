@@ -1,0 +1,72 @@
+{{#> auth/card}}
+  {{> auth/heading
+    heading="أكمل ملفك الشخصي"
+    description="أكمل بياناتك المطلوبة، ثم تابع لإنشاء كلمة مرورك وتفعيل الحساب."
+  }}
+  {{> auth/steps-profile}}
+  <form class='space-y-5' action='/auth/onboarding/complete-profile' method='post'>
+    {{> ui/csrf}}
+    {{> ui/form-error
+      error=error
+    }}
+    {{> ui/field
+      id="profile-full-name"
+      name="fullName"
+      label="الاسم الكامل"
+      value=form.fullName
+      required=true
+      autocomplete="name"
+      minlength="2"
+      maxlength="100"
+      error=errors.fullName
+    }}
+    {{> ui/field
+      id="profile-job-title"
+      name="jobTitle"
+      label="المسمى الوظيفي"
+      value=form.jobTitle
+      required=true
+      minlength="2"
+      maxlength="100"
+      error=errors.jobTitle
+    }}
+    {{> ui/field
+      id="profile-birth"
+      name="dateOfBirth"
+      label="تاريخ الميلاد"
+      type="date"
+      value=form.dateOfBirth
+      required=true
+      autocomplete="bday"
+      dir="ltr"
+      error=errors.dateOfBirth
+    }}
+    {{> ui/field
+      id="profile-national-id"
+      name="nationalId"
+      label="الرقم الوطني أو رقم الهوية"
+      value=form.nationalId
+      required=true
+      dir="ltr"
+      maxlength="30"
+      error=errors.nationalId
+    }}
+    {{> ui/field
+      id="profile-phone"
+      name="phone"
+      label="رقم الهاتف"
+      type="tel"
+      value=form.phone
+      required=true
+      autocomplete="tel"
+      dir="ltr"
+      maxlength="20"
+      error=errors.phone
+    }}
+    {{> ui/submit
+      label="المتابعة إلى كلمة المرور"
+      icon="users"
+      full=true
+    }}
+  </form>
+{{/auth/card}}

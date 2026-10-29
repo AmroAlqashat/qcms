@@ -25,7 +25,7 @@ export class RolesService {
   ) {}
 
   async getRoleAccountCount(roleId: string) {
-    const accountCount = await this.prisma.role.findFirst({
+    const accountCount = await this.prisma.roles.findFirst({
       where: { id: roleId },
       select: {
         _count: {
@@ -48,7 +48,7 @@ export class RolesService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
-        await tx.role.delete({ where: { id: roleId } });
+        await tx.roles.delete({ where: { id: roleId } });
 
         await this.audit.record(tx, {
           actorId,
@@ -70,8 +70,28 @@ export class RolesService {
     }
   }
 
+  async getRoles() {
+    return await this.prisma.roles.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async getUsedRoles(staffId: string) {
+    const usedRoles = await this.prisma.roleStaffAssignments.findMany({
+      where: { staffId, revokedAt: null },
+      select: { roleId: true },
+    });
+
+    return usedRoles;
+  }
+
   async listRoles() {
-    const roles = await this.prisma.role.findMany({
+    const roles = await this.prisma.roles.findMany({
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -91,7 +111,7 @@ export class RolesService {
   }
 
   async getPermissionsWithCategory(roleId?: string): Promise<PermissionsData> {
-    const permissions = await this.prisma.permission.findMany({
+    const permissions = await this.prisma.permissions.findMany({
       orderBy: [{ category: 'asc' }, { resource: 'asc' }, { action: 'asc' }],
       select: {
         id: true,
@@ -103,7 +123,7 @@ export class RolesService {
     });
 
     const selectedRolePermissions = roleId
-      ? await this.prisma.rolePermission.findMany({
+      ? await this.prisma.rolePermissions.findMany({
           where: { roleId },
           select: {
             permissionId: true,
@@ -177,7 +197,7 @@ export class RolesService {
   }
 
   async getRoleById(roleId: string) {
-    const role = await this.prisma.role.findUnique({
+    const role = await this.prisma.roles.findUnique({
       where: { id: roleId },
     });
 
@@ -198,11 +218,11 @@ export class RolesService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const role = await tx.role.create({
+        const role = await tx.roles.create({
           data: { name: normalizedName, description },
         });
 
-        await tx.rolePermission.createMany({
+        await tx.rolePermissions.createMany({
           data: rows.map((row) => ({ ...row, roleId: role.id })),
         });
 
@@ -239,7 +259,7 @@ export class RolesService {
     await this.checkExistingRoleName(normalizedName, roleId);
     this.duplicatePermissionValidation(permissions);
 
-    const oldRoleExists = await this.prisma.role.findUnique({
+    const oldRoleExists = await this.prisma.roles.findUnique({
       where: { id: roleId },
     });
     if (!oldRoleExists)
@@ -252,14 +272,14 @@ export class RolesService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const role = await tx.role.update({
+        const role = await tx.roles.update({
           where: { id: roleId },
           data: { name: normalizedName, description },
         });
 
-        await tx.rolePermission.deleteMany({ where: { roleId } });
+        await tx.rolePermissions.deleteMany({ where: { roleId } });
 
-        await tx.rolePermission.createMany({
+        await tx.rolePermissions.createMany({
           data: rows.map((row) => ({ ...row, roleId: role.id })),
         });
 
@@ -291,7 +311,7 @@ export class RolesService {
     roleName: string,
     excludeRoleId?: string,
   ) {
-    const roleNameExisting = await this.prisma.role.findUnique({
+    const roleNameExisting = await this.prisma.roles.findUnique({
       where: { name: roleName },
       select: { id: true },
     });
@@ -317,7 +337,7 @@ export class RolesService {
   private async validateRoleValues(permissions: RolePermissionDto[]) {
     if (permissions.length === 0) return [];
 
-    const catalog = await this.prisma.permission.findMany({
+    const catalog = await this.prisma.permissions.findMany({
       where: {
         OR: permissions.map(({ resource, action }) => ({
           resource,

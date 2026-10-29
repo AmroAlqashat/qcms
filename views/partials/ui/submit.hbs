@@ -1,5 +1,5 @@
 <button type="submit"
-  class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition {{#if danger}}bg-[#df262e] text-white hover:bg-red-700{{else}}bg-[#2b827a] text-white hover:bg-[#216c65]{{/if}} {{#if full}}w-full{{/if}}"
+  class="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition {{#if danger}}bg-[#df262e] text-white hover:bg-red-700{{else}}{{#if (eq variant "gold")}}border border-[#edbc5a] bg-[#edbc5a] text-[#12383b] enabled:hover:bg-[#f4cd80] focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:border-[#bfa777] disabled:bg-[#bfa777] disabled:text-[#443b28] disabled:shadow-none{{else}}bg-[#2b827a] text-white hover:bg-[#216c65]{{/if}}{{/if}} {{#if full}}w-full{{/if}}"
   {{#if disabled}}disabled{{/if}}>
   {{#if icon}}{{> ui/icon name=icon}}{{/if}}<span class="idle-label">{{label}}</span><span class="htmx-indicator"
     role="status">جارٍ الإرسال…</span>

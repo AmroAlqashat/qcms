@@ -1,17 +1,32 @@
 {{#> ui/dialog id="invite-dialog" icon="users" heading="دعوة موظف جديد" description="أدخل البيانات الأساسية؛ يكمل الموظف بقية ملفه عند التفعيل"}}
-  <form action="/staff/invitations" method="post" hx-post="/staff/invitations" hx-target="#invite-dialog"
-    hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" class="space-y-4">
-    {{> ui/csrf}}{{> ui/form-error error=error}}
+  <form
+    class='space-y-4'
+    action='/staff/invite'
+    method='post'
+    hx-post='/staff/invite'
+    hx-target='#modal-root'
+    hx-swap='innerHTML'
+    hx-disabled-elt="find button[type='submit']"
+  >
+    {{> ui/csrf}}
+    {{> ui/form-error
+      error=error
+    }}
     {{> staff/invite-fields}}
-    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-7">
-      <h3 class="mb-1 font-bold">ماذا يحدث بعد ذلك؟</h3>
-      <ol class="list-inside list-decimal space-y-1 text-slate-600">
+    <div class='rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-7'>
+      <h3 class='mb-1 font-bold'>ماذا يحدث بعد ذلك؟</h3>
+      <ol class='list-inside list-decimal space-y-1 text-slate-600'>
         <li>يُنشأ حساب معلّق وتظهر كلمة مرور مؤقتة لتسليمها للموظف.</li>
         <li>يدخل بها ويؤكد رمزًا يصل إلى بريده.</li>
         <li>يضع كلمة مرور خاصة ويكمل ملفه ليصبح الحساب نشطًا.</li>
       </ol>
     </div>
-    <div class="flex flex-wrap justify-end gap-2">
-      {{> ui/cancel}}{{> ui/submit label="إنشاء الحساب المعلّق" icon="send"}}</div>
+    <div class='flex flex-wrap justify-start gap-2'>
+      {{> ui/cancel}}
+      {{> ui/submit
+        label="إنشاء الحساب المعلّق"
+        icon="send"
+      }}
+    </div>
   </form>
 {{/ui/dialog}}

@@ -1,0 +1,67 @@
+{{#> auth/card}}
+  {{> auth/heading
+    heading="تأكيد البريد الإلكتروني"
+    description="أدخل رمز التحقق المكوّن من 6 أرقام. الرمز صالح لمدة عشر دقائق."
+  }}
+  {{> auth/steps-activation-code}}
+  {{#if email}}
+    <p class='mb-5 break-anywhere text-center text-sm font-bold' dir='ltr'>
+      {{ email }}
+    </p>
+  {{/if}}
+  <form class='space-y-5' action='/auth/onboarding/verify-otp' method='post'>
+    {{> ui/csrf}}
+    {{> ui/form-error
+      error=error
+    }}
+    <label class='sr-only' for='verification-code'>رمز التحقق المكون من ستة أرقام</label>
+    {{!-- One accessible input supports whole-code paste and mobile OTP autofill. --}}
+    <input
+      id='verification-code'
+      class='otp-input block min-h-14 w-full rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-3 py-3 text-2xl font-extrabold'
+      name='code'
+      type='text'
+      inputmode='numeric'
+      autocomplete='one-time-code'
+      pattern='[0-9]{6}'
+      maxlength='6'
+      minlength='6'
+      required
+      dir='ltr'
+      aria-describedby='code-hint{{#if errors.code}} code-error{{/if}}'
+      {{#if errors.code}}
+        aria-invalid="true"
+      {{/if}}
+    />
+    {{#if errors.code}}
+      <p id="code-error" class="mt-1 text-xs text-red-700" role="alert">{{errors.code}}</p>
+    {{/if}}
+    <p id='code-hint'  class='text-center text-xs text-slate-600'>
+      أدخل الأرقام الستة بالترتيب من اليسار إلى اليمين.
+    </p>
+    {{> ui/submit
+      label="تأكيد الرمز"
+      full=true
+    }}
+  </form>
+  <form action='/auth/onboarding/send-otp' method='post'
+        hx-post='/auth/onboarding/send-otp' hx-swap='none'
+        hx-sync='this:drop' data-otp-send
+        class='mt-6 border-t border-slate-200 pt-5 text-center'>
+    {{> ui/csrf}}
+    <p class='mb-3 text-sm text-slate-600'>لم يصلك رمز التحقق؟</p>
+    <button type='submit' data-otp-send-button aria-describedby='otp-send-status otp-send-countdown'
+            class='min-h-11 w-full rounded-xl border border-[#2b827a] bg-[#f0faf9] px-4 py-3 text-sm font-bold text-[#195954] enabled:hover:bg-[#dcefeb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73] disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500'>
+      إرسال رمز التحقق
+    </button>
+    <p id='otp-send-countdown' data-otp-send-countdown role='timer' aria-live='off'
+       class='mt-2 text-xs leading-6 text-slate-600' hidden></p>
+    <p id='otp-send-status' data-otp-send-status role='status' aria-live='polite' aria-atomic='true'
+       class='mt-2 text-sm leading-6 text-[#195954]'></p>
+  </form>
+  {{#if notice}}
+    <p class='mt-3 text-center text-sm text-[#287a73]' role='status'>
+      {{ notice }}
+    </p>
+  {{/if}}
+{{/auth/card}}

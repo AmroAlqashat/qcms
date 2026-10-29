@@ -1,0 +1,39 @@
+{{#> auth/card}}
+  {{> auth/heading
+    heading="تسجيل الدخول"
+    description="أدخل بريدك الإلكتروني وكلمة المرور للوصول إلى حسابك."
+  }}
+  <form class='space-y-5' action='/auth/signin' method='post'>
+    {{> ui/csrf}}
+    {{> ui/form-error
+      error=error
+    }}
+    {{> ui/field
+      id="sign-in-email"
+      name="email"
+      label="البريد الإلكتروني"
+      type="email"
+      value=form.email
+      required=true
+      autocomplete="username"
+      dir="ltr"
+      maxlength="254"
+      error=errors.email
+    }}
+    {{> ui/field
+      id="sign-in-password"
+      name="password"
+      label="كلمة المرور"
+      type="password"
+      password=true
+      required=true
+      autocomplete="current-password"
+      dir="ltr"
+      error=errors.password
+    }}
+    {{> ui/submit
+      label="تسجيل الدخول"
+      full=true
+    }}
+  </form>
+{{/auth/card}}

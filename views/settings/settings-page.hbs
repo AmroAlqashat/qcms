@@ -1,0 +1,248 @@
+{{!-- UI contract: render with layout="main", activeNav="settings", settings and errors.
+Durations use minutes / hours respectively. registrationOpen accepts a boolean
+or the form strings "true" / "false"; unset values require an explicit choice.
+initialSettings contains the saved values for change tracking and Cancel.
+currencyOptions may provide {value, label} fallback options. --}}
+<section id='settings-page' aria-labelledby='settings-heading' data-settings-page data-settings-initial="{{initialSettings}}">
+  <header class='mb-6 flex flex-wrap items-start justify-between gap-4'>
+    <div>
+      <p class='mb-2 text-sm font-semibold text-[#287a73]'>إدارة المركز</p>
+      <h1 id='settings-heading' class='text-2xl font-extrabold sm:text-3xl'>إعدادات المركز</h1>
+      <p class='mt-3 max-w-2xl text-sm leading-7 text-slate-600'>
+        اضبط بيانات المركز وحالة التسجيل ومدد الوصول من مكان واحد.
+      </p>
+    </div>
+    <span class='rounded-2xl bg-[#e3f2ef] p-4 text-[#287a73]' aria-hidden='true'>
+      {{> ui/icon
+        name="settings"
+      }}
+    </span>
+  </header>
+
+  <nav class='mb-6 flex flex-wrap gap-2 text-sm font-bold' aria-label='أقسام الإعدادات'>
+    <a
+      class='rounded-xl border border-slate-200 bg-white px-4 py-3 focus-visible:outline-2 focus-visible:outline-[#287a73]'
+      href='#settings-center'
+    >
+      بيانات المركز
+    </a>
+    <a
+      class='rounded-xl border border-slate-200 bg-white px-4 py-3 focus-visible:outline-2 focus-visible:outline-[#287a73]'
+      href='#settings-registration'
+    >
+      رابط التسجيل
+    </a>
+    <a
+      class='rounded-xl border border-slate-200 bg-white px-4 py-3 focus-visible:outline-2 focus-visible:outline-[#287a73]'
+      href='#settings-access'
+    >
+      الوصول والأمان
+    </a>
+  </nav>
+
+  <form
+    id='settings-form'
+    class='space-y-6'
+    method='post'
+    aria-labelledby='settings-heading'
+    hx-post='/settings'
+    action='/settings'
+    hx-target='#settings-page'
+    hx-swap='outerHTML'
+    hx-disabled-elt='find button[type="submit"]'
+  >
+    {{> ui/form-error
+      error=error
+    }}
+    <div
+      class='rounded-xl bg-[#e3f2ef] p-4 text-sm leading-7'
+      role='status'
+      aria-live='polite'
+      data-settings-feedback
+      tabindex='-1'
+      {{#unless feedback}}hidden{{/unless}}
+    >{{feedback}}</div>
+
+    <section
+      id='settings-center'
+      class='scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7'
+      aria-labelledby='settings-center-heading'
+    >
+      <h2 id='settings-center-heading' class='text-lg font-extrabold'>بيانات المركز</h2>
+      <p class='mb-6 mt-2 text-sm leading-7 text-slate-600'>الاسم والعملة المستخدمة في المركز.</p>
+      <div class='grid gap-6 md:grid-cols-2'>
+        <div>
+          {{> ui/field
+            id="settings-center-name"
+            name="centerName"
+            label="اسم المركز"
+            value=settings.centerName.value
+            required=true
+            maxlength="150"
+            autocomplete="organization"
+            hint="اكتب الاسم الذي تريد عرضه للمركز."
+            error=errors.centerName
+          }}
+        </div>
+        <div>
+          <label class='mb-2 block text-sm font-semibold' for='settings-currency'>العملة</label>
+          <select
+            id='settings-currency'
+            name='currency'
+            required
+            data-initial-value='{{ settings.currency.value }}'
+            aria-describedby='settings-currency-hint settings-currency-error'
+            {{#if errors.currency}}
+              aria-invalid="true"
+            {{/if}}
+            class='min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 text-sm'
+          >
+            <option value=''>اختر العملة</option>
+            {{#if settings.currency}}
+              <option value='{{ settings.currency.value }}' selected>
+                {{ settings.currency.value }}
+              </option>
+            {{/if}}
+            {{#each currencyOptions}}
+              <option value='{{ value }}'>
+                {{ label }}
+              </option>
+            {{/each}}
+          </select>
+          <p id='settings-currency-hint' class='mt-2 text-xs leading-6 text-slate-600'>
+            اختر رمز العملة، مثال: JOD — دينار أردني.
+          </p>
+          <p class='mt-1 text-xs leading-6 text-[#287a73]' data-currency-preview role='status'></p>
+          <p id='settings-currency-error' class='mt-1 text-xs text-red-700' {{#unless errors.currency}}hidden{{/unless}}>{{ errors.currency }}</p>
+        </div>
+      </div>
+    </section>
+
+    <section
+      id='settings-registration'
+      class='scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7'
+      aria-labelledby='settings-registration-heading'
+    >
+      <h2 id='settings-registration-heading' class='text-lg font-extrabold'>رابط التسجيل</h2>
+      <p class='mb-6 mt-2 text-sm leading-7 text-slate-600'>
+        تحكّم في استقبال طلبات التسجيل الجديدة عبر الرابط.
+      </p>
+      <div class='grid items-start gap-6 md:grid-cols-2'>
+        <div>
+          <label class='mb-2 block text-sm font-semibold' for='settings-registration-open'>
+            حالة التسجيل
+          </label>
+          <select
+            id='settings-registration-open'
+            name='registrationOpen'
+            required
+            aria-describedby='settings-registration-hint settings-registration-error'
+            {{#if errors.registrationOpen}}
+              aria-invalid="true"
+            {{/if}}
+            class='min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 text-sm'
+          >
+            <option value=''>اختر حالة التسجيل</option>
+            <option
+              value='true'
+              {{#if (eq settings.registrationOpen.value true)}}
+                selected
+              {{else}}
+                {{#if (eq settings.registrationOpen.value "true")}}selected{{/if}}
+              {{/if}}
+            >
+              مفتوح — استقبال طلبات جديدة
+            </option>
+            <option
+              value='false'
+              {{#if (eq settings.registrationOpen.value false)}}
+                selected
+              {{else}}
+                {{#if (eq settings.registrationOpen.value "false")}}selected{{/if}}
+              {{/if}}
+            >
+              مغلق — إيقاف الطلبات الجديدة
+            </option>
+          </select>
+          <p id='settings-registration-hint' class='mt-2 text-xs leading-6 text-slate-600'>
+            يُطبّق تغيير الحالة بعد حفظ الإعدادات.
+          </p>
+          <p id='settings-registration-error' class='mt-1 text-xs text-red-700' {{#unless errors.registrationOpen}}hidden{{/unless}}>{{ errors.registrationOpen }}</p>
+        </div>
+        <div class='rounded-xl bg-slate-50 p-4' role='status' aria-live='polite' aria-atomic='true'>
+          <p class='text-sm font-bold' data-registration-title>اختر حالة رابط التسجيل</p>
+          <p class='mt-2 text-sm leading-7 text-slate-600' data-registration-description>
+            اختر فتح التسجيل أو إغلاقه لعرض أثر الإعداد.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section
+      id='settings-access'
+      class='scroll-mt-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7'
+      aria-labelledby='settings-access-heading'
+    >
+      <h2 id='settings-access-heading' class='text-lg font-extrabold'>الوصول والأمان</h2>
+      <p class='mb-6 mt-2 text-sm leading-7 text-slate-600'>
+        مدة الخمول تخص جلسة المستخدم، بينما مدة التفويض تخص صلاحية الوصول المفوّض.
+      </p>
+      <div class='grid gap-6 md:grid-cols-2'>
+        <div>
+          {{> ui/field
+            id="settings-inactivity"
+            name="sessionInactivityTimeoutMinutes"
+            label="مهلة خمول الجلسة (بالدقائق)"
+            type="number"
+            value=settings.sessionInactivityTimeoutMinutes.value
+            required=true
+            inputmode="numeric"
+            hint="المدة دون نشاط قبل انتهاء الجلسة وطلب تسجيل الدخول مجدداً."
+            error=errors.sessionInactivityTimeoutMinutes
+          }}
+        </div>
+        <div>
+          {{> ui/field
+            id="settings-delegate-expiry"
+            name="delegateAccessExpiryHours"
+            label="مدة صلاحية الوصول المفوّض (بالساعات)"
+            type="number"
+            value=settings.delegateAccessExpiryHours.value
+            required=true
+            inputmode="numeric"
+            hint="مدة صلاحية التفويض، وليست مهلة خمول. مثال: 24 ساعة تساوي يوماً واحداً."
+            error=errors.delegateAccessExpiryHours
+          }}
+        </div>
+      </div>
+    </section>
+
+    <footer
+      class='sticky bottom-4 z-10 mx-auto flex w-full flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#407c75] bg-[#195954] p-4 shadow-[0_12px_32px_rgba(18,56,59,0.3)] sm:bottom-6 sm:p-5'
+    >
+      <div class='flex flex-wrap gap-3'>
+        {{> ui/submit
+          label="حفظ التغييرات"
+          icon="check"
+          variant="gold"
+          disabled=true
+        }}
+        <button
+          class='min-h-12 rounded-xl border-2 border-white bg-white px-5 py-3 text-sm font-bold text-[#195954] enabled:hover:bg-[#e3f2ef] focus-visible:ring-2 focus-visible:ring-[#edbc5a] disabled:cursor-not-allowed disabled:border-[#548b82] disabled:bg-[#306e64] disabled:text-[#c0d7d1]'
+          type='reset'
+          disabled
+        >
+          إلغاء التغييرات
+        </button>
+        <p>{{ count }}</p>
+      </div>
+      <p class='text-sm text-[#e3f2ef]' data-settings-dirty role='status' aria-live='polite'>
+        لا توجد تغييرات غير محفوظة.
+      </p>
+    </footer>
+    <noscript>
+      <p class='text-sm text-amber-800'>فعّل JavaScript لمعاينة التغييرات.</p>
+    </noscript>
+  </form>
+</section>
+

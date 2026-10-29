@@ -1,17 +1,25 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>{{> shared/head}}</head>
-<body class="min-h-screen bg-[#f5f6f8] text-[#12383b] antialiased">
-  <a href="#main-content" class="skip-link">تجاوز إلى المحتوى</a>
-  {{> shared/icons}}
-  {{> app/sidebar}}
-  <div class="min-h-screen lg:mr-60">
-    {{> app/topbar}}
-    <main id="main-content" tabindex="-1" class="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-10">
-      {{{body}}}
-    </main>
-  </div>
-  <p id="app-announcement" role="status" aria-live="polite" class="sr-only"></p>
-  {{> shared/scripts}}
-</body>
+  <head>{{> shared/head}}</head>
+  <body class="min-h-screen bg-[#f5f6f8] text-[#12383b] antialiased">
+    <a href="#main-content" class="skip-link">تجاوز إلى المحتوى</a>
+    {{> shared/icons}}
+    {{> app/sidebar}}
+    <div class="min-h-screen lg:mr-60">
+      {{> app/topbar}}
+      <main id="main-content"
+            tabindex="-1"
+            class="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-10">
+        {{{body}}}
+      </main>
+    </div>
+    <div id="modal-root"></div>
+    <div id="toast-root"
+         class="fixed inset-x-4 top-4 z-[100] flex flex-col items-start gap-3 sm:left-auto sm:right-6 sm:w-[min(24rem,calc(100vw-3rem))]"></div>
+    <p id="app-announcement"
+       role="status"
+       aria-live="polite"
+       class="sr-only"></p>
+    {{> shared/scripts}}
+  </body>
 </html>

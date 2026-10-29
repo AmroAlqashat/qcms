@@ -20,7 +20,7 @@ export class AuditService {
   record(tx: Prisma.TransactionClient, event: AuditEventInput) {
     const db = tx ?? this.prisma;
 
-    return db.auditEvent.create({
+    return db.auditEvents.create({
       data: {
         actorId: event.actorId,
         actionType: event.actionType,

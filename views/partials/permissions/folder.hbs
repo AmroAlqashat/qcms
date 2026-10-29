@@ -1,0 +1,15 @@
+<details class='overflow-hidden rounded-2xl border border-slate-200 bg-white' close data-permission-group>
+  <summary class='flex min-h-14 list-none items-center gap-2 bg-slate-50 p-4 text-sm font-extrabold'>
+    {{> ui/icon
+      name="folder"
+      class="h-5 w-5 text-amber-600"
+    }}
+    <span class='flex-1'>{{ prefix }} {{ category }}</span>
+    <span class='rounded-full border border-[#a8dfdc] bg-white px-2 py-1 text-xs text-[#287a73]' data-permission-count>{{ selectedCount }} محددة</span>
+    {{> ui/icon
+      name="down"
+      class="disclosure-chevron h-4 w-4 text-slate-400"
+    }}
+  </summary>
+  {{> @partial-block}}
+</details>
