@@ -11,4 +11,4 @@ import { RolesErrorFilter } from './helpers/roles-error.filter';
   providers: [RolesService, RolesErrorFilter],
   exports: [RolesService],
 })
-export class RolesModule { }
+export class RolesModule {}

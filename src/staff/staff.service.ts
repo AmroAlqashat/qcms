@@ -7,7 +7,14 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
-import { AuditAction, AuditTarget, Prisma, StaffActivityAssignments, StaffClassAssignments, StaffStatus } from '@prisma/client';
+import {
+  AuditAction,
+  AuditTarget,
+  Prisma,
+  StaffActivityAssignments,
+  StaffClassAssignments,
+  StaffStatus,
+} from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { generateTempPassword } from './helpers/generate-temp-password.util';
@@ -23,7 +30,7 @@ export class StaffService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly rolesSerive: RolesService,
-  ) { }
+  ) {}
 
   async getRoleOptionsForStaff(staffId: string) {
     // Show all roles, checking only those returned by the active-grants lookup.
@@ -54,7 +61,7 @@ export class StaffService {
     // The same permission can have historical rows for different scopes,
     // so identify a selection by both the permission ID and its scope.
     const selectedKeys = new Set(
-      grants.map((grant) => `${grant.permissionId}:${grant.scopeType}`)
+      grants.map((grant) => `${grant.permissionId}:${grant.scopeType}`),
     );
 
     let total = 0;
@@ -156,7 +163,9 @@ export class StaffService {
             activeGrants.map((g) => `${g.permissionId}:${g.scopeType}`),
           );
           const revokedIds = activeGrants
-            .filter((g) => !selectedKeys.has(`${g.permissionId}:${g.scopeType}`))
+            .filter(
+              (g) => !selectedKeys.has(`${g.permissionId}:${g.scopeType}`),
+            )
             .map((g) => g.id);
           const now = new Date();
 
@@ -223,7 +232,9 @@ export class StaffService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2034'
       ) {
-        throw new ConflictException('تغيّرت الصلاحيات أثناء الحفظ. أعد المحاولة');
+        throw new ConflictException(
+          'تغيّرت الصلاحيات أثناء الحفظ. أعد المحاولة',
+        );
       }
       throw error;
     }
@@ -239,20 +250,19 @@ export class StaffService {
             fullName: editStaffDto.fullName,
             jobTitle: editStaffDto.jobTitle,
             phone: editStaffDto.phoneNumber,
-            dateOfBirth: editStaffDto.dateOfBirth
-          }
+            dateOfBirth: editStaffDto.dateOfBirth,
+          },
         });
         await this.audit.record(tx, {
           actorId: 'staff_admin', //TODO: change to current user
           actionType: 'STAFF_UPDATED',
           targetType: 'STAFF',
           targetId: staffId,
-          isSuccess: true
+          isSuccess: true,
         });
         return staff;
       });
-    }
-    catch (error: unknown) {
+    } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
@@ -319,14 +329,13 @@ export class StaffService {
         nationalId: true,
         status: true,
         dateOfBirth: true,
-        phone: true
-      }
-    })
+        phone: true,
+      },
+    });
 
-    if (!staff)
-      throw new NotFoundException('الموظف غير موجود');
-    if (staff.status === "PENDING")
-      throw new BadRequestException('لا يمكن التعديل: دعوة معلّقة')
+    if (!staff) throw new NotFoundException('الموظف غير موجود');
+    if (staff.status === 'PENDING')
+      throw new BadRequestException('لا يمكن التعديل: دعوة معلّقة');
     return staff;
   }
 
@@ -439,7 +448,6 @@ export class StaffService {
     return staff;
   }
 
-
   async deactivateStaff(staffId: string, actorId: string) {
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
@@ -447,30 +455,33 @@ export class StaffService {
         id: true,
         status: true,
         classAssignments: true,
-        activityAssignments: true
-      }
-    })
+        activityAssignments: true,
+      },
+    });
     //validations
-    if (!staff)
-      throw new NotFoundException('can\'t find this employee')
-    if (staff.status !== "ACTIVE")
-      throw new ConflictException('staff member can\'t be deactivated')
-    await this.validateStaffNotAloneInClassesAndActivities(staffId, staff.classAssignments, staff.activityAssignments);
+    if (!staff) throw new NotFoundException("can't find this employee");
+    if (staff.status !== 'ACTIVE')
+      throw new ConflictException("staff member can't be deactivated");
+    await this.validateStaffNotAloneInClassesAndActivities(
+      staffId,
+      staff.classAssignments,
+      staff.activityAssignments,
+    );
     //changes
     try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staffMembers.update({
           where: { id: staffId },
-          data: { status: StaffStatus.INACTIVE }
+          data: { status: StaffStatus.INACTIVE },
         });
         await this.audit.record(tx, {
           actorId: actorId,
           targetType: 'STAFF',
           actionType: 'STAFF_DEACTIVATED',
           targetId: staffId,
-          isSuccess: true
-        })
-      })
+          isSuccess: true,
+        });
+      });
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -489,29 +500,28 @@ export class StaffService {
       where: { id: staffId },
       select: {
         id: true,
-        status: true
-      }
-    })
+        status: true,
+      },
+    });
     //validations
-    if (!staff)
-      throw new NotFoundException('can\'t find this employee')
-    if (staff.status !== "INACTIVE")
-      throw new ConflictException('staff member can\'t be activated')
+    if (!staff) throw new NotFoundException("can't find this employee");
+    if (staff.status !== 'INACTIVE')
+      throw new ConflictException("staff member can't be activated");
     //changes
     try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staffMembers.update({
           where: { id: staffId },
-          data: { status: StaffStatus.ACTIVE }
+          data: { status: StaffStatus.ACTIVE },
         });
         await this.audit.record(tx, {
           actorId: actorId,
           targetType: 'STAFF',
           actionType: 'STAFF_ACTIVATED',
           targetId: staffId,
-          isSuccess: true
-        })
-      })
+          isSuccess: true,
+        });
+      });
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -532,30 +542,36 @@ export class StaffService {
         id: true,
         status: true,
         classAssignments: true,
-        activityAssignments: true
-      }
-    })
+        activityAssignments: true,
+      },
+    });
     //validations
-    if (!staff)
-      throw new NotFoundException('can\'t find this employee')
-    if (staff.status !== StaffStatus.ACTIVE && staff.status !== StaffStatus.INACTIVE)
-      throw new ConflictException('staff member can\'t be deleted')
-    await this.validateStaffNotAloneInClassesAndActivities(staffId, staff.classAssignments, staff.activityAssignments);
+    if (!staff) throw new NotFoundException("can't find this employee");
+    if (
+      staff.status !== StaffStatus.ACTIVE &&
+      staff.status !== StaffStatus.INACTIVE
+    )
+      throw new ConflictException("staff member can't be deleted");
+    await this.validateStaffNotAloneInClassesAndActivities(
+      staffId,
+      staff.classAssignments,
+      staff.activityAssignments,
+    );
     //changes
     try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staffMembers.update({
           where: { id: staffId },
-          data: { status: StaffStatus.DELETED }
+          data: { status: StaffStatus.DELETED },
         });
         await this.audit.record(tx, {
           actorId: actorId,
           targetType: 'STAFF',
           actionType: 'STAFF_DELETED',
           targetId: staffId,
-          isSuccess: true
-        })
-      })
+          isSuccess: true,
+        });
+      });
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -661,8 +677,11 @@ export class StaffService {
       throw error;
     }
   }
-  private async validateStaffNotAloneInClassesAndActivities(staffId: string, classAssignments: StaffClassAssignments[],
-    activityAssignments: StaffActivityAssignments[]) {
+  private async validateStaffNotAloneInClassesAndActivities(
+    staffId: string,
+    classAssignments: StaffClassAssignments[],
+    activityAssignments: StaffActivityAssignments[],
+  ) {
     const [halaqas, activities] = await Promise.all([
       this.prisma.halaqas.findMany({
         where: {

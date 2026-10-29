@@ -45,12 +45,16 @@ export class SettingsDto {
   @Transform(({ value }: { value: unknown }) => formInteger(value))
   @IsInt({ message: 'مهلة خمول الجلسة يجب أن تكون عددًا صحيحًا بالدقائق' })
   @Min(1, { message: 'مهلة خمول الجلسة يجب ألا تقل عن دقيقة واحدة' })
-  @Max(Number.MAX_SAFE_INTEGER, { message: 'مهلة خمول الجلسة أكبر من الحد المدعوم' })
+  @Max(Number.MAX_SAFE_INTEGER, {
+    message: 'مهلة خمول الجلسة أكبر من الحد المدعوم',
+  })
   sessionInactivityTimeoutMinutes: number;
 
   @Transform(({ value }: { value: unknown }) => formInteger(value))
   @IsInt({ message: 'مدة صلاحية التفويض يجب أن تكون عددًا صحيحًا بالساعات' })
   @Min(1, { message: 'مدة صلاحية التفويض يجب ألا تقل عن ساعة واحدة' })
-  @Max(Number.MAX_SAFE_INTEGER, { message: 'مدة صلاحية التفويض أكبر من الحد المدعوم' })
+  @Max(Number.MAX_SAFE_INTEGER, {
+    message: 'مدة صلاحية التفويض أكبر من الحد المدعوم',
+  })
   delegateAccessExpiryHours: number;
 }

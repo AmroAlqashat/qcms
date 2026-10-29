@@ -19,7 +19,7 @@ export class OtpService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
-  ) { }
+  ) {}
 
   async issueOtp(staffId: string) {
     // Check if staff exist and get the email.
@@ -82,8 +82,7 @@ export class OtpService {
     const submitted = Buffer.from(userCodeHash, 'hex');
 
     return (
-      stored.length === submitted.length &&
-      timingSafeEqual(stored, submitted)
+      stored.length === submitted.length && timingSafeEqual(stored, submitted)
     );
   }
 

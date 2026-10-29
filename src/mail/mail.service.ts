@@ -4,5 +4,5 @@ import { Injectable } from '@nestjs/common';
 export class MailService {
   sendOtp(email: string, code: string) {
     console.log(`[Email emulation]: email: ${email} | OTP: ${code}`);
-  };
+  }
 }

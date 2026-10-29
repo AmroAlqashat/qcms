@@ -11,6 +11,6 @@ declare module 'express-session' {
       staffId: string;
       step: OnboardingStep;
       startedAt: number;
-    },
+    };
   }
 }

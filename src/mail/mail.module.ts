@@ -8,4 +8,4 @@ import { PrismaModule } from '../prisma/prisma.module';
   providers: [MailService, OtpService],
   exports: [OtpService],
 })
-export class MailModule { }
+export class MailModule {}

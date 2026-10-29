@@ -15,8 +15,7 @@ class PasswordsMatch implements ValidatorConstraintInterface {
     const dto = args.object as ChangeOnboardingPasswordDto;
 
     return (
-      typeof confirmPassword === 'string' &&
-      confirmPassword === dto.newPassword
+      typeof confirmPassword === 'string' && confirmPassword === dto.newPassword
     );
   }
 }

@@ -13,14 +13,13 @@ import { ChangeOnboardingPasswordDto } from './dto/change-onboarding-password.dt
 import { CompleteOnboardingProfileDto } from './dto/complete-onboarding-profile.dto';
 import { SignInDto } from './dto/auth.signIn.dto';
 import { saveSession, regenerateSession } from './helpers/sessions.helpers';
-import passport from 'passport';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-  ) { }
+  ) {}
 
   async signIn(signInDto: SignInDto, request: Request) {
     const { email, password } = signInDto;
@@ -94,13 +93,22 @@ export class AuthService {
     };
   }
 
-  async completeOnboardingProfile(staffId: string, profile: CompleteOnboardingProfileDto) {
+  async completeOnboardingProfile(
+    staffId: string,
+    profile: CompleteOnboardingProfileDto,
+  ) {
     const fullName = profile.fullName.trim();
     const jobTitle = profile.jobTitle.trim();
     const nationalId = profile.nationalId?.trim();
     const phone = profile.phone?.trim();
 
-    if (!fullName || !jobTitle || !nationalId || !phone || !profile.dateOfBirth) {
+    if (
+      !fullName ||
+      !jobTitle ||
+      !nationalId ||
+      !phone ||
+      !profile.dateOfBirth
+    ) {
       throw new UnprocessableEntityException({
         message: 'أكمل جميع البيانات المطلوبة',
         errors: { profile: 'أكمل جميع البيانات المطلوبة' },
@@ -124,7 +132,9 @@ export class AuthService {
       });
 
       if (updated.count !== 1) {
-        throw new ConflictException('تغيّرت حالة الحساب. أعد تسجيل الدخول وحاول مرة أخرى');
+        throw new ConflictException(
+          'تغيّرت حالة الحساب. أعد تسجيل الدخول وحاول مرة أخرى',
+        );
       }
     } catch (error: unknown) {
       if (
@@ -141,7 +151,10 @@ export class AuthService {
     }
   }
 
-  async changeOnboardingPassword(staffId: string, changeOnboardingPasswordDto: ChangeOnboardingPasswordDto) {
+  async changeOnboardingPassword(
+    staffId: string,
+    changeOnboardingPasswordDto: ChangeOnboardingPasswordDto,
+  ) {
     const { newPassword } = changeOnboardingPasswordDto;
 
     const staff = await this.prisma.staffMembers.findUnique({
@@ -196,7 +209,9 @@ export class AuthService {
       });
 
       if (changed.count !== 1) {
-        throw new ConflictException('تغيّرت حالة الحساب. أعد تسجيل الدخول وحاول مرة أخرى');
+        throw new ConflictException(
+          'تغيّرت حالة الحساب. أعد تسجيل الدخول وحاول مرة أخرى',
+        );
       }
 
       await this.audit.record(tx, {

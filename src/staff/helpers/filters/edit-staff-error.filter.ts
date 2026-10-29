@@ -14,7 +14,7 @@ import { staffShell } from '../staff-shell';
 
 @Catch(ConflictException, UnprocessableEntityException)
 export class EditStaffErrorFilter implements ExceptionFilter {
-  constructor(private readonly staffService: StaffService) { }
+  constructor(private readonly staffService: StaffService) {}
 
   async catch(exception: HttpException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();

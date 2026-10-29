@@ -18,14 +18,18 @@ import { CompleteOnboardingProfileDto } from './dto/complete-onboarding-profile.
 import { SignInDto } from './dto/auth.signIn.dto';
 import { OtpDto } from './dto/otp.dto';
 import { OtpService } from '../mail/otp.serivce';
-import { destroySession, regenerateSession, saveSession } from './helpers/sessions.helpers';
+import {
+  destroySession,
+  regenerateSession,
+  saveSession,
+} from './helpers/sessions.helpers';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly otp: OtpService,
-  ) { }
+  ) {}
 
   @Public()
   @Get('signIn')
@@ -41,7 +45,11 @@ export class AuthController {
   @Public()
   @UseFilters(SignInErrorFilter)
   @Post('signIn')
-  async signInStaff(@Body() signInDto: SignInDto, @Req() req: Request, @Res() res: Response) {
+  async signInStaff(
+    @Body() signInDto: SignInDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
     res.setHeader('Cache-Control', 'no-store');
 
     const redirectPath: string = await this.authService.signIn(signInDto, req);
@@ -101,7 +109,11 @@ export class AuthController {
   @Onboarding('VERIFY_OTP')
   @UseFilters(OnboardingErrorFilter)
   @Post('onboarding/verify-otp')
-  async verifyOtp(@Req() req: Request, @Res() res: Response, @Body() otpDto: OtpDto) {
+  async verifyOtp(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() otpDto: OtpDto,
+  ) {
     res.setHeader('Cache-Control', 'no-store');
 
     const onboarding = req.session.onboardingStep;
@@ -148,7 +160,9 @@ export class AuthController {
       throw new UnauthorizedException('استكمال معلومات الحساب غير متاح');
     }
 
-    const form = await this.authService.getOnboardingProfile(onboarding.staffId);
+    const form = await this.authService.getOnboardingProfile(
+      onboarding.staffId,
+    );
 
     return res.render('auth/onboarding-profile-page', {
       title: 'استكمال البيانات',
@@ -160,7 +174,11 @@ export class AuthController {
   @Onboarding('COMPLETE_PROFILE')
   @UseFilters(OnboardingErrorFilter)
   @Post('onboarding/complete-profile')
-  async completeProfile(@Req() req: Request, @Res() res: Response, @Body() dto: CompleteOnboardingProfileDto) {
+  async completeProfile(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() dto: CompleteOnboardingProfileDto,
+  ) {
     res.setHeader('Cache-Control', 'no-store');
 
     const onboarding = req.session.onboardingStep;
@@ -216,7 +234,11 @@ export class AuthController {
   @Onboarding('CHANGE_PASSWORD')
   @UseFilters(OnboardingErrorFilter)
   @Post('onboarding/change-password')
-  async changePassword(@Req() req: Request, @Res() res: Response, @Body() dto: ChangeOnboardingPasswordDto) {
+  async changePassword(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() dto: ChangeOnboardingPasswordDto,
+  ) {
     res.setHeader('Cache-Control', 'no-store');
 
     const onboarding = req.session.onboardingStep;
@@ -259,14 +281,11 @@ export class AuthController {
 
     const isProduction = process.env.NODE_ENV === 'production';
 
-    res.clearCookie(
-      isProduction ? '__Host-qcms.sid' : 'qcms.sid',
-      {
-        path: '/',
-        secure: isProduction,
-        sameSite: 'lax',
-      },
-    );
+    res.clearCookie(isProduction ? '__Host-qcms.sid' : 'qcms.sid', {
+      path: '/',
+      secure: isProduction,
+      sameSite: 'lax',
+    });
 
     if (req.get('HX-Request') === 'true') {
       res.setHeader('HX-Redirect', '/auth/signIn');

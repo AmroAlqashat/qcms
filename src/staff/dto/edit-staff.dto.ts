@@ -1,4 +1,12 @@
-import { IsDate, IsEmail, IsNumberString, IsString, MaxLength, MinLength, isISO8601 } from "class-validator";
+import {
+  IsDate,
+  IsEmail,
+  IsNumberString,
+  IsString,
+  MaxLength,
+  MinLength,
+  isISO8601,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class EditStaffDto {
@@ -20,17 +28,20 @@ export class EditStaffDto {
   @MaxLength(15)
   nationalId: string;
 
-  @Transform(({ value }: { value: unknown }) => {
-    if (
-      typeof value !== 'string' ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
-      !isISO8601(value, { strict: true })
-    ) {
-      return new Date(NaN);
-    }
+  @Transform(
+    ({ value }: { value: unknown }) => {
+      if (
+        typeof value !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+        !isISO8601(value, { strict: true })
+      ) {
+        return new Date(NaN);
+      }
 
-    return new Date(`${value}T00:00:00.000Z`);
-  }, { toClassOnly: true })
+      return new Date(`${value}T00:00:00.000Z`);
+    },
+    { toClassOnly: true },
+  )
   @IsDate()
   dateOfBirth: Date;
 

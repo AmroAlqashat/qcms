@@ -29,9 +29,7 @@ import { EditPermissionsDto } from './dto/edit-permissions.dto';
 
 @Controller('staff')
 export class StaffController {
-  constructor(
-    private readonly staffService: StaffService,
-  ) { }
+  constructor(private readonly staffService: StaffService) {}
 
   @Get()
   @Render('staff/staff-page')
@@ -88,7 +86,7 @@ export class StaffController {
       roles,
       ...permissions,
       staffId,
-    }
+    };
   }
 
   @Post('edit/permissions/:id')
@@ -101,7 +99,11 @@ export class StaffController {
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    await this.staffService.editPermissions(staffId, editPermissionsDto, user.id);
+    await this.staffService.editPermissions(
+      staffId,
+      editPermissionsDto,
+      user.id,
+    );
 
     // Respond only after the transaction succeeds. HX-Redirect navigates the
     // full page instead of swapping the profile HTML into the permissions dialog.
@@ -227,17 +229,19 @@ export class StaffController {
 
   @Get('deactivate/:id')
   @Render('staff/staff-deactivate-page')
-  async showDeactivateStaffDialog(@Param('id') staffId: string) {
+  showDeactivateStaffDialog(@Param('id') staffId: string) {
     return {
-      staff: { id: staffId }
+      staff: { id: staffId },
     };
   }
   @Post('deactivate/:id')
   @Render('staff/staff-page')
-  async deactivateStaff(@Param('id') staffId: string,
+  async deactivateStaff(
+    @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
-    @Res() response: Response) {
+    @Res() response: Response,
+  ) {
     await this.staffService.deactivateStaff(staffId, actor.id);
     const location = '/staff';
 
@@ -256,17 +260,19 @@ export class StaffController {
 
   @Get('delete/:id')
   @Render('staff/staff-delete-page')
-  async showDeleteStaffDialog(@Param('id') staffId: string) {
+  showDeleteStaffDialog(@Param('id') staffId: string) {
     return {
-      staff: { id: staffId }
+      staff: { id: staffId },
     };
   }
   @Post('delete/:id')
   @Render('staff/staff-page')
-  async deleteStaff(@Param('id') staffId: string,
+  async deleteStaff(
+    @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
-    @Res() response: Response) {
+    @Res() response: Response,
+  ) {
     await this.staffService.deleteStaff(staffId, actor.id);
     const location = '/staff';
 
@@ -286,17 +292,19 @@ export class StaffController {
 
   @Get('activate/:id')
   @Render('staff/staff-activate-page')
-  async showactivateStaffDialog(@Param('id') staffId: string) {
+  showactivateStaffDialog(@Param('id') staffId: string) {
     return {
-      staff: { id: staffId }
+      staff: { id: staffId },
     };
   }
   @Post('activate/:id')
   @Render('staff/staff-page')
-  async activateStaff(@Param('id') staffId: string,
+  async activateStaff(
+    @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
-    @Res() response: Response,) {
+    @Res() response: Response,
+  ) {
     await this.staffService.activateStaff(staffId, actor.id);
     const location = '/staff';
 

@@ -11,4 +11,4 @@ import { RolesModule } from '../roles/roles.module';
   controllers: [StaffController],
   providers: [StaffService, EditStaffErrorFilter],
 })
-export class StaffModule { }
+export class StaffModule {}

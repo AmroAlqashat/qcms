@@ -22,7 +22,7 @@ export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-  ) { }
+  ) {}
 
   async getRoleAccountCount(roleId: string) {
     const accountCount = await this.prisma.roles.findFirst({
@@ -124,12 +124,12 @@ export class RolesService {
 
     const selectedRolePermissions = roleId
       ? await this.prisma.rolePermissions.findMany({
-        where: { roleId },
-        select: {
-          permissionId: true,
-          scopeType: true,
-        },
-      })
+          where: { roleId },
+          select: {
+            permissionId: true,
+            scopeType: true,
+          },
+        })
       : [];
 
     const selectedKeys = new Set(
