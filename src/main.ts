@@ -11,10 +11,11 @@ import { NotFoundFilter } from './common/filters/not-found.filter';
 import { BadRequestFilter } from './common/filters/bad-request.filter';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
+import { SettingsService } from './settings/settings.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
+  const settings = app.get(SettingsService, { strict: false });
   const isProduction = process.env.NODE_ENV === 'production';
   const sessionSecret = process.env.SESSION_SECRET;
   const databaseUrl = process.env.DATABASE_URL;
@@ -40,10 +41,19 @@ async function bootstrap() {
         secure: isProduction,
         sameSite: 'lax',
         path: '/',
-        maxAge: 30 * 60 * 1000, // 30 minutes of inactivity
+        maxAge: 30 * 60 * 1000, // 30 minutes of inactivity only a fallback next is the normal case
       },
     }),
   );
+  app.use(async (req, _res, next) => {
+    try {
+      const minutes = await settings.getSessionTimeoutMinutes();
+      if (req.session) req.session.cookie.maxAge = minutes * 60_000;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // To triger $disconnect in PrismaService.onModuleDestroy() and close the DB connection
   app.enableShutdownHooks();
