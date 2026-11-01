@@ -45,7 +45,7 @@ async function bootstrap() {
       },
     }),
   );
-  app.use(async (req, _res, next) => {
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const minutes = await settings.getSessionTimeoutMinutes();
       if (req.session) req.session.cookie.maxAge = minutes * 60_000;
