@@ -1,3 +1,4 @@
+import { scopeLabels } from '../common/scope-labels-map';
 import 'reflect-metadata';
 import {
   ConflictException,
@@ -43,6 +44,10 @@ function permissionData(): PermissionsData {
                   resource: 'staff',
                   action: 'edit',
                   scopes: [scope, otherScope],
+                  scopeOptions: [scope, otherScope].map((value) => ({
+                    value,
+                    label: scopeLabels[value],
+                  })),
                   selected: false,
                 },
               ],

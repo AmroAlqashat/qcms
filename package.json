@@ -22,7 +22,9 @@
     "css:dev": "tailwindcss -i ./assets/styles/tailwind.css -o ./public/css/source.css --watch",
     "css:build": "tailwindcss -i ./assets/styles/tailwind.css -o ./public/css/source.css --minify",
     "postinstall": "prisma skills sync || exit 0",
-    "admin:create": "npx tsx scripts/create-admin.ts"
+    "admin:create": "npx tsx scripts/create-admin.ts",
+    "seed:permissions": "tsx prisma/seed-permissions.ts",
+    "seed:settings": "tsx prisma/seed-settings.ts"
   },
   "dependencies": {
     "@emnapi/core": "^1.11.3",
@@ -46,7 +48,8 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "restore-cursor": "^5.1.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

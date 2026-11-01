@@ -47,8 +47,8 @@
                       name="scopes[{{#if ../directGrants}}{{id}}{{else}}{{resource}}::{{action}}{{/if}}]"
                       data-permission-scope
                       {{#unless selected}}disabled{{/unless}}>
-                {{#each scopes}}
-                  <option value="{{this}}" {{#if (eq this ../selectedScope)}}selected{{/if}}>{{this}}</option>
+                {{#each scopeOptions}}
+                  <option value="{{value}}" {{#if (eq value ../selectedScope)}}selected{{/if}}>{{label}}</option>
                 {{/each}}
               </select>
             </label>

@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AuditAction, AuditTarget, Prisma } from '@prisma/client';
+import { scopeLabels } from '../common/scope-labels-map';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateNewRoleDto } from './dto/create-new-role.dto';
@@ -163,6 +164,10 @@ export class RolesService {
           resource: permission.resource,
           action: permission.action,
           scopes: permission.allowedScopes,
+          scopeOptions: permission.allowedScopes.map((scope) => ({
+            value: scope,
+            label: scopeLabels[scope],
+          })),
           selected: isSelected,
           selectedScope,
         });

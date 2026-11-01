@@ -3,6 +3,9 @@ import { Prisma, PrismaClient, StaffStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { isEmail } from 'class-validator';
 import { createInterface } from 'node:readline/promises';
+import { readFile, writeFile, rename, rm } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 const roleName = 'Bootstrap Administrator';
 
@@ -115,6 +118,34 @@ export async function createAdmin(
   );
 }
 
+// Update only the seed actor; write atomically so a failed write leaves .env intact.
+export async function saveSeedActorEmail(
+  email: string,
+  envPath = resolve('.env'),
+): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!isEmail(normalizedEmail) || /[\r\n]/.test(normalizedEmail)) {
+    throw new Error('Invalid seed actor email.');
+  }
+  const contents = await readFile(envPath, 'utf8');
+  const newline = contents.includes('\r\n') ? '\r\n' : '\n';
+  const assignment = `SEED_ACTOR_EMAIL=${JSON.stringify(normalizedEmail)}`;
+  const pattern = /^[ \t]*(?:export[ \t]+)?SEED_ACTOR_EMAIL[ \t]*=[^\r\n]*/gm;
+  const updated = pattern.test(contents)
+    ? contents.replace(pattern, () => assignment)
+    : contents +
+      (contents && !contents.endsWith('\n') ? newline : '') +
+      assignment +
+      newline;
+  const temporaryPath = `${envPath}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryPath, updated, { mode: 0o600, flag: 'wx' });
+    await rename(temporaryPath, envPath);
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
+}
+
 async function main(): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY)
     throw new Error('Run this command in an interactive terminal.');
@@ -131,6 +162,19 @@ async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
     await createAdmin(prisma, { email, fullName, password });
+    try {
+      await saveSeedActorEmail(email);
+      console.log(
+        'Saved SEED_ACTOR_EMAIL in .env. Next: npm run seed:settings',
+      );
+    } catch {
+      console.warn(
+        'Admin was created, but .env could not be updated. Do not rerun admin:create.',
+      );
+      console.warn(
+        `Set SEED_ACTOR_EMAIL=${JSON.stringify(email.trim().toLowerCase())} in .env, then run npm run seed:settings.`,
+      );
+    }
     console.log(
       'Admin created. Sign in at /auth/signIn with the email and password you entered.',
     );
