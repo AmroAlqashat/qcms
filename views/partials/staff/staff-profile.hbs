@@ -15,7 +15,7 @@
           {{#if staff.initial}}{{staff.initial}}{{else}}{{> ui/icon name="user" class="h-9 w-9"}}{{/if}}
         </span>
         <div class='min-w-0 flex-1'>
-          <h1 id='staff-name' class='break-words text-2xl font-extrabold leading-relaxed sm:text-3xl'>{{staff.fullName}}</h1>
+          <h1 id='staff-name' class='break-words text-2xl font-extrabold leading-relaxed sm:text-3xl'>{{#if staff.fullName}}{{staff.fullName}}{{else}}موظف محذوف{{/if}}</h1>
           <div class='mt-2 flex flex-wrap items-center gap-3'>
             <span class='text-sm text-[#d7ebe6]'>{{staff.jobTitle}}</span>
             {{> staff/staff-status-badge status=staff.status isDeleted=staff.isDeleted}}

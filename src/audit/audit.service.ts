@@ -15,7 +15,7 @@ type AuditEventInput = {
 
 @Injectable()
 export class AuditService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   record(tx: Prisma.TransactionClient, event: AuditEventInput) {
     const db = tx ?? this.prisma;

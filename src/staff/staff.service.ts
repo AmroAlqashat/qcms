@@ -30,7 +30,7 @@ export class StaffService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly rolesSerive: RolesService,
-  ) { }
+  ) {}
 
   async getRoleOptionsForStaff(staffId: string) {
     // Show all roles, checking only those returned by the active-grants lookup.
@@ -240,7 +240,11 @@ export class StaffService {
     }
   }
 
-  async editStaff(staffId: string, editStaffDto: EditStaffDto, actorId: string) {
+  async editStaff(
+    staffId: string,
+    editStaffDto: EditStaffDto,
+    actorId: string,
+  ) {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const staff = await tx.staffMembers.update({
@@ -316,7 +320,8 @@ export class StaffService {
     }
     if (status) where.status = status;
     else if (!isDeleted) where.status = { not: StaffStatus.PENDING };
-    if (halaqa) where.classAssignments = { some: { halaqaId: halaqa } };
+    if (halaqa)
+      where.classAssignments = { some: { halaqaId: halaqa, endedAt: null } };
     if (role) where.roleGrants = { some: { roleId: role } };
     //search
     return this.prisma.staffMembers.findMany({
@@ -412,6 +417,7 @@ export class StaffService {
         nationalId: true,
         phone: true,
         classAssignments: {
+          where: { endedAt: null },
           select: {
             halaqa: {
               select: { id: true, name: true },
@@ -419,6 +425,7 @@ export class StaffService {
           },
         },
         activityAssignments: {
+          where: { endedAt: null },
           select: {
             activity: {
               select: { id: true, name: true },
@@ -464,8 +471,8 @@ export class StaffService {
       select: {
         id: true,
         status: true,
-        classAssignments: true,
-        activityAssignments: true,
+        classAssignments: { where: { endedAt: null } },
+        activityAssignments: { where: { endedAt: null } },
       },
     });
     //validations
@@ -546,67 +553,92 @@ export class StaffService {
   }
 
   async deleteStaff(staffId: string, actorId: string) {
-    const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId, isDeleted: false },
-      select: {
-        id: true,
-        status: true,
-        classAssignments: true,
-        activityAssignments: true,
-      },
-    });
-    //validations
-    if (!staff) throw new NotFoundException("can't find this employee");
-    if (
-      staff.status !== StaffStatus.ACTIVE &&
-      staff.status !== StaffStatus.INACTIVE
-    )
-      throw new ConflictException("staff member can't be deleted");
-    await this.validateStaffNotAloneInClassesAndActivities(
-      staffId,
-      staff.classAssignments,
-      staff.activityAssignments,
-    );
-    //changes
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.staffMembers.update({
-          where: { id: staffId, isDeleted: false },
-          data: { isDeleted: true },
-        });
-        await this.audit.record(tx, {
-          actorId,
-          targetType: 'STAFF',
-          actionType: 'STAFF_DELETED',
-          targetId: staffId,
-          isSuccess: true,
-        });
-      });
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const staff = await tx.staffMembers.findUnique({
+            where: { id: staffId, isDeleted: false },
+            select: {
+              status: true,
+              classAssignments: { where: { endedAt: null } },
+              activityAssignments: { where: { endedAt: null } },
+            },
+          });
+          if (!staff) throw new NotFoundException('الموظف غير موجود');
+          if (
+            staff.status !== StaffStatus.ACTIVE &&
+            staff.status !== StaffStatus.INACTIVE
+          )
+            throw new ConflictException('لا يمكن حذف هذا الموظف');
+
+          // Validate and write in the same transaction, including assignment history.
+          await this.validateStaffNotAloneInClassesAndActivities(
+            staffId,
+            staff.classAssignments,
+            staff.activityAssignments,
+            tx,
+          );
+          const endedAt = new Date();
+          await tx.roleStaffAssignments.deleteMany({ where: { staffId } });
+          await tx.directPermissionGrants.deleteMany({ where: { staffId } });
+          await tx.oTPs.deleteMany({ where: { staffId } });
+          await tx.staffClassAssignments.updateMany({
+            where: { staffId, endedAt: null },
+            data: { endedAt },
+          });
+          await tx.staffActivityAssignments.updateMany({
+            where: { staffId, endedAt: null },
+            data: { endedAt },
+          });
+          await tx.staffMembers.update({
+            where: { id: staffId, isDeleted: false },
+            data: {
+              isDeleted: true,
+              status: StaffStatus.INACTIVE,
+              mustChangePassword: true,
+              fullName: null,
+              jobTitle: null,
+              passwordHash: null,
+              dateOfBirth: null,
+              nationalId: null,
+              phone: null,
+            },
+          });
+          await this.audit.record(tx, {
+            actorId,
+            targetType: 'STAFF',
+            actionType: 'STAFF_DELETED',
+            targetId: staffId,
+            isSuccess: true,
+          });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      )
-        throw new ConflictException({
-          message: 'a conflict has occured',
-          errors: { email: 'a conflict has occured' },
-        });
+        (error.code === 'P2034' || error.code === 'P2025')
+      ) {
+        throw new ConflictException(
+          'تغيّرت بيانات الموظف أثناء الحذف. حدّث الصفحة وأعد المحاولة',
+        );
+      }
       throw error;
     }
   }
 
   async inviteStaff(inviteStaffDto: InviteStaffDto, actorId: string) {
     const { email, fullName, jobTitle } = inviteStaffDto;
-
     const normalizedEmail = email.trim().toLowerCase();
 
     const existingStaff = await this.prisma.staffMembers.findUnique({
       where: { email: normalizedEmail },
+      select: { id: true, isDeleted: true },
     });
 
     // Check if the Staff exist and not deleted.
     if (existingStaff && !existingStaff.isDeleted) {
-      throw new ConflictException('This email already exist.');
+      throw new ConflictException('البريد الإلكتروني موجود');
     }
 
     const temporaryPassword = generateTempPassword();
@@ -692,26 +724,39 @@ export class StaffService {
     staffId: string,
     classAssignments: StaffClassAssignments[],
     activityAssignments: StaffActivityAssignments[],
+    db: Prisma.TransactionClient = this.prisma,
   ) {
     const [halaqas, activities] = await Promise.all([
-      this.prisma.halaqas.findMany({
+      db.halaqas.findMany({
         where: {
           id: { in: classAssignments.map(({ halaqaId }) => halaqaId) },
-          staffAssignments: { some: { staffId } },
+          staffAssignments: { some: { staffId, endedAt: null } },
         },
         select: {
           name: true,
-          _count: { select: { staffAssignments: true } },
+          _count: {
+            select: {
+              staffAssignments: {
+                where: { endedAt: null, staff: { isDeleted: false } },
+              },
+            },
+          },
         },
       }),
-      this.prisma.activities.findMany({
+      db.activities.findMany({
         where: {
           id: { in: activityAssignments.map(({ activityId }) => activityId) },
-          staffAssignments: { some: { staffId } },
+          staffAssignments: { some: { staffId, endedAt: null } },
         },
         select: {
           name: true,
-          _count: { select: { staffAssignments: true } },
+          _count: {
+            select: {
+              staffAssignments: {
+                where: { endedAt: null, staff: { isDeleted: false } },
+              },
+            },
+          },
         },
       }),
     ]);

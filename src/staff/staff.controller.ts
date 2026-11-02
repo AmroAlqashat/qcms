@@ -29,7 +29,7 @@ import { EditPermissionsDto } from './dto/edit-permissions.dto';
 
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) { }
+  constructor(private readonly staffService: StaffService) {}
 
   @Get()
   @Render('staff/staff-page')
@@ -128,7 +128,7 @@ export class StaffController {
     return {
       staff: {
         ...staff,
-        initial: staff.fullName.trim().charAt(0),
+        initial: staff.fullName?.trim().charAt(0) ?? '',
         dateOfBirthValue: staff.dateOfBirth?.toISOString().slice(0, 10) ?? '',
         permissions: {
           canChangeStatus: true,
@@ -180,7 +180,10 @@ export class StaffController {
   ) {
     response.setHeader('Cache-Control', 'no-store');
 
-    const result = await this.staffService.inviteStaff(inviteStaffDto, actor.id);
+    const result = await this.staffService.inviteStaff(
+      inviteStaffDto,
+      actor.id,
+    );
 
     if (!wantsHtml(request)) {
       response.json(result);
@@ -206,7 +209,7 @@ export class StaffController {
     return {
       staff: {
         ...staff,
-        initial: staff.fullName.trim().charAt(0),
+        initial: staff.fullName?.trim().charAt(0) ?? '',
         dateOfBirthLabel: formatStaffDate(staff.dateOfBirth),
         nationalIdLabel: staff.nationalId,
         phoneLabel: formatStaffPhone(staff.phone),

@@ -11,9 +11,9 @@ datasource db {
 model StaffMembers {
   id                     String                     @id @default(uuid())
   email                  String                     @unique
-  passwordHash           String
-  fullName               String
-  jobTitle               String
+  passwordHash           String?
+  fullName               String?
+  jobTitle               String?
   status                 StaffStatus                @default(INACTIVE)
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
@@ -96,21 +96,27 @@ model RoleStaffAssignments {
 }
 
 model StaffClassAssignments {
-  staffId  String
-  halaqaId String
-  halaqa   Halaqas      @relation(fields: [halaqaId], references: [id])
-  staff    StaffMembers @relation(fields: [staffId], references: [id])
+  id         String       @id @default(uuid())
+  assignedAt DateTime?    @default(now())
+  endedAt    DateTime?
+  staffId    String
+  halaqaId   String
+  halaqa     Halaqas      @relation(fields: [halaqaId], references: [id])
+  staff      StaffMembers @relation(fields: [staffId], references: [id])
 
-  @@id([staffId, halaqaId])
+  @@index([staffId, endedAt])
 }
 
 model StaffActivityAssignments {
+  id         String       @id @default(uuid())
+  assignedAt DateTime?    @default(now())
+  endedAt    DateTime?
   staffId    String
   activityId String
   activity   Activities   @relation(fields: [activityId], references: [id])
   staff      StaffMembers @relation(fields: [staffId], references: [id])
 
-  @@id([staffId, activityId])
+  @@index([staffId, endedAt])
 }
 
 model AuditEvents {

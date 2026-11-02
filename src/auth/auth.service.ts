@@ -35,7 +35,11 @@ export class AuthService {
       },
     });
 
-    if (!staff || !(await argon2.verify(staff.passwordHash, password))) {
+    if (
+      !staff ||
+      !staff.passwordHash ||
+      !(await argon2.verify(staff.passwordHash, password))
+    ) {
       throw new UnauthorizedException('بيانات الدخول غير صحيحة');
     }
 
@@ -165,6 +169,8 @@ export class AuthService {
         status: true,
         mustChangePassword: true,
         passwordHash: true,
+        fullName: true,
+        jobTitle: true,
         nationalId: true,
         phone: true,
         dateOfBirth: true,
@@ -173,13 +179,20 @@ export class AuthService {
 
     if (
       !staff ||
+      !staff.passwordHash ||
       staff.status !== StaffStatus.PENDING ||
       !staff.mustChangePassword
     ) {
       throw new UnauthorizedException('لا يمكن تغيير كلمة المرور');
     }
 
-    if (!staff.nationalId || !staff.phone || !staff.dateOfBirth) {
+    if (
+      !staff.fullName ||
+      !staff.jobTitle ||
+      !staff.nationalId ||
+      !staff.phone ||
+      !staff.dateOfBirth
+    ) {
       throw new ConflictException('يجب إكمال الملف الشخصي أولًا');
     }
 
