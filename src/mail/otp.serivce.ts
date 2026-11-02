@@ -24,7 +24,7 @@ export class OtpService {
   async issueOtp(staffId: string) {
     // Check if staff exist and get the email.
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId },
+      where: { id: staffId, isDeleted: false },
       select: { email: true },
     });
 
@@ -88,7 +88,7 @@ export class OtpService {
 
   async verifyOnboardingOtp(staffId: string, code: string) {
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId },
+      where: { id: staffId, isDeleted: false },
       select: {
         status: true,
         mustChangePassword: true,

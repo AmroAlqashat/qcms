@@ -29,7 +29,7 @@ import { EditPermissionsDto } from './dto/edit-permissions.dto';
 
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) {}
+  constructor(private readonly staffService: StaffService) { }
 
   @Get()
   @Render('staff/staff-page')
@@ -175,10 +175,11 @@ export class StaffController {
     @Body() inviteStaffDto: InviteStaffDto,
     @Req() request: Request,
     @Res() response: Response,
+    @CurrentUser() actor: { id: string },
   ) {
     response.setHeader('Cache-Control', 'no-store');
 
-    const result = await this.staffService.inviteStaff(inviteStaffDto);
+    const result = await this.staffService.inviteStaff(inviteStaffDto, actor.id);
 
     if (!wantsHtml(request)) {
       response.json(result);
@@ -208,7 +209,7 @@ export class StaffController {
         dateOfBirthLabel: formatStaffDate(staff.dateOfBirth),
         nationalIdLabel: staff.nationalId,
         phoneLabel: formatStaffPhone(staff.phone),
-        statusLabel: formatStaffStatus(staff.status),
+        statusLabel: formatStaffStatus(staff.status, staff.isDeleted),
       },
       assignments: {
         classes: staff.classAssignments.map(({ halaqa }) => halaqa),
@@ -217,10 +218,10 @@ export class StaffController {
         directGrantsLabel: 'تُتاح في إصدار لاحق',
       },
       permissions: {
-        canEditStaff: true,
-        canManagePermissions: true,
-        canChangeStatus: true,
-        canDelete: true,
+        canEditStaff: !staff.isDeleted,
+        canManagePermissions: !staff.isDeleted,
+        canChangeStatus: !staff.isDeleted,
+        canDelete: !staff.isDeleted,
       },
       effectivePermissionCount: 0,
       activeNav: 'staff',

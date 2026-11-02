@@ -24,6 +24,7 @@ async function main() {
         where: {
           email: { equals: email, mode: 'insensitive' },
           status: StaffStatus.ACTIVE,
+          isDeleted: false,
           mustChangePassword: false,
         },
         select: { id: true },

@@ -50,6 +50,7 @@ export class SessionAuthGuard implements CanActivate {
       const staff = await this.loadStaff(onboarding.staffId);
       if (
         !staff ||
+        staff.isDeleted ||
         staff.status !== StaffStatus.PENDING ||
         !staff.mustChangePassword
       ) {
@@ -67,6 +68,7 @@ export class SessionAuthGuard implements CanActivate {
     const staff = await this.loadStaff(staffId);
     if (
       !staff ||
+      staff.isDeleted ||
       staff.status !== StaffStatus.ACTIVE ||
       staff.mustChangePassword
     ) {
@@ -80,7 +82,12 @@ export class SessionAuthGuard implements CanActivate {
   private loadStaff(id: string) {
     return this.prisma.staffMembers.findUnique({
       where: { id },
-      select: { id: true, status: true, mustChangePassword: true },
+      select: {
+        id: true,
+        status: true,
+        mustChangePassword: true,
+        isDeleted: true,
+      },
     });
   }
 

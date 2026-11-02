@@ -17,7 +17,7 @@
           <p class="text-xs leading-6 text-slate-600">{{jobTitle}}</p>
         </div>
         <div class="flex shrink-0 flex-col items-center gap-2 sm:flex-row sm:gap-4">
-          {{> staff/staff-status-badge status=status}}{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}
+          {{> staff/staff-status-badge status=status isDeleted=isDeleted}}{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}
         </div>
       </a>
     {{else}}

@@ -18,7 +18,7 @@
           <h1 id='staff-name' class='break-words text-2xl font-extrabold leading-relaxed sm:text-3xl'>{{staff.fullName}}</h1>
           <div class='mt-2 flex flex-wrap items-center gap-3'>
             <span class='text-sm text-[#d7ebe6]'>{{staff.jobTitle}}</span>
-            {{> staff/staff-status-badge status=staff.status}}
+            {{> staff/staff-status-badge status=staff.status isDeleted=staff.isDeleted}}
           </div>
           <p class='mt-3 flex min-w-0 items-start gap-2 text-sm text-[#d7ebe6]'>
             <span aria-hidden='true'>{{> ui/icon name="mail" class="mt-1 h-4 w-4"}}</span>

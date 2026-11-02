@@ -26,7 +26,7 @@ export class AuthService {
     const normalizedEmail = email.trim().toLowerCase();
 
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { email: normalizedEmail },
+      where: { email: normalizedEmail, isDeleted: false },
       select: {
         id: true,
         passwordHash: true,
@@ -72,6 +72,7 @@ export class AuthService {
       where: {
         id: staffId,
         status: StaffStatus.PENDING,
+        isDeleted: false,
         mustChangePassword: true,
       },
       select: {
@@ -120,6 +121,7 @@ export class AuthService {
         where: {
           id: staffId,
           status: StaffStatus.PENDING,
+          isDeleted: false,
           mustChangePassword: true,
         },
         data: {
@@ -158,7 +160,7 @@ export class AuthService {
     const { newPassword } = changeOnboardingPasswordDto;
 
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId },
+      where: { id: staffId, isDeleted: false },
       select: {
         status: true,
         mustChangePassword: true,
@@ -199,6 +201,7 @@ export class AuthService {
         where: {
           id: staffId,
           status: StaffStatus.PENDING,
+          isDeleted: false,
           mustChangePassword: true,
         },
         data: {

@@ -4,11 +4,13 @@ const statusLabels: Record<StaffStatus, string> = {
   ACTIVE: 'نشط',
   INACTIVE: 'موقوف',
   PENDING: 'بانتظار التفعيل',
-  DELETED: 'محذوف',
 };
 
-export function formatStaffStatus(status: StaffStatus): string {
-  return statusLabels[status];
+export function formatStaffStatus(
+  status: StaffStatus,
+  isDeleted = false,
+): string {
+  return isDeleted ? 'محذوف' : statusLabels[status];
 }
 
 export function formatStaffDate(date: Date | null): string | undefined {

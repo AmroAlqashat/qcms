@@ -21,6 +21,7 @@ model StaffMembers {
   mustChangePassword     Boolean
   nationalId             String?                    @db.VarChar(30)
   phone                  String?                    @db.VarChar(20)
+  isDeleted              Boolean                    @default(false)
   auditEvents            AuditEvents[]
   directPermissionGrants DirectPermissionGrants[]
   OTP                    OTPs?
@@ -283,7 +284,6 @@ enum StaffStatus {
   ACTIVE
   INACTIVE
   PENDING
-  DELETED
 }
 
 enum ScopeType {

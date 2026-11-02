@@ -30,7 +30,7 @@ export class StaffService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly rolesSerive: RolesService,
-  ) {}
+  ) { }
 
   async getRoleOptionsForStaff(staffId: string) {
     // Show all roles, checking only those returned by the active-grants lookup.
@@ -112,7 +112,7 @@ export class StaffService {
           // Check existence even when both selections are empty and no new
           // grant would otherwise trigger a foreign-key check.
           const staff = await tx.staffMembers.findUnique({
-            where: { id: staffId },
+            where: { id: staffId, isDeleted: false },
             select: { id: true },
           });
           if (!staff) throw new NotFoundException('الموظف غير موجود');
@@ -244,7 +244,7 @@ export class StaffService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const staff = await tx.staffMembers.update({
-          where: { id: staffId },
+          where: { id: staffId, isDeleted: false },
           data: {
             email: editStaffDto.email,
             fullName: editStaffDto.fullName,
@@ -281,6 +281,7 @@ export class StaffService {
       where: {
         id: staffId,
         status: 'PENDING',
+        isDeleted: false,
       },
     });
 
@@ -290,13 +291,21 @@ export class StaffService {
   }
 
   async showFilteredStaff(filterDto: FilteredStaffDto) {
-    const { searchField, status, halaqa, role, page, limit } = filterDto;
+    const {
+      searchField,
+      status,
+      isDeleted = false,
+      halaqa,
+      role,
+      page,
+      limit,
+    } = filterDto;
     const skip = (page! - 1) * limit!;
 
     //validate foreign keys
     await this.validateRelations(halaqa, role);
 
-    const where: Prisma.StaffMembersWhereInput = {};
+    const where: Prisma.StaffMembersWhereInput = { isDeleted };
 
     //define search parameters
     if (searchField) {
@@ -306,7 +315,7 @@ export class StaffService {
       ];
     }
     if (status) where.status = status;
-    else where.status = { not: StaffStatus.PENDING };
+    else if (!isDeleted) where.status = { not: StaffStatus.PENDING };
     if (halaqa) where.classAssignments = { some: { halaqaId: halaqa } };
     if (role) where.roleGrants = { some: { roleId: role } };
     //search
@@ -320,7 +329,7 @@ export class StaffService {
 
   async showStaffEditPage(staffId: string) {
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId },
+      where: { id: staffId, isDeleted: false },
       select: {
         id: true,
         email: true,
@@ -398,6 +407,7 @@ export class StaffService {
         email: true,
         jobTitle: true,
         status: true,
+        isDeleted: true,
         dateOfBirth: true,
         nationalId: true,
         phone: true,
@@ -435,7 +445,7 @@ export class StaffService {
 
   async showPendingStaff() {
     const staff = await this.prisma.staffMembers.findMany({
-      where: { status: 'PENDING', mustChangePassword: true },
+      where: { status: 'PENDING', mustChangePassword: true, isDeleted: false },
       select: {
         id: true,
         fullName: true,
@@ -450,7 +460,7 @@ export class StaffService {
 
   async deactivateStaff(staffId: string, actorId: string) {
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId },
+      where: { id: staffId, isDeleted: false },
       select: {
         id: true,
         status: true,
@@ -471,7 +481,7 @@ export class StaffService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staffMembers.update({
-          where: { id: staffId },
+          where: { id: staffId, isDeleted: false },
           data: { status: StaffStatus.INACTIVE },
         });
         await this.audit.record(tx, {
@@ -497,7 +507,7 @@ export class StaffService {
 
   async activateStaff(staffId: string, actorId: string) {
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId },
+      where: { id: staffId, isDeleted: false },
       select: {
         id: true,
         status: true,
@@ -511,7 +521,7 @@ export class StaffService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staffMembers.update({
-          where: { id: staffId },
+          where: { id: staffId, isDeleted: false },
           data: { status: StaffStatus.ACTIVE },
         });
         await this.audit.record(tx, {
@@ -537,7 +547,7 @@ export class StaffService {
 
   async deleteStaff(staffId: string, actorId: string) {
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId },
+      where: { id: staffId, isDeleted: false },
       select: {
         id: true,
         status: true,
@@ -561,8 +571,8 @@ export class StaffService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         await tx.staffMembers.update({
-          where: { id: staffId },
-          data: { status: StaffStatus.DELETED },
+          where: { id: staffId, isDeleted: false },
+          data: { isDeleted: true },
         });
         await this.audit.record(tx, {
           actorId: actorId,
@@ -585,7 +595,7 @@ export class StaffService {
     }
   }
 
-  async inviteStaff(inviteStaffDto: InviteStaffDto) {
+  async inviteStaff(inviteStaffDto: InviteStaffDto, actorId: string) {
     const { email, fullName, jobTitle } = inviteStaffDto;
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -595,7 +605,7 @@ export class StaffService {
     });
 
     // Check if the Staff exist and not deleted.
-    if (existingStaff && existingStaff.status !== StaffStatus.DELETED) {
+    if (existingStaff && !existingStaff.isDeleted) {
       throw new ConflictException('This email already exist.');
     }
 
@@ -611,6 +621,7 @@ export class StaffService {
       fullName,
       jobTitle,
       status: StaffStatus.PENDING,
+      isDeleted: false,
       mustChangePassword: true,
     };
 
@@ -631,13 +642,13 @@ export class StaffService {
         let staff: StaffSummary;
 
         // Check if the staff exist and deleted
-        if (existingStaff && existingStaff.status === StaffStatus.DELETED) {
+        if (existingStaff && existingStaff.isDeleted) {
           // Change the status to pending
           staff = await tx.staffMembers.update({
             // We need the check here too, to prevent another invitation at the same time.
             where: {
               id: existingStaff.id,
-              status: StaffStatus.DELETED,
+              isDeleted: true,
             },
             data,
             select,
@@ -650,7 +661,7 @@ export class StaffService {
         }
 
         await this.audit.record(tx, {
-          actorId: 'staff_admin', //TODO: make it current user
+          actorId,
           actionType: AuditAction.STAFF_INVITED,
           targetType: AuditTarget.STAFF,
           targetId: staff.id,
