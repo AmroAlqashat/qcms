@@ -240,7 +240,7 @@ export class StaffService {
     }
   }
 
-  async editStaff(staffId: string, editStaffDto: EditStaffDto) {
+  async editStaff(staffId: string, editStaffDto: EditStaffDto, actorId: string) {
     try {
       return await this.prisma.$transaction(async (tx) => {
         const staff = await tx.staffMembers.update({
@@ -254,7 +254,7 @@ export class StaffService {
           },
         });
         await this.audit.record(tx, {
-          actorId: 'staff_admin', //TODO: change to current user
+          actorId,
           actionType: 'STAFF_UPDATED',
           targetType: 'STAFF',
           targetId: staffId,
@@ -485,7 +485,7 @@ export class StaffService {
           data: { status: StaffStatus.INACTIVE },
         });
         await this.audit.record(tx, {
-          actorId: actorId,
+          actorId,
           targetType: 'STAFF',
           actionType: 'STAFF_DEACTIVATED',
           targetId: staffId,
@@ -525,7 +525,7 @@ export class StaffService {
           data: { status: StaffStatus.ACTIVE },
         });
         await this.audit.record(tx, {
-          actorId: actorId,
+          actorId,
           targetType: 'STAFF',
           actionType: 'STAFF_ACTIVATED',
           targetId: staffId,
@@ -575,7 +575,7 @@ export class StaffService {
           data: { isDeleted: true },
         });
         await this.audit.record(tx, {
-          actorId: actorId,
+          actorId,
           targetType: 'STAFF',
           actionType: 'STAFF_DELETED',
           targetId: staffId,

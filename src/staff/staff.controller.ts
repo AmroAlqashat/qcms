@@ -143,8 +143,9 @@ export class StaffController {
     @Body() editStaffDto: EditStaffDto,
     @Req() request: Request,
     @Res() response: Response,
+    @CurrentUser() actor: { id: string },
   ) {
-    await this.staffService.editStaff(id, editStaffDto);
+    await this.staffService.editStaff(id, editStaffDto, actor.id);
 
     const location = `/staff/${encodeURIComponent(id)}`;
 
