@@ -436,7 +436,7 @@ export class StaffService {
       },
     });
 
-    if (!staff) {
+    if (!staff || staff.status === StaffStatus.PENDING || staff.isDeleted) {
       throw new NotFoundException('الموظف غير موجود');
     }
 
