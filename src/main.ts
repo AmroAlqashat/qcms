@@ -41,10 +41,12 @@ async function bootstrap() {
         secure: isProduction,
         sameSite: 'lax',
         path: '/',
-        maxAge: 30 * 60 * 1000, // 30 minutes of inactivity only a fallback next is the normal case
+        maxAge: 30 * 60 * 1000, // 30 minutes is default. A middleware is responsable for handling customizable session timout from DB.
       },
     }),
   );
+
+  // Middleware for customizable session timeout
   app.use(async (req: Request, res: Response, next: NextFunction) => {
     try {
       const minutes = await settings.getSessionTimeoutMinutes();

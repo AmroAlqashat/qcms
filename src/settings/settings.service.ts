@@ -1,30 +1,30 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsDto } from './dto/settings.dto';
-import { JsonValue } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
-  private cache = new Map<string, { value: JsonValue; expiresAt: number }>();
+  private cache = new Map<string, { value: number; expiresAt: number }>();
   private readonly ttlMs = 60_000;
   private readonly defaultTimeOut = 30;
 
-  private async get(key: string): Promise<JsonValue> {
+  async getSessionTimeoutMinutes(): Promise<number> {
+    const key = 'sessionInactivityTimeoutMinutes';
     const hit = this.cache.get(key);
     if (hit && hit.expiresAt > Date.now()) return hit.value;
 
-    const row = await this.prisma.settings.findFirst({ where: { key } });
+    const row = await this.prisma.settings.findFirst({
+      where: { key },
+      orderBy: [{ setAt: 'desc' }, { id: 'desc' }],
+    });
     if (!row) throw new NotFoundException('setting not found');
-    const value = row.value;
 
+    const minutes = Number(row.value);
+    const value =
+      Number.isFinite(minutes) && minutes > 0 ? minutes : this.defaultTimeOut;
     this.cache.set(key, { value, expiresAt: Date.now() + this.ttlMs });
     return value;
-  }
-
-  async getSessionTimeoutMinutes(): Promise<number> {
-    const n = Number(await this.get('sessionTimeOut'));
-    return Number.isFinite(n) && n > 0 ? n : Number(this.defaultTimeOut);
   }
 
   async getSettings() {
@@ -83,13 +83,9 @@ export class SettingsService {
   }
 
   async refresh(key?: string): Promise<void> {
-    if (key) {
-      this.cache.delete(key);
-      await this.get(key); // re-read now so the next caller hits a warm cache
-    } else {
-      const keys = [...this.cache.keys()];
-      this.cache.clear();
-      await Promise.all(keys.map((k) => this.get(k)));
-    }
+    const timeoutKey = 'sessionInactivityTimeoutMinutes';
+    if (key && key !== timeoutKey) return;
+    this.cache.delete(timeoutKey);
+    await this.getSessionTimeoutMinutes();
   }
 }
