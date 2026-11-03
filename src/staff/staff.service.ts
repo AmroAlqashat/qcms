@@ -787,26 +787,25 @@ export class StaffService {
     }
   }
 
-  public async changeMyPassword(changeMyPasswordDto: changeMyPasswordDto){
+  public async changeMyPassword(changeMyPasswordDto: changeMyPasswordDto) {
     const staff = await this.prisma.staffMembers.findUnique({
-      where: {email: changeMyPasswordDto.email, isDeleted: false},
-      select: {id: true}
-    })
+      where: { email: changeMyPasswordDto.email, isDeleted: false },
+      select: { id: true },
+    });
 
-    if(!staff)
-      throw new NotFoundException("email does not exist")
+    if (!staff) throw new NotFoundException('email does not exist');
 
     const otp = await this.prisma.oTPs.findUnique({
-      where:{staffId: staff.id},
+      where: { staffId: staff.id },
       select: {
         id: true,
         codeHash: true,
         expiresAt: true,
         attempts: true,
-      }
-    })
+      },
+    });
 
-    if(!otp)
+    if (!otp)
       throw new UnprocessableEntityException({
         message: 'لا يوجد رمز تحقق',
         errors: { code: 'اطلب رمز تحقق جديدًا' },
@@ -860,20 +859,20 @@ export class StaffService {
       });
     }
 
-    if(deleted.count === 1)
-      this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staff.id);
+    if (deleted.count === 1)
+      await this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staff.id);
   }
 
   private async ChangeStaffPassword(newPass: string, staffId: string) {
     try {
-      const passhash =  await argon2.hash(newPass, {
-        type: argon2.argon2id
+      const passhash = await argon2.hash(newPass, {
+        type: argon2.argon2id,
       });
 
       return await this.prisma.$transaction(async (tx) => {
-        tx.staffMembers.update({
-          where: {id: staffId},
-          data: {passwordHash: passhash},
+        await tx.staffMembers.update({
+          where: { id: staffId },
+          data: { passwordHash: passhash },
           select: {
             id: true,
             email: true,
@@ -881,8 +880,18 @@ export class StaffService {
             jobTitle: true,
             status: true,
           },
-        })
-      })
-    } catch(e: unknown){}
+        });
+      });
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      )
+        throw new ConflictException({
+          message: 'a conflict has occured',
+          errors: { email: 'a conflict has occured' },
+        });
+      throw error;
+    }
   }
 }

@@ -329,9 +329,7 @@ export class StaffController {
   }
 
   @Post('reset my password')
-  async changeMyPassword(
-    @Query() changeMyPasswordDto: changeMyPasswordDto
-  ) {
-    this.staffService.changeMyPassword(changeMyPasswordDto)
+  async changeMyPassword(@Query() changeMyPasswordDto: changeMyPasswordDto) {
+    await this.staffService.changeMyPassword(changeMyPasswordDto);
   }
 }
