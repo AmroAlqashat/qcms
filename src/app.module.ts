@@ -25,7 +25,7 @@ import { ResendModule } from 'nestjs-resend';
     AuthModule,
     SettingsModule,
     MailModule,
-    ResendModule.forRoot({apiKey: process.env.RESEND_API_KEY,}),
+    ResendModule.forRoot({ apiKey: process.env.RESEND_API_KEY }),
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: SessionAuthGuard }],

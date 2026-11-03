@@ -72,7 +72,7 @@ export class OtpService {
     }
 
     // Add await to it when implementing real send otp.
-    this.mail.sendOtp(staff.email, code);
+    await this.mail.sendOtp(staff.email, code);
   }
 
   verifyOtp(dbCodeHash: string, code: string) {
