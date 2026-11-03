@@ -39,6 +39,7 @@
     "connect-pg-simple": "^10.0.0",
     "express-handlebars": "^8.0.3",
     "express-session": "^1.19.0",
+    "nestjs-resend": "^1.1.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",

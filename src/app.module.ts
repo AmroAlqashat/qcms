@@ -11,6 +11,7 @@ import { StaffModule } from './staff/staff.module';
 import { AuthModule } from './auth/auth.module';
 import { SettingsModule } from './settings/settings.module';
 import { MailModule } from './mail/mail.module';
+import { ResendModule } from 'nestjs-resend';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MailModule } from './mail/mail.module';
     AuthModule,
     SettingsModule,
     MailModule,
+    ResendModule.forRoot({apiKey: process.env.RESEND_API_KEY,}),
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: SessionAuthGuard }],
