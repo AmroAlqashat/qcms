@@ -26,6 +26,7 @@ import {
 } from './helpers/staff-profile-formatters';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { EditPermissionsDto } from './dto/edit-permissions.dto';
+import { changeMyPasswordDto } from './dto/change-my-password.dto';
 
 @Controller('staff')
 export class StaffController {
@@ -325,5 +326,12 @@ export class StaffController {
 
     response.redirect(303, location);
     return;
+  }
+
+  @Post('reset my password')
+  async changeMyPassword(
+    @Query() changeMyPasswordDto: changeMyPasswordDto
+  ) {
+    this.staffService.changeMyPassword(changeMyPasswordDto)
   }
 }

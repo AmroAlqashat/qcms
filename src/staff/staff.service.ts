@@ -23,6 +23,8 @@ import { FilteredStaffDto } from './dto/filter-staff.dto';
 import { EditStaffDto } from './dto/edit-staff.dto';
 import { RolesService } from '../roles/roles.service';
 import { EditPermissionsDto } from './dto/edit-permissions.dto';
+import { changeMyPasswordDto } from './dto/change-my-password.dto';
+import { OtpService } from '../mail/otp.serivce';
 
 @Injectable()
 export class StaffService {
@@ -30,6 +32,7 @@ export class StaffService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly rolesSerive: RolesService,
+    private readonly otpService: OtpService,
   ) {}
 
   async getRoleOptionsForStaff(staffId: string) {
@@ -782,5 +785,104 @@ export class StaffService {
         `Cannot remove the only assigned staff member from ${assignments.join('; ')}.`,
       );
     }
+  }
+
+  public async changeMyPassword(changeMyPasswordDto: changeMyPasswordDto){
+    const staff = await this.prisma.staffMembers.findUnique({
+      where: {email: changeMyPasswordDto.email, isDeleted: false},
+      select: {id: true}
+    })
+
+    if(!staff)
+      throw new NotFoundException("email does not exist")
+
+    const otp = await this.prisma.oTPs.findUnique({
+      where:{staffId: staff.id},
+      select: {
+        id: true,
+        codeHash: true,
+        expiresAt: true,
+        attempts: true,
+      }
+    })
+
+    if(!otp)
+      throw new UnprocessableEntityException({
+        message: 'لا يوجد رمز تحقق',
+        errors: { code: 'اطلب رمز تحقق جديدًا' },
+      });
+    if (otp.expiresAt <= new Date()) {
+      throw new UnprocessableEntityException({
+        message: 'رمز التحقق منتهي الصلاحية',
+        errors: { code: 'رمز التحقق منتهي الصلاحية' },
+      });
+    }
+
+    if (otp.attempts >= 5) {
+      throw new UnprocessableEntityException({
+        message: 'لقد تعديت خمس محاولات، اطلب رمزًا آخر',
+        errors: { code: 'لقد تعديت خمس محاولات، اطلب رمزًا آخر' },
+      });
+    }
+
+    if (!this.otpService.verifyOtp(otp.codeHash, changeMyPasswordDto.otp)) {
+      await this.prisma.oTPs.updateMany({
+        where: {
+          id: otp.id,
+          codeHash: otp.codeHash,
+          attempts: { lt: 5 },
+        },
+        data: {
+          attempts: { increment: 1 },
+        },
+      });
+
+      throw new UnprocessableEntityException({
+        message: 'رمز التحقق غير صحيح',
+        errors: { code: 'رمز التحقق غير صحيح' },
+      });
+    }
+
+    const deleted = await this.prisma.oTPs.deleteMany({
+      where: {
+        id: otp.id,
+        otp,
+        codeHash: otp.codeHash,
+        expiresAt: { gt: new Date() },
+        attempts: { lt: 5 },
+      },
+    });
+
+    if (deleted.count !== 1) {
+      throw new UnprocessableEntityException({
+        message: 'تعذر التحقق من الرمز، حاول مرة أخرى',
+        errors: { code: 'تعذر التحقق من الرمز، حاول مرة أخرى' },
+      });
+    }
+
+    if(deleted.count === 1)
+      this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staff.id);
+  }
+
+  private async ChangeStaffPassword(newPass: string, staffId: string) {
+    try {
+      const passhash =  await argon2.hash(newPass, {
+        type: argon2.argon2id
+      });
+
+      return await this.prisma.$transaction(async (tx) => {
+        tx.staffMembers.update({
+          where: {id: staffId},
+          data: {passwordHash: passhash},
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            jobTitle: true,
+            status: true,
+          },
+        })
+      })
+    } catch(e: unknown){}
   }
 }
