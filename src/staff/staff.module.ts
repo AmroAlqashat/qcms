@@ -5,10 +5,12 @@ import { AuditModule } from '../audit/audit.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EditStaffErrorFilter } from './helpers/filters/edit-staff-error.filter';
 import { RolesModule } from '../roles/roles.module';
+import { OtpService } from '../mail/otp.serivce';
+import { MailService } from '../mail/mail.service';
 
 @Module({
   imports: [PrismaModule, AuditModule, RolesModule],
   controllers: [StaffController],
-  providers: [StaffService, EditStaffErrorFilter],
+  providers: [StaffService, EditStaffErrorFilter, OtpService, MailService],
 })
 export class StaffModule {}

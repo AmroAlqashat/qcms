@@ -137,7 +137,7 @@ export class OtpService {
     const deleted = await this.prisma.oTPs.deleteMany({
       where: {
         id: otp.id,
-        otp,
+        staffId,
         codeHash: otp.codeHash,
         expiresAt: { gt: new Date() },
         attempts: { lt: 5 },

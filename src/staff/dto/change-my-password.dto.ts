@@ -1,25 +1,20 @@
 import {
-  IsEmail,
   IsNotEmpty,
   IsString,
-  Length,
   Matches,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 
 export class changeMyPasswordDto {
-  @IsEmail()
-  @MaxLength(254, { message: 'يجب ألا يتجاوز البريد الإلكتروني 254 حرفًا' })
-  @IsNotEmpty({ message: 'البريد الإلكتروني مطلوب' })
-  email: string;
-
-  @Matches(/^\d{6}$/)
-  @IsNotEmpty()
+  @Matches(/^\d{6}$/, { message: 'أدخل رمز التحقق المكوّن من 6 أرقام' })
+  @IsNotEmpty({ message: 'رمز التحقق مطلوب' })
   @IsString()
-  otp: string;
+  otp!: string;
 
   @IsString()
-  @Length(12)
-  @IsNotEmpty()
-  newPassword: string;
+  @MinLength(12, { message: 'كلمة المرور يجب ألا تقل عن 12 حرفًا' })
+  @MaxLength(128, { message: 'كلمة المرور يجب ألا تزيد عن 128 حرفًا' })
+  @IsNotEmpty({ message: 'كلمة المرور الجديدة مطلوبة' })
+  newPassword!: string;
 }

@@ -787,20 +787,16 @@ export class StaffService {
     }
   }
 
-  public async changeMyPassword(changeMyPasswordDto: changeMyPasswordDto) {
-    const staff = await this.prisma.staffMembers.findUnique({
-      where: { email: changeMyPasswordDto.email, isDeleted: false },
-      select: { id: true },
-    });
+  public async sendChangePasswordOtp(staffId: string) {
+    await this.otpService.issueOtp(staffId);
+  }
 
-    if (!staff) throw new NotFoundException('email does not exist');
-    if (await this.otpService.verifyStaffOtp(staff.id, changeMyPasswordDto.otp))
-      await this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staff.id);
-    else
-      throw new UnprocessableEntityException({
-        message: 'تعذر التحقق من الرمز، حاول مرة أخرى',
-        errors: { code: 'تعذر التحقق من الرمز، حاول مرة أخرى' },
-      });
+  public async changeMyPassword(
+    changeMyPasswordDto: changeMyPasswordDto,
+    staffId: string,
+  ) {
+    await this.otpService.verifyStaffOtp(staffId, changeMyPasswordDto.otp);
+    await this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staffId);
   }
 
   private async ChangeStaffPassword(newPass: string, staffId: string) {

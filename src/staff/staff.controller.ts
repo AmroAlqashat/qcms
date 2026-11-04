@@ -202,6 +202,15 @@ export class StaffController {
     );
   }
 
+  @Get('reset-my-password')
+  getChangePasswordPage(@Res() response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    return response.render('staff/reset-my-password-page', {
+      title: 'تغيير كلمة المرور',
+      layout: 'auth',
+    });
+  }
+
   @Get(':id')
   @Render('staff/staff-profile-page')
   async showStaffProfile(@Param('id') id: string) {
@@ -328,8 +337,33 @@ export class StaffController {
     return;
   }
 
-  @Post('reset my password')
-  async changeMyPassword(@Query() changeMyPasswordDto: changeMyPasswordDto) {
-    await this.staffService.changeMyPassword(changeMyPasswordDto);
+  @Post('reset-my-password/send-otp')
+  async sendChangePasswordOtp(
+    @CurrentUser() actor: { id: string },
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    await this.staffService.sendChangePasswordOtp(actor.id);
+    return response.status(200).json({ message: 'تم إرسال رمز التحقق' });
+  }
+
+  @Post('reset-my-password')
+  async changeMyPassword(
+    @Body() changeMyPasswordDto: changeMyPasswordDto,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    await this.staffService.changeMyPassword(changeMyPasswordDto, actor.id);
+
+    const location = `/staff/${encodeURIComponent(actor.id)}`;
+    if (!wantsHtml(request)) {
+      return response.json({ success: true });
+    }
+    if (request.get('HX-Request') === 'true') {
+      return response.setHeader('HX-Redirect', location).status(204).end();
+    }
+    return response.redirect(303, location);
   }
 }
