@@ -2,13 +2,10 @@ import { Module } from '@nestjs/common';
 import { MailService } from './mail.service';
 import { OtpService } from './otp.serivce';
 import { PrismaModule } from '../prisma/prisma.module';
-import { ResendModule } from 'nestjs-resend';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
-  imports: [
-    PrismaModule,
-    ResendModule.forRoot({ apiKey: process.env.RESEND_API_KEY }),
-  ],
+  imports: [PrismaModule, MailerModule],
   providers: [MailService, OtpService],
   exports: [OtpService],
 })

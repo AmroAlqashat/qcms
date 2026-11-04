@@ -11,7 +11,7 @@ import { StaffModule } from './staff/staff.module';
 import { AuthModule } from './auth/auth.module';
 import { SettingsModule } from './settings/settings.module';
 import { MailModule } from './mail/mail.module';
-import { ResendModule } from 'nestjs-resend';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
@@ -25,7 +25,20 @@ import { ResendModule } from 'nestjs-resend';
     AuthModule,
     SettingsModule,
     MailModule,
-    ResendModule.forRoot({ apiKey: process.env.RESEND_API_KEY }),
+    MailerModule.forRoot({
+      transport: {
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true, // true for port 465, false for other ports
+        auth: {
+          user: process.env.EMAIL_SENDER_ADDRESS,
+          pass: process.env.EMAIL_APP_PASSWORD,
+        },
+      },
+      defaults: {
+        from: `"No Reply" ${process.env.EMAIL_SENDER_ADDRESS}`,
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: SessionAuthGuard }],

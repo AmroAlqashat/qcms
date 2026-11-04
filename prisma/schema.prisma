@@ -329,3 +329,11 @@ enum AuditTarget {
   STUDENT
   ROLE
 }
+
+enum JobTitle {
+  SUPERADMIN
+  ADMIN
+  TEACHER
+  FINANCE
+  MISC
+}

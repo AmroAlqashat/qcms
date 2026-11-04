@@ -2,12 +2,15 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Post,
   Query,
   Render,
   Req,
   Res,
+  UnauthorizedException,
   UseFilters,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
@@ -27,6 +30,8 @@ import {
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { EditPermissionsDto } from './dto/edit-permissions.dto';
 import { changeMyPasswordDto } from './dto/change-my-password.dto';
+import { ForgotPasswordEmailDto } from './dto/forgot-password-email.dto';
+import { Public } from '../auth/decorators/route-access.decorator';
 
 @Controller('staff')
 export class StaffController {
@@ -211,6 +216,44 @@ export class StaffController {
     });
   }
 
+  @Public()
+  @Get('forgot-my-password')
+  getForgotPasswordPage(@Res() response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    return response.render('staff/forgot-my-password-page', {
+      title: 'نسيت كلمة المرور',
+      layout: 'auth',
+    });
+  }
+
+  @Public()
+  @Post('forgot-my-password/send-otp')
+  async sendForgotPasswordOtp(
+    @Body() emailDto: ForgotPasswordEmailDto,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    try {
+      await this.staffService.sendForgotPasswordOtp(emailDto.email);
+    } catch (error: unknown) {
+      if (
+        !(error instanceof HttpException) ||
+        error.getStatus() !== Number(HttpStatus.TOO_MANY_REQUESTS)
+      ) {
+        throw error;
+      }
+    }
+
+    return response.render('staff/forgot-my-password-page', {
+      title: 'إعادة تعيين كلمة المرور',
+      layout: 'auth',
+      resetStep: true,
+      email: emailDto.email.trim().toLowerCase(),
+      notice:
+        'إذا كان البريد الإلكتروني مرتبطًا بحساب نشط، فسيصلك رمز التحقق. إذا طلبت رمزًا مؤخرًا، انتظر دقيقة قبل المحاولة مجددًا.',
+    });
+  }
+
   @Get(':id')
   @Render('staff/staff-profile-page')
   async showStaffProfile(@Param('id') id: string) {
@@ -347,17 +390,33 @@ export class StaffController {
     return response.status(200).json({ message: 'تم إرسال رمز التحقق' });
   }
 
+  @Public()
   @Post('reset-my-password')
   async changeMyPassword(
     @Body() changeMyPasswordDto: changeMyPasswordDto,
-    @CurrentUser() actor: { id: string },
     @Req() request: Request,
     @Res() response: Response,
   ) {
     response.setHeader('Cache-Control', 'no-store');
-    await this.staffService.changeMyPassword(changeMyPasswordDto, actor.id);
 
-    const location = `/staff/${encodeURIComponent(actor.id)}`;
+    if (changeMyPasswordDto.email) {
+      await this.staffService.resetForgottenPassword({
+        email: changeMyPasswordDto.email,
+        otp: changeMyPasswordDto.otp,
+        newPassword: changeMyPasswordDto.newPassword,
+      });
+      return response.render('auth/sign-in-page', {
+        title: 'تسجيل الدخول',
+        layout: 'auth',
+        successMessage: 'تم تغيير كلمة المرور. يمكنك تسجيل الدخول الآن.',
+      });
+    }
+
+    const staffId = request.session.staffId;
+    if (!staffId) throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
+    await this.staffService.changeMyPassword(changeMyPasswordDto, staffId);
+
+    const location = `/staff/${encodeURIComponent(staffId)}`;
     if (!wantsHtml(request)) {
       return response.json({ success: true });
     }

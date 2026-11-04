@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InviteStaffDto } from './dto/invite-staff.dto';
@@ -24,6 +25,7 @@ import { EditStaffDto } from './dto/edit-staff.dto';
 import { RolesService } from '../roles/roles.service';
 import { EditPermissionsDto } from './dto/edit-permissions.dto';
 import { changeMyPasswordDto } from './dto/change-my-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { OtpService } from '../mail/otp.serivce';
 
 @Injectable()
@@ -795,8 +797,64 @@ export class StaffService {
     changeMyPasswordDto: changeMyPasswordDto,
     staffId: string,
   ) {
+    const staff = await this.prisma.staffMembers.findFirst({
+      where: {
+        id: staffId,
+        isDeleted: false,
+        status: StaffStatus.ACTIVE,
+        mustChangePassword: false,
+      },
+      select: { id: true },
+    });
+    if (!staff) throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
+
     await this.otpService.verifyStaffOtp(staffId, changeMyPasswordDto.otp);
     await this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staffId);
+  }
+
+  public async sendForgotPasswordOtp(email: string) {
+    const staff = await this.prisma.staffMembers.findFirst({
+      where: {
+        email: email.trim().toLowerCase(),
+        isDeleted: false,
+        status: StaffStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+
+    if (staff) await this.otpService.issueOtp(staff.id);
+  }
+
+  public async resetForgottenPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const staff = await this.prisma.staffMembers.findFirst({
+      where: {
+        email: forgotPasswordDto.email.trim().toLowerCase(),
+        isDeleted: false,
+        status: StaffStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+
+    if (!staff) {
+      throw new UnprocessableEntityException({
+        message: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
+        errors: { otp: 'رمز التحقق غير صحيح أو منتهي الصلاحية' },
+      });
+    }
+
+    try {
+      await this.otpService.verifyStaffOtp(staff.id, forgotPasswordDto.otp);
+    } catch (error: unknown) {
+      if (error instanceof UnprocessableEntityException) {
+        throw new UnprocessableEntityException({
+          message: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
+          errors: { otp: 'رمز التحقق غير صحيح أو منتهي الصلاحية' },
+        });
+      }
+      throw error;
+    }
+
+    await this.ChangeStaffPassword(forgotPasswordDto.newPassword, staff.id);
   }
 
   private async ChangeStaffPassword(newPass: string, staffId: string) {
