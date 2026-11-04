@@ -75,7 +75,7 @@ export class OtpService {
     await this.mail.sendOtp(staff.email, code);
   }
 
-  verifyOtp(dbCodeHash: string, code: string) {
+  private verifyOtp(dbCodeHash: string, code: string) {
     const userCodeHash = this.hashOtpCode(code);
 
     const stored = Buffer.from(dbCodeHash, 'hex');
@@ -84,6 +84,75 @@ export class OtpService {
     return (
       stored.length === submitted.length && timingSafeEqual(stored, submitted)
     );
+  }
+
+  async verifyStaffOtp(staffId: string, code: string) {
+    const otp = await this.prisma.oTPs.findUnique({
+      where: { staffId: staffId },
+      select: {
+        id: true,
+        codeHash: true,
+        expiresAt: true,
+        attempts: true,
+      },
+    });
+
+    if (!otp)
+      throw new UnprocessableEntityException({
+        message: 'لا يوجد رمز تحقق',
+        errors: { code: 'اطلب رمز تحقق جديدًا' },
+      });
+    if (otp.expiresAt <= new Date()) {
+      throw new UnprocessableEntityException({
+        message: 'رمز التحقق منتهي الصلاحية',
+        errors: { code: 'رمز التحقق منتهي الصلاحية' },
+      });
+    }
+
+    if (otp.attempts >= 5) {
+      throw new UnprocessableEntityException({
+        message: 'لقد تعديت خمس محاولات، اطلب رمزًا آخر',
+        errors: { code: 'لقد تعديت خمس محاولات، اطلب رمزًا آخر' },
+      });
+    }
+
+    if (!this.verifyOtp(otp.codeHash, code)) {
+      await this.prisma.oTPs.updateMany({
+        where: {
+          id: otp.id,
+          codeHash: otp.codeHash,
+          attempts: { lt: 5 },
+        },
+        data: {
+          attempts: { increment: 1 },
+        },
+      });
+
+      throw new UnprocessableEntityException({
+        message: 'رمز التحقق غير صحيح',
+        errors: { code: 'رمز التحقق غير صحيح' },
+      });
+    }
+
+    const deleted = await this.prisma.oTPs.deleteMany({
+      where: {
+        id: otp.id,
+        otp,
+        codeHash: otp.codeHash,
+        expiresAt: { gt: new Date() },
+        attempts: { lt: 5 },
+      },
+    });
+
+    if (deleted.count !== 1) {
+      throw new UnprocessableEntityException({
+        message: 'تعذر التحقق من الرمز، حاول مرة أخرى',
+        errors: { code: 'تعذر التحقق من الرمز، حاول مرة أخرى' },
+      });
+    }
+
+    if (deleted.count === 1) return true;
+    return false;
   }
 
   async verifyOnboardingOtp(staffId: string, code: string) {

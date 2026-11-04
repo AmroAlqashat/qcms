@@ -794,73 +794,13 @@ export class StaffService {
     });
 
     if (!staff) throw new NotFoundException('email does not exist');
-
-    const otp = await this.prisma.oTPs.findUnique({
-      where: { staffId: staff.id },
-      select: {
-        id: true,
-        codeHash: true,
-        expiresAt: true,
-        attempts: true,
-      },
-    });
-
-    if (!otp)
-      throw new UnprocessableEntityException({
-        message: 'لا يوجد رمز تحقق',
-        errors: { code: 'اطلب رمز تحقق جديدًا' },
-      });
-    if (otp.expiresAt <= new Date()) {
-      throw new UnprocessableEntityException({
-        message: 'رمز التحقق منتهي الصلاحية',
-        errors: { code: 'رمز التحقق منتهي الصلاحية' },
-      });
-    }
-
-    if (otp.attempts >= 5) {
-      throw new UnprocessableEntityException({
-        message: 'لقد تعديت خمس محاولات، اطلب رمزًا آخر',
-        errors: { code: 'لقد تعديت خمس محاولات، اطلب رمزًا آخر' },
-      });
-    }
-
-    if (!this.otpService.verifyOtp(otp.codeHash, changeMyPasswordDto.otp)) {
-      await this.prisma.oTPs.updateMany({
-        where: {
-          id: otp.id,
-          codeHash: otp.codeHash,
-          attempts: { lt: 5 },
-        },
-        data: {
-          attempts: { increment: 1 },
-        },
-      });
-
-      throw new UnprocessableEntityException({
-        message: 'رمز التحقق غير صحيح',
-        errors: { code: 'رمز التحقق غير صحيح' },
-      });
-    }
-
-    const deleted = await this.prisma.oTPs.deleteMany({
-      where: {
-        id: otp.id,
-        otp,
-        codeHash: otp.codeHash,
-        expiresAt: { gt: new Date() },
-        attempts: { lt: 5 },
-      },
-    });
-
-    if (deleted.count !== 1) {
+    if (await this.otpService.verifyStaffOtp(staff.id, changeMyPasswordDto.otp))
+      await this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staff.id);
+    else
       throw new UnprocessableEntityException({
         message: 'تعذر التحقق من الرمز، حاول مرة أخرى',
         errors: { code: 'تعذر التحقق من الرمز، حاول مرة أخرى' },
       });
-    }
-
-    if (deleted.count === 1)
-      await this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staff.id);
   }
 
   private async ChangeStaffPassword(newPass: string, staffId: string) {
