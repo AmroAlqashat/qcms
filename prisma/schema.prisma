@@ -13,7 +13,7 @@ model StaffMembers {
   email                  String                     @unique
   passwordHash           String?
   fullName               String?
-  jobTitle               String?
+  jobTitle               JobTitle?
   status                 StaffStatus                @default(INACTIVE)
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
@@ -21,6 +21,7 @@ model StaffMembers {
   mustChangePassword     Boolean
   nationalId             String?                    @db.VarChar(30)
   phone                  String?                    @db.VarChar(20)
+  isSuperAdmin           Boolean                    @default(false)
   isDeleted              Boolean                    @default(false)
   auditEvents            AuditEvents[]
   directPermissionGrants DirectPermissionGrants[]
@@ -60,12 +61,13 @@ model DirectPermissionGrants {
 }
 
 model Roles {
-  id              String                 @id @default(uuid())
-  name            String                 @unique
-  description     String?
-  createdAt       DateTime               @default(now())
-  rolePermissions RolePermissions[]
-  staffGrants     RoleStaffAssignments[]
+  isSuperAdminRole Boolean                @default(false)
+  id               String                 @id @default(uuid())
+  name             String                 @unique
+  description      String?
+  createdAt        DateTime               @default(now())
+  rolePermissions  RolePermissions[]
+  staffGrants      RoleStaffAssignments[]
 
   @@index([id])
 }
@@ -311,6 +313,8 @@ enum RegistrationStatus {
 }
 
 enum AuditAction {
+  SYSTEM_SETUP_COMPLETED
+  SUPERADMIN_RECOVERED
   STAFF_ONBOARDING_COMPLETED
   STAFF_INVITED
   STAFF_ACTIVATED
@@ -336,4 +340,12 @@ enum JobTitle {
   TEACHER
   FINANCE
   MISC
+}
+
+model SystemSetups {
+  id             Int       @id @default(1)
+  tokenHash      String?
+  tokenExpiresAt DateTime?
+  failedAttempts Int       @default(0)
+  completedAt    DateTime?
 }
