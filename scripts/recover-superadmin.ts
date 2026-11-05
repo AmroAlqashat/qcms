@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   console.log('Existing accounts and roles will not be overwritten.');
   const email = await ask('Admin email: ');
   const fullName = await ask('Full name: ');
-  const password = await ask('Password (12–128 characters, hidden): ', true);
+  const password = await ask('Password (8–128 characters, hidden): ', true);
   const confirmation = await ask('Confirm password (hidden): ', true);
   if (password !== confirmation) throw new Error('Passwords do not match.');
   const app = await NestFactory.createApplicationContext(SetupModule, {

@@ -30,11 +30,11 @@ export class SetupDto {
   email!: string;
 
   @IsString()
-  @MinLength(12, { message: 'استخدم كلمة مرور من 12 حرفًا على الأقل.' })
+  @MinLength(8, { message: 'استخدم كلمة مرور من 8 أحرف على الأقل.' })
   @MaxLength(128)
   password!: string;
 
   @IsString()
-  @Length(12, 128)
+  @Length(8, 128)
   confirmPassword!: string;
 }

@@ -31,8 +31,8 @@ export class SetupService {
       throw new BadRequestException('Enter a valid email.');
     if (fullName.length < 2 || fullName.length > 100)
       throw new BadRequestException('Full name must be 2–100 characters.');
-    if (details.password.length < 12 || details.password.length > 128)
-      throw new BadRequestException('Password must be 12–128 characters.');
+    if (details.password.length < 8 || details.password.length > 128)
+      throw new BadRequestException('Password must be 8–128 characters.');
     const passwordHash = await argon2.hash(details.password, {
       type: argon2.argon2id,
     });

@@ -58,7 +58,7 @@ It expires after 30 minutes. Generating another token invalidates the previous o
 After ten failed token comparisons, the operator must generate a new token.
 
 Start the app as described below and open `/setup`. Use HTTPS in production.
-The owner enters the token, name, email, and a password of 12–128 characters.
+The owner enters the token, name, email, and a password of 8–128 characters.
 The server creates the single superadmin and initializes permissions and missing
 settings in one transaction. No separate seeds are needed for this flow. Settings
 use the new account's ID as `setById`. Sign in normally after setup succeeds.

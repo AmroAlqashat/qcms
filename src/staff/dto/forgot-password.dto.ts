@@ -20,7 +20,7 @@ export class ForgotPasswordDto {
   otp!: string;
 
   @IsString()
-  @MinLength(12, { message: 'كلمة المرور يجب ألا تقل عن 12 حرفًا' })
+  @MinLength(8, { message: 'كلمة المرور يجب ألا تقل عن 8 أحرف' })
   @MaxLength(128, { message: 'كلمة المرور يجب ألا تزيد عن 128 حرفًا' })
   @IsNotEmpty({ message: 'كلمة المرور الجديدة مطلوبة' })
   newPassword!: string;

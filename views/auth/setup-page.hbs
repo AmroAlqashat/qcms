@@ -11,8 +11,8 @@
         {{> ui/field id="setup-token" name="token" label="رمز الإعداد" type="password" password=true required=true minlength="64" maxlength="64" dir="ltr" autocomplete="off" error=errors.token hint="الرمز صالح لمدة 30 دقيقة، ويُستخدم مرة واحدة فقط."}}
         {{> ui/field id="setup-name" name="fullName" label="الاسم الكامل" required=true minlength="2" maxlength="100" autocomplete="name" value=form.fullName error=errors.fullName}}
         {{> ui/field id="setup-email" name="email" label="البريد الإلكتروني" type="email" required=true maxlength="254" autocomplete="username" dir="ltr" value=form.email error=errors.email}}
-        {{> ui/field id="setup-password" name="password" label="كلمة المرور" type="password" password=true required=true minlength="12" maxlength="128" autocomplete="new-password" dir="ltr" error=errors.password hint="استخدم كلمة مرور فريدة من 12 حرفًا على الأقل."}}
-        {{> ui/field id="setup-confirm" name="confirmPassword" label="تأكيد كلمة المرور" type="password" password=true required=true minlength="12" maxlength="128" autocomplete="new-password" dir="ltr" error=errors.confirmPassword}}
+        {{> ui/field id="setup-password" name="password" label="كلمة المرور" type="password" password=true required=true minlength="8" maxlength="128" autocomplete="new-password" dir="ltr" error=errors.password hint="استخدم كلمة مرور فريدة من 8 أحرف على الأقل."}}
+        {{> ui/field id="setup-confirm" name="confirmPassword" label="تأكيد كلمة المرور" type="password" password=true required=true minlength="8" maxlength="128" autocomplete="new-password" dir="ltr" error=errors.confirmPassword}}
         {{> ui/submit label="إنشاء حساب المالك وتهيئة المركز" full=true}}
         <p class="text-xs leading-6 text-slate-600">بعد الإكمال، يُغلق الإعداد ولا يمكن إنشاء مالك آخر من هذه الصفحة.</p>
       </form>
