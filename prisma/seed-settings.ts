@@ -1,3 +1,4 @@
+import { initializeSettings } from '../src/setup/initialize-settings';
 import 'dotenv/config';
 import { Prisma, PrismaClient, StaffStatus } from '@prisma/client';
 
@@ -7,16 +8,8 @@ async function main() {
   const email = process.env.SEED_ACTOR_EMAIL?.trim().toLowerCase();
   if (!email)
     throw new Error(
-      'Set SEED_ACTOR_EMAIL to the admin email used by admin:create.',
+      'Set SEED_ACTOR_EMAIL to an active, non-deleted staff account email.',
     );
-
-  const defaults = [
-    { key: 'centerName', value: 'مركز النور لتحفيظ القرآن الكريم' },
-    { key: 'currency', value: 'JOD' },
-    { key: 'registrationOpen', value: true },
-    { key: 'sessionInactivityTimeoutMinutes', value: 30 },
-    { key: 'delegateAccessExpiryHours', value: 24 },
-  ] as const;
 
   const count = await prisma.$transaction(
     async (tx) => {
@@ -31,19 +24,9 @@ async function main() {
       });
       if (!actor)
         throw new Error(
-          'No active account found for SEED_ACTOR_EMAIL. Run admin:create first.',
+          'No active account found for SEED_ACTOR_EMAIL. Check the configured email.',
         );
-      let inserted = 0;
-      for (const setting of defaults) {
-        const existing = await tx.settings.findFirst({
-          where: { key: setting.key },
-          select: { id: true },
-        });
-        if (existing) continue;
-        await tx.settings.create({ data: { ...setting, setById: actor.id } });
-        inserted++;
-      }
-      return inserted;
+      return initializeSettings(tx, actor.id);
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
