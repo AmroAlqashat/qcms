@@ -17,7 +17,7 @@
         <div class='min-w-0 flex-1'>
           <h1 id='staff-name' class='break-words text-2xl font-extrabold leading-relaxed sm:text-3xl'>{{#if staff.fullName}}{{staff.fullName}}{{else}}موظف محذوف{{/if}}</h1>
           <div class='mt-2 flex flex-wrap items-center gap-3'>
-            <span class='text-sm text-[#d7ebe6]'>{{staff.jobTitle}}</span>
+            <span class='text-sm text-[#d7ebe6]'>{{staff.jobTitleLabel}}</span>
             {{> staff/staff-status-badge status=staff.status isDeleted=staff.isDeleted}}
           </div>
           <p class='mt-3 flex min-w-0 items-start gap-2 text-sm text-[#d7ebe6]'>

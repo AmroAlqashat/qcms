@@ -20,16 +20,11 @@
       maxlength="100"
       error=errors.fullName
     }}
-    {{> ui/field
-      id="profile-job-title"
-      name="jobTitle"
-      label="المسمى الوظيفي"
-      value=form.jobTitle
-      required=true
-      minlength="2"
-      maxlength="100"
-      error=errors.jobTitle
-    }}
+    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <p class="text-sm font-semibold">المسمى الوظيفي</p>
+    <p class="mt-1 text-sm">{{form.jobTitleLabel}}</p>
+    <p class="mt-1 text-xs text-slate-600">يحدده مسؤول المركز. تواصل معه إذا احتجت إلى تصحيحه.</p>
+  </div>
     {{> ui/field
       id="profile-birth"
       name="dateOfBirth"

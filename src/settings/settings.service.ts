@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsDto } from './dto/settings.dto';
 
@@ -18,7 +18,7 @@ export class SettingsService {
       where: { key },
       orderBy: [{ setAt: 'desc' }, { id: 'desc' }],
     });
-    if (!row) throw new NotFoundException('setting not found');
+    if (!row) return this.defaultTimeOut;
 
     const minutes = Number(row.value);
     const value =

@@ -15,7 +15,9 @@ import {
 } from '../decorators/route-access.decorator';
 import { destroySession } from '../helpers/sessions.helpers';
 
-type AuthenticatedRequest = Request & { user?: { id: string } };
+type AuthenticatedRequest = Request & {
+  user?: { id: string; isSuperAdmin: boolean };
+};
 
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
@@ -75,7 +77,7 @@ export class SessionAuthGuard implements CanActivate {
       await destroySession(request);
       return this.deny(request, response);
     }
-    request.user = { id: staff.id };
+    request.user = { id: staff.id, isSuperAdmin: staff.isSuperAdmin };
     return true;
   }
 
@@ -87,6 +89,7 @@ export class SessionAuthGuard implements CanActivate {
         status: true,
         mustChangePassword: true,
         isDeleted: true,
+        isSuperAdmin: true,
       },
     });
   }

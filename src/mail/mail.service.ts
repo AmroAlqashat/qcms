@@ -3,7 +3,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 @Injectable()
 export class MailService {
-  constructor(private readonly mailerService: MailerService) {}
+  constructor(private readonly mailerService: MailerService) { }
 
   async sendOtp(email: string, code: string) {
     if (!process.env.EMAIL_SENDER_ADDRESS)

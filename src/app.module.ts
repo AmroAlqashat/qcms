@@ -1,3 +1,4 @@
+import { SetupModule } from './setup/setup.module';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { SessionAuthGuard } from './auth/guards/session-auth.guard';
@@ -19,6 +20,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
       isGlobal: true,
     }),
     PrismaModule,
+    SetupModule,
     AuditModule,
     RolesModule,
     StaffModule,

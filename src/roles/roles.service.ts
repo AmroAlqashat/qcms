@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
@@ -25,6 +26,19 @@ export class RolesService {
     private readonly audit: AuditService,
   ) {}
 
+  async assertRoleManageable(
+    roleId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ) {
+    const role = await db.roles.findUnique({
+      where: { id: roleId },
+      select: { isSuperAdminRole: true },
+    });
+    if (!role) throw new NotFoundException('القالب غير موجود');
+    if (role.isSuperAdminRole)
+      throw new ForbiddenException('لا يمكن تعديل أو حذف قالب مدير النظام');
+  }
+
   async getRoleAccountCount(roleId: string) {
     const accountCount = await this.prisma.roles.findFirst({
       where: { id: roleId },
@@ -49,6 +63,7 @@ export class RolesService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await this.assertRoleManageable(roleId, tx);
         await tx.roles.delete({ where: { id: roleId } });
 
         await this.audit.record(tx, {
@@ -68,11 +83,13 @@ export class RolesService {
           message: 'هاذ القالب غير موجود',
           errors: { name: 'هاذ القالب غير موجود' },
         });
+      throw error;
     }
   }
 
   async getRoles() {
     return await this.prisma.roles.findMany({
+      where: { isSuperAdminRole: false },
       select: {
         id: true,
         name: true,
@@ -93,6 +110,7 @@ export class RolesService {
 
   async listRoles() {
     const roles = await this.prisma.roles.findMany({
+      where: { isSuperAdminRole: false },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -202,6 +220,7 @@ export class RolesService {
   }
 
   async getRoleById(roleId: string) {
+    await this.assertRoleManageable(roleId);
     const role = await this.prisma.roles.findUnique({
       where: { id: roleId },
     });
@@ -277,6 +296,7 @@ export class RolesService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await this.assertRoleManageable(roleId, tx);
         const role = await tx.roles.update({
           where: { id: roleId },
           data: { name: normalizedName, description },

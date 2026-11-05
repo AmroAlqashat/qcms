@@ -1,3 +1,4 @@
+import { SetupService } from '../setup/setup.service';
 import { SignInErrorFilter } from './filters/sign-in-error.filter';
 import { OnboardingErrorFilter } from './filters/onboarding-error.filter';
 import {
@@ -29,12 +30,16 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly otp: OtpService,
+    private readonly setup: SetupService,
   ) {}
 
   @Public()
   @Get('signIn')
-  showSignInPage(@Res() res: Response) {
+  async showSignInPage(@Res() res: Response) {
     res.setHeader('Cache-Control', 'no-store');
+
+    if (await this.setup.needsInitialSetup())
+      return res.redirect(303, '/setup');
 
     return res.render('auth/sign-in-page', {
       title: 'تسجيل الدخول',

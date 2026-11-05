@@ -40,16 +40,7 @@
       maxlength="15"
       error=errors.nationalId
     }}
-    {{> ui/field
-      id="edit-job-title"
-      name="jobTitle"
-      label="المسمى الوظيفي"
-      value=staff.jobTitle
-      required=true
-      maxlength="80"
-      hint="وصف فقط — تغييره لا يغيّر أي صلاحية."
-      error=errors.jobTitle
-    }}
+    {{> staff/job-title-select id="edit-job-title" options=staff.jobTitleOptions error=errors.jobTitle}}
     <div class='grid gap-4 sm:grid-cols-2'>
       {{> ui/field
         id="edit-phone"

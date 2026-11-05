@@ -81,6 +81,7 @@ export class StaffController {
   @Get('edit/permissions/:id')
   @Render('partials/staff/permissions-dialog')
   async showPermissionsDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
     // GET: load the available choices and the staff member's active selections.
     // The partial uses selected/selectedScope to reopen the saved state.
     const [roles, permissions] = await Promise.all([
@@ -276,9 +277,9 @@ export class StaffController {
       },
       permissions: {
         canEditStaff: !staff.isDeleted,
-        canManagePermissions: !staff.isDeleted,
-        canChangeStatus: !staff.isDeleted,
-        canDelete: !staff.isDeleted,
+        canManagePermissions: !staff.isDeleted && !staff.isSuperAdmin,
+        canChangeStatus: !staff.isDeleted && !staff.isSuperAdmin,
+        canDelete: !staff.isDeleted && !staff.isSuperAdmin,
       },
       effectivePermissionCount: 0,
       activeNav: 'staff',
@@ -287,7 +288,8 @@ export class StaffController {
 
   @Get('deactivate/:id')
   @Render('staff/staff-deactivate-page')
-  showDeactivateStaffDialog(@Param('id') staffId: string) {
+  async showDeactivateStaffDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
     return {
       staff: { id: staffId },
     };
@@ -318,7 +320,8 @@ export class StaffController {
 
   @Get('delete/:id')
   @Render('staff/staff-delete-page')
-  showDeleteStaffDialog(@Param('id') staffId: string) {
+  async showDeleteStaffDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
     return {
       staff: { id: staffId },
     };

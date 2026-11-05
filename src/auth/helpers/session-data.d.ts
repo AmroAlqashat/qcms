@@ -4,6 +4,7 @@ type OnboardingStep = 'VERIFY_OTP' | 'COMPLETE_PROFILE' | 'CHANGE_PASSWORD';
 
 declare module 'express-session' {
   interface SessionData {
+    setupCsrf?: string;
     staffId?: string;
     loggedInAt?: number;
 
