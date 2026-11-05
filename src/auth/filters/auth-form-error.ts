@@ -9,6 +9,7 @@ export function renderAuthError(
   view: string,
   fields: string[],
   resend = false,
+  extra: { jobTitleLabel?: string } = {},
 ): void {
   const request = host.switchToHttp().getRequest<Request>();
   const response = host.switchToHttp().getResponse<Response>();
@@ -76,7 +77,7 @@ export function renderAuthError(
   response.status(status).render(view, {
     layout: isHtmx ? false : 'auth',
     title: 'تسجيل الدخول واستكمال الحساب',
-    form,
+    form: { ...form, ...extra },
     errors,
     error: errors.profile ? String(errors.profile) : error,
   });

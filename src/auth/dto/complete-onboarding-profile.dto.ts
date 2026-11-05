@@ -15,11 +15,6 @@ export class CompleteOnboardingProfileDto {
   @MaxLength(100)
   fullName: string;
 
-  @IsString()
-  @MinLength(2)
-  @MaxLength(100)
-  jobTitle: string;
-
   @IsOptional()
   @IsEmail()
   @MaxLength(254)

@@ -1,3 +1,4 @@
+import { jobTitleOptions } from '../../../common/job-title-labels-map';
 import {
   ArgumentsHost,
   Catch,
@@ -58,6 +59,7 @@ export class EditStaffErrorFilter implements ExceptionFilter {
             email: form.email ?? staff.email,
             nationalId: form.nationalId ?? staff.nationalId,
             jobTitle: form.jobTitle ?? staff.jobTitle,
+            jobTitleOptions: jobTitleOptions(form.jobTitle ?? staff.jobTitle),
             phone: form.phoneNumber ?? staff.phone,
             dateOfBirthValue:
               form.dateOfBirth ??

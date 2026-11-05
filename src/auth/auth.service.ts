@@ -1,3 +1,4 @@
+import { jobTitleLabels } from '../common/job-title-labels-map';
 import { AuditAction, AuditTarget, Prisma, StaffStatus } from '@prisma/client';
 import {
   ConflictException,
@@ -94,6 +95,9 @@ export class AuthService {
 
     return {
       ...staff,
+      jobTitleLabel: staff.jobTitle
+        ? jobTitleLabels[staff.jobTitle]
+        : 'غير محدد',
       dateOfBirth: staff.dateOfBirth?.toISOString().slice(0, 10) ?? '',
     };
   }
@@ -103,17 +107,10 @@ export class AuthService {
     profile: CompleteOnboardingProfileDto,
   ) {
     const fullName = profile.fullName.trim();
-    const jobTitle = profile.jobTitle.trim();
     const nationalId = profile.nationalId?.trim();
     const phone = profile.phone?.trim();
 
-    if (
-      !fullName ||
-      !jobTitle ||
-      !nationalId ||
-      !phone ||
-      !profile.dateOfBirth
-    ) {
+    if (!fullName || !nationalId || !phone || !profile.dateOfBirth) {
       throw new UnprocessableEntityException({
         message: 'أكمل جميع البيانات المطلوبة',
         errors: { profile: 'أكمل جميع البيانات المطلوبة' },
@@ -130,7 +127,6 @@ export class AuthService {
         },
         data: {
           fullName,
-          jobTitle,
           nationalId,
           phone,
           dateOfBirth: profile.dateOfBirth,

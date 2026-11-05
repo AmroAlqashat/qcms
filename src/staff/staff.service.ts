@@ -1,4 +1,8 @@
 import {
+  jobTitleLabels,
+  jobTitleOptions,
+} from '../common/job-title-labels-map';
+import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -15,6 +19,7 @@ import {
   StaffActivityAssignments,
   StaffClassAssignments,
   StaffStatus,
+  JobTitle,
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -36,6 +41,21 @@ export class StaffService {
     private readonly rolesSerive: RolesService,
     private readonly otpService: OtpService,
   ) {}
+
+  async assertStaffManageable(
+    staffId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ) {
+    const staff = await db.staffMembers.findUnique({
+      where: { id: staffId },
+      select: { isSuperAdmin: true },
+    });
+    if (!staff) throw new NotFoundException('الموظف غير موجود');
+    if (staff.isSuperAdmin)
+      throw new ForbiddenException(
+        'لا يمكن تغيير حالة مدير النظام أو حذفه أو تعديل صلاحياته',
+      );
+  }
 
   async getRoleOptionsForStaff(staffId: string) {
     // Show all roles, checking only those returned by the active-grants lookup.
@@ -114,6 +134,12 @@ export class StaffService {
       // rolls back role replacement and direct-grant changes together.
       await this.prisma.$transaction(
         async (tx) => {
+          await this.assertStaffManageable(staffId, tx);
+          const protectedRole = await tx.roles.findFirst({
+            where: { id: { in: roleIds }, isSuperAdminRole: true },
+          });
+          if (protectedRole)
+            throw new ForbiddenException('لا يمكن إسناد قالب مدير النظام');
           // Check existence even when both selections are empty and no new
           // grant would otherwise trigger a foreign-key check.
           const staff = await tx.staffMembers.findUnique({
@@ -320,7 +346,15 @@ export class StaffService {
     if (searchField) {
       where.OR = [
         { fullName: { contains: searchField, mode: 'insensitive' } },
-        { jobTitle: { contains: searchField, mode: 'insensitive' } },
+        {
+          jobTitle: {
+            in: Object.values(JobTitle).filter(
+              (title) =>
+                jobTitleLabels[title].includes(searchField) ||
+                title.toLowerCase().includes(searchField.toLowerCase()),
+            ),
+          },
+        },
       ];
     }
     if (status) where.status = status;
@@ -329,12 +363,16 @@ export class StaffService {
       where.classAssignments = { some: { halaqaId: halaqa, endedAt: null } };
     if (role) where.roleGrants = { some: { roleId: role } };
     //search
-    return this.prisma.staffMembers.findMany({
+    const staffList = await this.prisma.staffMembers.findMany({
       where,
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
     });
+    return staffList.map((staff) => ({
+      ...staff,
+      jobTitleLabel: staff.jobTitle ? jobTitleLabels[staff.jobTitle] : '',
+    }));
   }
 
   async showStaffEditPage(staffId: string) {
@@ -355,7 +393,7 @@ export class StaffService {
     if (!staff) throw new NotFoundException('الموظف غير موجود');
     if (staff.status === 'PENDING')
       throw new BadRequestException('لا يمكن التعديل: دعوة معلّقة');
-    return staff;
+    return { ...staff, jobTitleOptions: jobTitleOptions(staff.jobTitle) };
   }
 
   async showStaffFilterOptions(
@@ -368,6 +406,7 @@ export class StaffService {
         orderBy: { name: 'asc' },
       }),
       this.prisma.roles.findMany({
+        where: { isSuperAdminRole: false },
         select: { id: true, name: true },
         orderBy: { name: 'asc' },
       }),
@@ -418,6 +457,7 @@ export class StaffService {
         jobTitle: true,
         status: true,
         isDeleted: true,
+        isSuperAdmin: true,
         dateOfBirth: true,
         nationalId: true,
         phone: true,
@@ -452,7 +492,10 @@ export class StaffService {
       throw new NotFoundException('الموظف غير موجود');
     }
 
-    return staff;
+    return {
+      ...staff,
+      jobTitleLabel: staff.jobTitle ? jobTitleLabels[staff.jobTitle] : '',
+    };
   }
 
   async showPendingStaff() {
@@ -471,6 +514,7 @@ export class StaffService {
   }
 
   async deactivateStaff(staffId: string, actorId: string) {
+    await this.assertStaffManageable(staffId);
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId, isDeleted: false },
       select: {
@@ -492,6 +536,7 @@ export class StaffService {
     //changes
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await this.assertStaffManageable(staffId, tx);
         await tx.staffMembers.update({
           where: { id: staffId, isDeleted: false },
           data: { status: StaffStatus.INACTIVE },
@@ -561,6 +606,7 @@ export class StaffService {
     try {
       return await this.prisma.$transaction(
         async (tx) => {
+          await this.assertStaffManageable(staffId, tx);
           const staff = await tx.staffMembers.findUnique({
             where: { id: staffId, isDeleted: false },
             select: {

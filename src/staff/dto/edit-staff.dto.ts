@@ -1,8 +1,10 @@
+import { JobTitle } from '@prisma/client';
 import {
   IsDate,
   IsEmail,
   IsNumberString,
   IsString,
+  IsEnum,
   MaxLength,
   MinLength,
   isISO8601,
@@ -19,10 +21,8 @@ export class EditStaffDto {
   @MaxLength(100, { message: 'يجب ألا يتجاوز الاسم الكامل 100 حرف' })
   fullName: string;
 
-  @IsString({ message: 'المسمى الوظيفي يجب أن يكون نصًا' })
-  @MinLength(2, { message: 'يجب ألا يقل المسمى الوظيفي عن حرفين' })
-  @MaxLength(100, { message: 'يجب ألا يتجاوز المسمى الوظيفي 100 حرف' })
-  jobTitle: string;
+  @IsEnum(JobTitle, { message: 'اختر مسمى وظيفيًا من القائمة.' })
+  jobTitle: JobTitle;
 
   @IsString()
   @MaxLength(15)
