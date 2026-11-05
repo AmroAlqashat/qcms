@@ -45,6 +45,14 @@
           تعديل الملف
         </a>
       {{/if}}
+      {{#if permissions.canChangeOwnPassword}}
+        <a
+          class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
+          href='/staff/reset-my-password'
+        >
+          تغيير كلمة المرور
+        </a>
+      {{/if}}
       {{#if permissions.canManagePermissions}}
         <a
           class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'

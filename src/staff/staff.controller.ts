@@ -257,7 +257,10 @@ export class StaffController {
 
   @Get(':id')
   @Render('staff/staff-profile-page')
-  async showStaffProfile(@Param('id') id: string) {
+  async showStaffProfile(
+    @Param('id') id: string,
+    @CurrentUser() actor: { id: string },
+  ) {
     const staff = await this.staffService.showStaffProfile(id);
 
     return {
@@ -276,6 +279,7 @@ export class StaffController {
         directGrantsLabel: 'تُتاح في إصدار لاحق',
       },
       permissions: {
+        canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
         canEditStaff: !staff.isDeleted,
         canManagePermissions: !staff.isDeleted && !staff.isSuperAdmin,
         canChangeStatus: !staff.isDeleted && !staff.isSuperAdmin,
