@@ -8,9 +8,10 @@
     const button = form.querySelector('[data-otp-send-button]');
     const countdown = form.querySelector('[data-otp-send-countdown]');
     const status = form.querySelector('[data-otp-send-status]');
-    let availableAt = 0;
+    const alreadySent = form.hasAttribute('data-otp-already-sent');
+    let availableAt = alreadySent ? Date.now() + 60_000 : 0;
     let pending = false;
-    let attempted = false;
+    let attempted = alreadySent;
     let timer;
 
     const render = () => {
@@ -92,6 +93,7 @@
       window.clearInterval(timer);
       cleanup.abort();
     });
+    if (alreadySent) timer = window.setInterval(render, 250);
     render();
   };
 
