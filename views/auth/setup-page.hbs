@@ -17,7 +17,7 @@
         description="أنشئ حساب مالك المركز. تحتاج إلى رمز الإعداد الخاص الذي يقدمه لك مسؤول التثبيت."
       }}
       <form class='space-y-5' method='post' action='/setup'>
-        <input type='hidden' name='_csrf' value='{{ csrfToken }}' />
+        {{> ui/csrf}}
         {{> ui/form-error
           error=error
         }}
@@ -93,6 +93,17 @@
           بعد الإكمال، يُغلق الإعداد ولا يمكن إنشاء مالك آخر من هذه الصفحة.
         </p>
       </form>
+    {{else if csrfInvalid}}
+      {{> auth/heading
+        heading="يرجى تحديث صفحة الإعداد"
+        description="تعذر التحقق من الطلب. أعد فتح الصفحة ثم حاول مرة أخرى."
+      }}
+      <a
+        class='flex min-h-11 items-center justify-center rounded-xl bg-[#287a73] px-5 py-3 font-bold text-white'
+        href='/setup'
+      >
+        إعادة فتح صفحة الإعداد
+      </a>
     {{else if needsToken}}
       {{> auth/heading
         heading="المركز جاهز للإعداد"

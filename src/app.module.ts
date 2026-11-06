@@ -2,6 +2,7 @@ import { SetupModule } from './setup/setup.module';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { SessionAuthGuard } from './auth/guards/session-auth.guard';
+import { CsrfGuard } from './common/guards/csrf.guard';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -43,6 +44,10 @@ import { MailerModule } from '@nestjs-modules/mailer';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: SessionAuthGuard }],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_GUARD, useClass: SessionAuthGuard },
+  ],
 })
 export class AppModule {}

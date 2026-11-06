@@ -12,6 +12,7 @@ import { BadRequestFilter } from './common/filters/bad-request.filter';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import { SettingsService } from './settings/settings.service';
+import { csrfMiddleware } from './common/middleware/csrf.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -84,6 +85,8 @@ async function bootstrap() {
     }
     next();
   });
+
+  app.use(csrfMiddleware);
 
   app.useGlobalPipes(
     new ValidationPipe({

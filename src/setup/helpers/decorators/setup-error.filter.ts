@@ -32,8 +32,8 @@ export class SetupErrorFilter implements ExceptionFilter {
     return res.status(exception.getStatus()).render('auth/setup-page', {
       layout: 'auth',
       title: 'إعداد المركز',
-      available: payload.code !== 'SETUP_CSRF',
-      csrfToken: req.session?.setupCsrf,
+      available: payload.code !== 'CSRF_INVALID',
+      csrfInvalid: payload.code === 'CSRF_INVALID',
       form,
       errors: payload.errors ?? {},
       error:
