@@ -1,10 +1,34 @@
-import { initializeSettings } from '../src/setup/initialize-settings';
-import 'dotenv/config';
+import { config } from 'dotenv';
 import { Prisma, PrismaClient, StaffStatus } from '@prisma/client';
 
-const prisma = new PrismaClient();
+export async function seedSettings(
+  tx: Prisma.TransactionClient,
+  actorId: string,
+) {
+  const defaults = [
+    { key: 'centerName', value: 'مركز النور لتحفيظ القرآن الكريم' },
+    { key: 'currency', value: 'JOD' },
+    { key: 'registrationOpen', value: true },
+    { key: 'sessionInactivityTimeoutMinutes', value: 30 },
+    { key: 'delegateAccessExpiryHours', value: 24 },
+  ] as const;
 
-async function main() {
+  let inserted = 0;
+  for (const setting of defaults) {
+    if (
+      await tx.settings.findFirst({
+        where: { key: setting.key },
+        select: { id: true },
+      })
+    )
+      continue;
+    await tx.settings.create({ data: { ...setting, setById: actorId } });
+    inserted++;
+  }
+  return inserted;
+}
+
+async function main(prisma: PrismaClient) {
   const email = process.env.SEED_ACTOR_EMAIL?.trim().toLowerCase();
   if (!email)
     throw new Error(
@@ -26,7 +50,7 @@ async function main() {
         throw new Error(
           'No active account found for SEED_ACTOR_EMAIL. Check the configured email.',
         );
-      return initializeSettings(tx, actor.id);
+      return seedSettings(tx, actor.id);
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
@@ -35,15 +59,20 @@ async function main() {
   );
 }
 
-main()
-  .catch((error: unknown) => {
-    console.error(
-      error instanceof Error && error.constructor === Error
-        ? error.message
-        : 'Settings seed failed. Check the database connection and migrations.',
-    );
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Setup supplies its transaction; direct CLI execution creates a separate client.
+if (require.main === module) {
+  config();
+  const prisma = new PrismaClient();
+  main(prisma)
+    .catch((error: unknown) => {
+      console.error(
+        error instanceof Error && error.constructor === Error
+          ? error.message
+          : 'Settings seed failed. Check the database connection and migrations.',
+      );
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

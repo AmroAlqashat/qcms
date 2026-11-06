@@ -20,7 +20,7 @@
     "superadmin:recover": "ts-node --files scripts/recover-superadmin.ts",
     "seed:permissions": "tsx prisma/seed-permissions.ts",
     "seed:settings": "tsx prisma/seed-settings.ts",
-    "setup:token": "tsx scripts/setup-token.ts"
+    "setup:token": "ts-node --files scripts/setup-token.ts"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^4.0.0",

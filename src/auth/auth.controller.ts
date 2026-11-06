@@ -30,7 +30,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly otp: OtpService,
-    private readonly setup: SetupService,
+    private readonly setupService: SetupService,
   ) {}
 
   @Public()
@@ -38,8 +38,8 @@ export class AuthController {
   async showSignInPage(@Res() res: Response) {
     res.setHeader('Cache-Control', 'no-store');
 
-    if (await this.setup.needsInitialSetup())
-      return res.redirect(303, '/setup');
+    const { needsSetup } = await this.setupService.getSetupStatus();
+    if (needsSetup) return res.redirect(303, '/setup');
 
     return res.render('auth/sign-in-page', {
       title: 'تسجيل الدخول',

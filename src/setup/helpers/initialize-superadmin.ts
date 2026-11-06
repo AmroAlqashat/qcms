@@ -6,16 +6,16 @@ import {
   ScopeType,
   StaffStatus,
 } from '@prisma/client';
-import { initializePermissions } from './initialize-permissions';
-import { initializeSettings } from './initialize-settings';
+import { seedPermissions } from '../../../prisma/seed-permissions';
+import { seedSettings } from '../../../prisma/seed-settings';
 
 // Called only inside the setup/recovery transaction, never from normal staff DTOs.
-export async function initializeOwner(
+export async function initializeSuperadmin(
   tx: Prisma.TransactionClient,
   details: { email: string; fullName: string; passwordHash: string },
   recovery = false,
 ) {
-  await initializePermissions(tx);
+  await seedPermissions(tx);
   const owner = await tx.staffMembers.create({
     data: {
       ...details,
@@ -59,7 +59,7 @@ export async function initializeOwner(
   await tx.roleStaffAssignments.create({
     data: { staffId: owner.id, roleId: role.id, grantedById: owner.id },
   });
-  await initializeSettings(tx, owner.id);
+  await seedSettings(tx, owner.id);
   await tx.auditEvents.create({
     data: {
       actorId: owner.id,

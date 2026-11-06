@@ -1,5 +1,9 @@
 import { Transform } from 'class-transformer';
 import {
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
   IsEmail,
   IsString,
   Length,
@@ -7,6 +11,15 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+
+@ValidatorConstraint({ name: 'setupPasswordsMatch', async: false })
+class SetupPasswordsMatch implements ValidatorConstraintInterface {
+  validate(value: unknown, args: ValidationArguments): boolean {
+    return (
+      typeof value === 'string' && value === (args.object as SetupDto).password
+    );
+  }
+}
 
 export class SetupDto {
   @IsString()
@@ -36,5 +49,6 @@ export class SetupDto {
 
   @IsString()
   @Length(8, 128)
+  @Validate(SetupPasswordsMatch, { message: 'كلمتا المرور غير متطابقتين.' })
   confirmPassword!: string;
 }
