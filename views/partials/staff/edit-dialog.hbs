@@ -21,6 +21,7 @@
       maxlength="120"
       error=errors.fullName
     }}
+    <div class='grid gap-4 sm:grid-cols-2'>
     {{> ui/field
       id="edit-email"
       name="email"
@@ -30,6 +31,22 @@
       required=true
       maxlength="254"
       error=errors.email
+    }}
+    
+    {{> ui/field
+      id="edit-otp"
+      name="otp"
+      label="رمز التحقق للبريد الإلكتروني"
+      type="numeric"
+      maxlength="6"
+      error=errors.otp
+    }}
+    </div>
+    {{> ui/send-otp
+      actionPrefix="/staff/edit/"
+      staffId=staff.id
+      actionSuffix="/send-otp"
+      label="إرسال رمز التحقق"
     }}
     {{> ui/field
       id="edit-nationalId"
@@ -64,7 +81,7 @@
         max=today
         error=errors.dateOfBirth
       }}
-    </div>
+      </div>
     {{#if permissions.canChangeStatus}}
       <label
         class='flex min-h-16 cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 p-3'

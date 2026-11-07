@@ -8,6 +8,8 @@ import {
   MaxLength,
   MinLength,
   isISO8601,
+  Length,
+  IsOptional,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -15,6 +17,14 @@ export class EditStaffDto {
   @IsEmail({}, { message: 'أدخل بريدًا إلكترونيًا صالحًا' })
   @MaxLength(254, { message: 'يجب ألا يتجاوز البريد الإلكتروني 254 حرفًا' })
   email: string;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' ? undefined : value,
+  )
+  @IsNumberString()
+  @Length(6, 6)
+  otp?: string;
 
   @IsString({ message: 'الاسم الكامل يجب أن يكون نصًا' })
   @MinLength(2, { message: 'يجب ألا يقل الاسم الكامل عن حرفين' })

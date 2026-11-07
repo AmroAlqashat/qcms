@@ -278,16 +278,37 @@ export class StaffService {
   ) {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const staff = await tx.staffMembers.update({
-          where: { id: staffId, isDeleted: false },
-          data: {
-            email: editStaffDto.email,
-            fullName: editStaffDto.fullName,
-            jobTitle: editStaffDto.jobTitle,
-            phone: editStaffDto.phoneNumber,
-            dateOfBirth: editStaffDto.dateOfBirth,
-          },
-        });
+        let staff: {
+          id: string;
+          email: string;
+          fullName: string | null;
+          jobTitle: JobTitle | null;
+          status: StaffStatus;
+        } | null = null;
+
+        if (editStaffDto.otp !== null && editStaffDto.otp !== undefined) {
+          if (await this.otpService.verifyStaffOtp(staffId, editStaffDto.otp))
+            staff = await tx.staffMembers.update({
+              where: { id: staffId, isDeleted: false },
+              data: {
+                email: editStaffDto.email,
+                fullName: editStaffDto.fullName,
+                jobTitle: editStaffDto.jobTitle,
+                phone: editStaffDto.phoneNumber,
+                dateOfBirth: editStaffDto.dateOfBirth,
+              },
+            });
+        }
+        if (staff === null)
+          staff = await tx.staffMembers.update({
+            where: { id: staffId, isDeleted: false },
+            data: {
+              fullName: editStaffDto.fullName,
+              jobTitle: editStaffDto.jobTitle,
+              phone: editStaffDto.phoneNumber,
+              dateOfBirth: editStaffDto.dateOfBirth,
+            },
+          });
         await this.audit.record(tx, {
           actorId,
           actionType: 'STAFF_UPDATED',
@@ -869,6 +890,19 @@ export class StaffService {
     });
 
     if (staff) await this.otpService.issueOtp(staff.id);
+  }
+
+  public async sendChangeEmailOtp(staffId: string) {
+    const staff = await this.prisma.staffMembers.findFirst({
+      where: {
+        id: staffId,
+        isDeleted: false,
+        status: StaffStatus.ACTIVE,
+      },
+      select: { id: true },
+    });
+
+    if (staff) await this.otpService.issueOtp(staffId);
   }
 
   public async resetForgottenPassword(forgotPasswordDto: ForgotPasswordDto) {

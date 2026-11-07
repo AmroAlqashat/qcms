@@ -143,6 +143,12 @@ export class StaffController {
       },
     };
   }
+
+  @Post('edit/:id/send-otp')
+  async sendOtpToEditStaffEmail(@Param('id') staffId: string) {
+    await this.staffService.sendChangeEmailOtp(staffId);
+  }
+
   @Post('edit/:id')
   @UseFilters(EditStaffErrorFilter)
   async editStaff(
