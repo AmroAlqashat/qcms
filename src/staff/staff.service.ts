@@ -699,6 +699,42 @@ export class StaffService {
     }
   }
 
+  async generatePassword(staffId: string, actorId: string) {
+    if (staffId === actorId) {
+      throw new ForbiddenException('استخدم صفحة تغيير كلمة المرور الخاصة بك');
+    }
+
+    const temporaryPassword = generateTempPassword();
+    const passwordHash = await argon2.hash(temporaryPassword, {
+      type: argon2.argon2id,
+    });
+
+    return this.prisma.$transaction(async (tx) => {
+      await this.assertStaffManageable(staffId, tx);
+      const { count } = await tx.staffMembers.updateMany({
+        where: { id: staffId, isDeleted: false },
+        data: {
+          passwordHash,
+          mustChangePassword: false,
+        },
+      });
+
+      if (count !== 1) {
+        throw new NotFoundException('الموظف غير موجود');
+      }
+
+      await this.audit.record(tx, {
+        actorId,
+        actionType: AuditAction.STAFF_UPDATED,
+        targetType: AuditTarget.STAFF,
+        targetId: staffId,
+        isSuccess: true,
+      });
+
+      return temporaryPassword;
+    });
+  }
+
   async inviteStaff(inviteStaffDto: InviteStaffDto, actorId: string) {
     const { email, fullName, jobTitle } = inviteStaffDto;
     const normalizedEmail = email.trim().toLowerCase();

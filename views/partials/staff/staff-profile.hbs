@@ -45,13 +45,32 @@
           تعديل الملف
         </a>
       {{/if}}
-      {{#if permissions.canChangeOwnPassword}}
+
+      {{#if staff.isActor}}
         <a
           class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
           href='/staff/reset-my-password'
         >
           تغيير كلمة المرور
         </a>
+      {{else}}
+        {{#if permissions.canGeneratePassword}}
+          <form
+            action='/staff/generate-new-password/{{ staff.id }}'
+            method='post'
+            hx-post='/staff/generate-new-password/{{ staff.id }}'
+            hx-target='#modal-root'
+            hx-swap='innerHTML'
+          >
+            {{> ui/csrf}}
+            <button
+              class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
+              type='submit'
+            >
+              إنشاء كلمة مرور
+            </button>
+          </form>
+        {{/if}}
       {{/if}}
       {{#if permissions.canManagePermissions}}
         <a

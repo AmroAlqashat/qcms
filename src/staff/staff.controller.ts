@@ -214,6 +214,31 @@ export class StaffController {
     );
   }
 
+  @Post('generate-new-password/:id')
+  async generatePassword(
+    @Param('id') id: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    const temporaryPassword = await this.staffService.generatePassword(
+      id,
+      actor.id,
+    );
+    const profile = await this.showStaffProfile(id, actor);
+
+    response.render(
+      'staff/admin-generates-password-page',
+      staffShell({
+        ...profile,
+        title: 'إنشاء كلمة مرور',
+        temporaryPassword,
+        isHtmx: request.get('HX-Request') === 'true',
+      }),
+    );
+  }
+
   @Get('reset-my-password')
   getChangePasswordPage(@Res() response: Response) {
     response.setHeader('Cache-Control', 'no-store');
@@ -277,6 +302,7 @@ export class StaffController {
         nationalIdLabel: staff.nationalId,
         phoneLabel: formatStaffPhone(staff.phone),
         statusLabel: formatStaffStatus(staff.status, staff.isDeleted),
+        isActor: id === actor.id,
       },
       assignments: {
         classes: staff.classAssignments.map(({ halaqa }) => halaqa),
@@ -286,6 +312,7 @@ export class StaffController {
       },
       permissions: {
         canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
+        canGeneratePassword: actor.id !== staff.id && !staff.isDeleted,
         canEditStaff: !staff.isDeleted,
         canManagePermissions: !staff.isDeleted && !staff.isSuperAdmin,
         canChangeStatus: !staff.isDeleted && !staff.isSuperAdmin,
