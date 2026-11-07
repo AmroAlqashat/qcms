@@ -3,10 +3,14 @@ import { StaffService } from './staff.service';
 import { StaffController } from './staff.controller';
 import { AuditModule } from '../audit/audit.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { EditStaffErrorFilter } from './helpers/filters/edit-staff-error.filter';
+import { RolesModule } from '../roles/roles.module';
+import { OtpService } from '../mail/otp.serivce';
+import { MailService } from '../mail/mail.service';
 
 @Module({
-  imports: [PrismaModule, AuditModule],
+  imports: [PrismaModule, AuditModule, RolesModule],
   controllers: [StaffController],
-  providers: [StaffService],
+  providers: [StaffService, EditStaffErrorFilter, OtpService, MailService],
 })
 export class StaffModule {}

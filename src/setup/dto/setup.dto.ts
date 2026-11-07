@@ -1,0 +1,54 @@
+import { Transform } from 'class-transformer';
+import {
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  IsEmail,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+
+@ValidatorConstraint({ name: 'setupPasswordsMatch', async: false })
+class SetupPasswordsMatch implements ValidatorConstraintInterface {
+  validate(value: unknown, args: ValidationArguments): boolean {
+    return (
+      typeof value === 'string' && value === (args.object as SetupDto).password
+    );
+  }
+}
+
+export class SetupDto {
+  @IsString()
+  @Matches(/^[a-f0-9]{64}$/, {
+    message: 'أدخل رمز الإعداد المكوّن من 64 حرفًا.',
+  })
+  token!: string;
+
+  @IsString()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @Length(2, 100, { message: 'الاسم مطلوب ويجب أن يكون بين حرفين و100 حرف.' })
+  fullName!: string;
+
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
+  @IsEmail({}, { message: 'أدخل بريدًا إلكترونيًا صالحًا.' })
+  @MaxLength(254)
+  email!: string;
+
+  @IsString()
+  @MinLength(8, { message: 'استخدم كلمة مرور من 8 أحرف على الأقل.' })
+  @MaxLength(128)
+  password!: string;
+
+  @IsString()
+  @Length(8, 128)
+  @Validate(SetupPasswordsMatch, { message: 'كلمتا المرور غير متطابقتين.' })
+  confirmPassword!: string;
+}

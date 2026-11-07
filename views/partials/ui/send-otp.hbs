@@ -1,0 +1,19 @@
+<form action='{{#if actionPrefix}}{{actionPrefix}}{{staffId}}{{actionSuffix}}{{else}}{{action}}{{/if}}' method='post'
+      hx-post='{{#if actionPrefix}}{{actionPrefix}}{{staffId}}{{actionSuffix}}{{else}}{{action}}{{/if}}' hx-swap='none'
+      hx-sync='this:drop' data-otp-send
+      {{#if alreadySent}}data-otp-already-sent{{/if}}
+      class='mt-6 border-t border-slate-200 pt-5 text-center'>
+  {{> ui/csrf}}
+  {{#if email}}
+    <input type='hidden' name='email' value='{{email}}'>
+  {{/if}}
+  <p class='mb-3 text-sm text-slate-600'>{{prompt}}</p>
+  <button type='submit' data-otp-send-button aria-describedby='otp-send-status otp-send-countdown'
+          class='min-h-11 w-full rounded-xl border border-[#2b827a] bg-[#f0faf9] px-4 py-3 text-sm font-bold text-[#195954] enabled:hover:bg-[#dcefeb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73] disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500'>
+    {{label}}
+  </button>
+  <p id='otp-send-countdown' data-otp-send-countdown role='timer' aria-live='off'
+     class='mt-2 text-xs leading-6 text-slate-600' hidden></p>
+  <p id='otp-send-status' data-otp-send-status role='status' aria-live='polite' aria-atomic='true'
+     class='mt-2 text-sm leading-6 text-[#195954]'></p>
+</form>

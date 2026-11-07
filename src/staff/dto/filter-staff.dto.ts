@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import { StaffStatus } from '@prisma/client';
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -20,6 +21,13 @@ export class FilteredStaffDto {
   )
   @IsEnum(StaffStatus, { message: 'invalid staff status' })
   status?: StaffStatus;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  isDeleted?: boolean;
 
   @IsOptional()
   halaqa?: string;

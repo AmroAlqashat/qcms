@@ -1,0 +1,40 @@
+{{!-- Auth-only additions from the supplied UI; other app screens keep their styles. --}}
+<style>
+  [data-auth-layout] input,
+  [data-auth-layout] select,
+  [data-auth-layout] textarea {
+    min-width: 0;
+  }
+
+  [data-auth-layout] input[type='date'] {
+    min-height: 46px;
+  }
+
+  [data-auth-layout] input:focus-visible,
+  [data-auth-layout] button:focus-visible,
+  [data-auth-layout] a:focus-visible {
+    outline: 3px solid #5fb7ae;
+    outline-offset: 3px;
+  }
+
+  [data-auth-layout] .field[aria-invalid='true'] {
+    border-color: #ef4444;
+    background: #fff7f7;
+  }
+
+  [data-auth-layout] .break-anywhere {
+    overflow-wrap: anywhere;
+  }
+
+  [data-auth-layout] .otp-input {
+    letter-spacing: 0.35em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 639px) {
+    [data-auth-layout] .otp-input {
+      letter-spacing: 0.22em;
+    }
+  }
+</style>

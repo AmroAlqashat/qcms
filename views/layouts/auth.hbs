@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang='ar' dir='rtl'>
+  <head>
+    {{> shared/head}}
+    {{> auth/styles}}
+    <script src='/js/onboarding-otp.js' defer></script>
+  </head>
+  <body
+    class='flex min-h-screen flex-col bg-[#faf7ef] text-[#12383b] antialiased'
+    data-auth-layout
+    hx-history='false'
+  >
+    <a class='skip-link' href='#main-content'>تجاوز إلى المحتوى</a>
+    {{> shared/icons}}
+    <main id='main-content' class='flex flex-1 items-center justify-center px-4 py-8 sm:px-6' tabindex='-1'>
+      {{{ body }}}
+    </main>
+    <footer class='px-4 pb-5 text-center text-xs leading-6 text-[#536e73]'>
+      <p>لا تُنشأ حسابات الموظفين إلا بدعوة من الإدارة</p>
+      <p>
+        ©
+        {{#if year}}
+          {{ year }}
+        {{else}}
+          2026
+        {{/if}}
+        QCMS · نظام إدارة مركز القرآن الكريم
+      </p>
+    </footer>
+    <div id="toast-root" class="fixed inset-x-4 top-4 z-[100] flex flex-col items-start gap-3 sm:left-auto sm:right-6 sm:w-[min(24rem,calc(100vw-3rem))]"></div>
+    <p id='app-announcement' class='sr-only' role='status' aria-live='polite'></p>
+    {{> shared/scripts}}
+  </body>
+</html>

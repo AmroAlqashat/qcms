@@ -7,10 +7,10 @@
     <li class="flex gap-2">{{> ui/icon name="database" class="h-4 w-4 text-[#287a73]"}}تبقى بياناته وتعييناته كما هي.
     </li>
   </ul>
-  <form action="/staff/{{staff.id}}/deactivate" method="post" hx-post="/staff/{{staff.id}}/deactivate"
+  <form action="/staff/deactivate/{{staff.id}}" method="post" hx-post="/staff/deactivate/{{staff.id}}"
     hx-target="#deactivate-dialog" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" class="space-y-4">
     {{> ui/csrf}}{{> ui/form-error error=error}}
-    <div class="flex flex-wrap justify-end gap-2">
+    <div class="flex flex-wrap justify-start gap-2">
       {{> ui/cancel label="تراجع"}}{{> ui/submit label="إيقاف الحساب" icon="pause" danger=true}}</div>
   </form>
 {{/ui/dialog}}

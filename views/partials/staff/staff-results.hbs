@@ -11,13 +11,13 @@
         <span aria-hidden="true"
               class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f0faf9] text-[#287a73]">{{> ui/icon name="user" class="h-6 w-6"}}</span>
         <div class="min-w-0 flex-1">
-          <h2 class="font-bold">{{fullName}}</h2>
+          <h2 class="font-bold">{{#if fullName}}{{fullName}}{{else}}موظف محذوف{{/if}}</h2>
           <p dir="ltr"
              class="break-anywhere text-right text-xs leading-6 text-slate-600">{{email}}</p>
-          <p class="text-xs leading-6 text-slate-600">{{jobTitle}}</p>
+          <p class="text-xs leading-6 text-slate-600">{{jobTitleLabel}}</p>
         </div>
         <div class="flex shrink-0 flex-col items-center gap-2 sm:flex-row sm:gap-4">
-          {{> staff/staff-status-badge status=status}}{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}
+          {{> staff/staff-status-badge status=status isDeleted=isDeleted}}{{> ui/icon name="chevron" class="h-4 w-4 text-slate-400"}}
         </div>
       </a>
     {{else}}

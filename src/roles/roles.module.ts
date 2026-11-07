@@ -9,5 +9,6 @@ import { RolesErrorFilter } from './helpers/roles-error.filter';
   imports: [PrismaModule, AuditModule],
   controllers: [RolesController],
   providers: [RolesService, RolesErrorFilter],
+  exports: [RolesService],
 })
 export class RolesModule {}

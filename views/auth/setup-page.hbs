@@ -1,0 +1,135 @@
+{{#> auth/card}}
+  {{#if complete}}
+    {{> auth/heading
+      heading="أصبح مركزك جاهزًا"
+      description="تم إنشاء حساب مالك المركز وتهيئة الإعدادات والصلاحيات. أغلق رابط الإعداد، ثم سجّل الدخول بحسابك الجديد."
+    }}
+    <a
+      class='flex min-h-11 items-center justify-center rounded-xl bg-[#287a73] px-5 py-3 font-bold text-white'
+      href='/auth/signIn'
+    >
+      تسجيل الدخول
+    </a>
+  {{else}}
+    {{#if available}}
+      {{> auth/heading
+        heading="إعداد المركز لأول مرة"
+        description="أنشئ حساب مالك المركز. تحتاج إلى رمز الإعداد الخاص الذي يقدمه لك مسؤول التثبيت."
+      }}
+      <form class='space-y-5' method='post' action='/setup'>
+        {{> ui/csrf}}
+        {{> ui/form-error
+          error=error
+        }}
+        {{> ui/field
+          id="setup-token"
+          name="token"
+          label="رمز الإعداد"
+          type="password"
+          password=true
+          required=true
+          minlength="64"
+          maxlength="64"
+          dir="ltr"
+          autocomplete="off"
+          error=errors.token
+          hint="الرمز صالح لمدة 30 دقيقة، ويُستخدم مرة واحدة فقط."
+        }}
+        {{> ui/field
+          id="setup-name"
+          name="fullName"
+          label="الاسم الكامل"
+          required=true
+          minlength="2"
+          maxlength="100"
+          autocomplete="name"
+          value=form.fullName
+          error=errors.fullName
+        }}
+        {{> ui/field
+          id="setup-email"
+          name="email"
+          label="البريد الإلكتروني"
+          type="email"
+          required=true
+          maxlength="254"
+          autocomplete="username"
+          dir="ltr"
+          value=form.email
+          error=errors.email
+        }}
+        {{> ui/field
+          id="setup-password"
+          name="password"
+          label="كلمة المرور"
+          type="password"
+          password=true
+          required=true
+          minlength="8"
+          maxlength="128"
+          autocomplete="new-password"
+          dir="ltr"
+          error=errors.password
+          hint="استخدم كلمة مرور فريدة من 8 أحرف على الأقل."
+        }}
+        {{> ui/field
+          id="setup-confirm"
+          name="confirmPassword"
+          label="تأكيد كلمة المرور"
+          type="password"
+          password=true
+          required=true
+          minlength="8"
+          maxlength="128"
+          autocomplete="new-password"
+          dir="ltr"
+          error=errors.confirmPassword
+        }}
+        {{> ui/submit
+          label="إنشاء حساب المالك وتهيئة المركز"
+          full=true
+        }}
+        <p class='text-xs leading-6 text-slate-600'>
+          بعد الإكمال، يُغلق الإعداد ولا يمكن إنشاء مالك آخر من هذه الصفحة.
+        </p>
+      </form>
+    {{else if csrfInvalid}}
+      {{> auth/heading
+        heading="يرجى تحديث صفحة الإعداد"
+        description="تعذر التحقق من الطلب. أعد فتح الصفحة ثم حاول مرة أخرى."
+      }}
+      <a
+        class='flex min-h-11 items-center justify-center rounded-xl bg-[#287a73] px-5 py-3 font-bold text-white'
+        href='/setup'
+      >
+        إعادة فتح صفحة الإعداد
+      </a>
+    {{else if needsToken}}
+      {{> auth/heading
+        heading="المركز جاهز للإعداد"
+        description="اطلب من مسؤول التثبيت تشغيل الأمر التالي في مجلد التطبيق لإنشاء رمز إعداد جديد. إذا انتهت صلاحية الرمز أو استُنفدت المحاولات، أنشئ رمزًا جديدًا."
+      }}
+      <pre class='rounded-xl bg-slate-100 p-4 text-left' dir='ltr'><code>npm run setup:token</code></pre>
+      <p class='my-4 text-sm leading-6 text-slate-600'>
+        بعد إنشاء الرمز، اضغط على متابعة الإعداد. لا تشارك الرمز إلا مع مالك المركز.
+      </p>
+      <a
+        class='flex min-h-11 items-center justify-center rounded-xl bg-[#287a73] px-5 py-3 font-bold text-white'
+        href='/setup'
+      >
+        متابعة الإعداد
+      </a>
+    {{else}}
+      {{> auth/heading
+        heading="الإعداد غير متاح"
+        description="قد يكون إعداد المركز مكتملًا، أو أن رمز الإعداد غير متاح أو انتهت صلاحيته. تواصل مع مسؤول التثبيت إذا كنت تُعدّ المركز لأول مرة."
+      }}
+      <a
+        class='flex min-h-11 items-center justify-center rounded-xl bg-[#287a73] px-5 py-3 font-bold text-white'
+        href='/auth/signIn'
+      >
+        الانتقال إلى تسجيل الدخول
+      </a>
+    {{/if}}
+  {{/if}}
+{{/auth/card}}

@@ -2,12 +2,15 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Post,
   Query,
   Render,
   Req,
   Res,
+  UnauthorizedException,
   UseFilters,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
@@ -15,8 +18,20 @@ import { InviteStaffDto } from './dto/invite-staff.dto';
 import { StaffService } from './staff.service';
 import { wantsHtml } from '../common/wants-html';
 import { staffShell } from './helpers/staff-shell';
-import { InviteStaffErrorFilter } from './helpers/invite-staff-error.filter';
+import { EditStaffErrorFilter } from './helpers/filters/edit-staff-error.filter';
+import { InviteStaffErrorFilter } from './helpers/filters/invite-staff-error.filter';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
+import { EditStaffDto } from './dto/edit-staff.dto';
+import {
+  formatStaffDate,
+  formatStaffPhone,
+  formatStaffStatus,
+} from './helpers/staff-profile-formatters';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { EditPermissionsDto } from './dto/edit-permissions.dto';
+import { changeMyPasswordDto } from './dto/change-my-password.dto';
+import { ForgotPasswordEmailDto } from './dto/forgot-password-email.dto';
+import { Public } from '../auth/decorators/route-access.decorator';
 
 @Controller('staff')
 export class StaffController {
@@ -36,6 +51,9 @@ export class StaffController {
       staffList,
       filters: filterDto,
       filterOptions,
+      permissions: {
+        canInvite: true,
+      },
       activeNav: 'staff',
     };
   }
@@ -53,7 +71,6 @@ export class StaffController {
       activeNav: 'staff',
     };
   }
-
   @Post('invitations/cancel/:id')
   async cancelPendingInvitation(@Param('id') staffId: string) {
     await this.staffService.cancelPendingInvitation(staffId);
@@ -61,25 +78,231 @@ export class StaffController {
     return { success: true };
   }
 
+  @Get('edit/permissions/:id')
+  @Render('partials/staff/permissions-dialog')
+  async showPermissionsDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
+    // GET: load the available choices and the staff member's active selections.
+    // The partial uses selected/selectedScope to reopen the saved state.
+    const [roles, permissions] = await Promise.all([
+      this.staffService.getRoleOptionsForStaff(staffId),
+      this.staffService.getPermissionOptionsForStaff(staffId),
+    ]);
+
+    return {
+      roles,
+      ...permissions,
+      staffId,
+    };
+  }
+
+  @Post('edit/permissions/:id')
+  // The global ValidationPipe transforms and validates the submitted DTO
+  // before this handler passes the target staff ID and acting user's ID onward.
+  async editPermissions(
+    @Param('id') staffId: string,
+    @Body() editPermissionsDto: EditPermissionsDto,
+    @CurrentUser() user: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.editPermissions(
+      staffId,
+      editPermissionsDto,
+      user.id,
+    );
+
+    // Respond only after the transaction succeeds. HX-Redirect navigates the
+    // full page instead of swapping the profile HTML into the permissions dialog.
+    const location = `/staff/${encodeURIComponent(staffId)}`;
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+    // API callers receive JSON; ordinary form submissions use a GET redirect.
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+    response.redirect(303, location);
+  }
+
+  @Get('edit/:id')
+  @Render('staff/staff-edit-profile-page')
+  async showEditStaffForm(@Param('id') staffId: string) {
+    const staff = await this.staffService.showStaffEditPage(staffId);
+
+    return {
+      staff: {
+        ...staff,
+        initial: staff.fullName?.trim().charAt(0) ?? '',
+        dateOfBirthValue: staff.dateOfBirth?.toISOString().slice(0, 10) ?? '',
+        permissions: {
+          canChangeStatus: true,
+        },
+      },
+    };
+  }
+
+  @Post('edit/:id/send-otp')
+  async sendOtpToEditStaffEmail(@Param('id') staffId: string) {
+    await this.staffService.sendChangeEmailOtp(staffId);
+  }
+
+  @Post('edit/:id')
+  @UseFilters(EditStaffErrorFilter)
+  async editStaff(
+    @Param('id') id: string,
+    @Body() editStaffDto: EditStaffDto,
+    @Req() request: Request,
+    @Res() response: Response,
+    @CurrentUser() actor: { id: string },
+  ) {
+    await this.staffService.editStaff(id, editStaffDto, actor.id);
+
+    const location = `/staff/${encodeURIComponent(id)}`;
+
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
+  }
+
   @Get('invite')
-  @Render('staff/staff-invitation-page')
+  @Render('staff/staff-invitation-dialog')
   showInviteForm() {
     return staffShell({
       title: 'دعوة موظف',
       form: {},
     });
   }
+  @Post('invite')
+  @UseFilters(InviteStaffErrorFilter)
+  async inviteStaff(
+    @Body() inviteStaffDto: InviteStaffDto,
+    @Req() request: Request,
+    @Res() response: Response,
+    @CurrentUser() actor: { id: string },
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+
+    const result = await this.staffService.inviteStaff(
+      inviteStaffDto,
+      actor.id,
+    );
+
+    if (!wantsHtml(request)) {
+      response.json(result);
+      return;
+    }
+
+    response.render(
+      'partials/staff/credentials-dialog',
+      staffShell({
+        title: 'تم إنشاء الحساب',
+        // TODO: compute from the permissions service once the cancel route exists
+        permissions: { canCancelInvitation: false },
+        ...result,
+      }),
+    );
+  }
+
+  @Post('generate-new-password/:id')
+  async generatePassword(
+    @Param('id') id: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    const temporaryPassword = await this.staffService.generatePassword(
+      id,
+      actor.id,
+    );
+    const profile = await this.showStaffProfile(id, actor);
+
+    response.render(
+      'staff/admin-generates-password-page',
+      staffShell({
+        ...profile,
+        title: 'إنشاء كلمة مرور',
+        temporaryPassword,
+        isHtmx: request.get('HX-Request') === 'true',
+      }),
+    );
+  }
+
+  @Get('reset-my-password')
+  getChangePasswordPage(@Res() response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    return response.render('staff/reset-my-password-page', {
+      title: 'تغيير كلمة المرور',
+      layout: 'auth',
+    });
+  }
+
+  @Public()
+  @Get('forgot-my-password')
+  getForgotPasswordPage(@Res() response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    return response.render('staff/forgot-my-password-page', {
+      title: 'نسيت كلمة المرور',
+      layout: 'auth',
+    });
+  }
+
+  @Public()
+  @Post('forgot-my-password/send-otp')
+  async sendForgotPasswordOtp(
+    @Body() emailDto: ForgotPasswordEmailDto,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    try {
+      await this.staffService.sendForgotPasswordOtp(emailDto.email);
+    } catch (error: unknown) {
+      if (
+        !(error instanceof HttpException) ||
+        error.getStatus() !== Number(HttpStatus.TOO_MANY_REQUESTS)
+      ) {
+        throw error;
+      }
+    }
+
+    return response.render('staff/forgot-my-password-page', {
+      title: 'إعادة تعيين كلمة المرور',
+      layout: 'auth',
+      resetStep: true,
+      email: emailDto.email.trim().toLowerCase(),
+      notice:
+        'إذا كان البريد الإلكتروني مرتبطًا بحساب نشط، فسيصلك رمز التحقق. إذا طلبت رمزًا مؤخرًا، انتظر دقيقة قبل المحاولة مجددًا.',
+    });
+  }
 
   @Get(':id')
   @Render('staff/staff-profile-page')
-  async showStaffProfile(@Param('id') id: string) {
+  async showStaffProfile(
+    @Param('id') id: string,
+    @CurrentUser() actor: { id: string },
+  ) {
     const staff = await this.staffService.showStaffProfile(id);
 
     return {
       staff: {
         ...staff,
-        initial: staff.fullName.trim().charAt(0),
-        dateOfBirthLabel: staff.dateOfBirth?.toLocaleDateString('ar'),
+        initial: staff.fullName?.trim().charAt(0) ?? '',
+        dateOfBirthLabel: formatStaffDate(staff.dateOfBirth),
+        nationalIdLabel: staff.nationalId,
+        phoneLabel: formatStaffPhone(staff.phone),
+        statusLabel: formatStaffStatus(staff.status, staff.isDeleted),
+        isActor: id === actor.id,
       },
       assignments: {
         classes: staff.classAssignments.map(({ halaqa }) => halaqa),
@@ -88,40 +311,158 @@ export class StaffController {
         directGrantsLabel: 'تُتاح في إصدار لاحق',
       },
       permissions: {
-        canEditStaff: true,
-        canManageAssignments: true,
-        canDeactivate: true,
-        canDelete: true,
+        canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
+        canGeneratePassword: actor.id !== staff.id && !staff.isDeleted,
+        canEditStaff: !staff.isDeleted,
+        canManagePermissions: !staff.isDeleted && !staff.isSuperAdmin,
+        canChangeStatus: !staff.isDeleted && !staff.isSuperAdmin,
+        canDelete: !staff.isDeleted && !staff.isSuperAdmin,
       },
       effectivePermissionCount: 0,
       activeNav: 'staff',
     };
   }
 
-  @Post('invite')
-  @UseFilters(InviteStaffErrorFilter)
-  async inviteStaff(
-    @Body() inviteStaffDto: InviteStaffDto,
+  @Get('deactivate/:id')
+  @Render('staff/staff-deactivate-page')
+  async showDeactivateStaffDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
+    return {
+      staff: { id: staffId },
+    };
+  }
+  @Post('deactivate/:id')
+  @Render('staff/staff-page')
+  async deactivateStaff(
+    @Param('id') staffId: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.deactivateStaff(staffId, actor.id);
+    const location = '/staff';
+
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
+  }
+
+  @Get('delete/:id')
+  @Render('staff/staff-delete-page')
+  async showDeleteStaffDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
+    return {
+      staff: { id: staffId },
+    };
+  }
+  @Post('delete/:id')
+  @Render('staff/staff-page')
+  async deleteStaff(
+    @Param('id') staffId: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.deleteStaff(staffId, actor.id);
+    const location = '/staff';
+
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
+    return;
+  }
+
+  @Get('activate/:id')
+  @Render('staff/staff-activate-page')
+  showactivateStaffDialog(@Param('id') staffId: string) {
+    return {
+      staff: { id: staffId },
+    };
+  }
+  @Post('activate/:id')
+  @Render('staff/staff-page')
+  async activateStaff(
+    @Param('id') staffId: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.activateStaff(staffId, actor.id);
+    const location = '/staff';
+
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
+    return;
+  }
+
+  @Post('reset-my-password/send-otp')
+  async sendChangePasswordOtp(
+    @CurrentUser() actor: { id: string },
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    await this.staffService.sendChangePasswordOtp(actor.id);
+    return response.status(200).json({ message: 'تم إرسال رمز التحقق' });
+  }
+
+  @Public()
+  @Post('reset-my-password')
+  async changeMyPassword(
+    @Body() changeMyPasswordDto: changeMyPasswordDto,
     @Req() request: Request,
     @Res() response: Response,
   ) {
     response.setHeader('Cache-Control', 'no-store');
 
-    const result = await this.staffService.inviteStaff(inviteStaffDto);
-
-    if (!wantsHtml(request)) {
-      response.json(result);
-      return;
+    if (changeMyPasswordDto.email) {
+      await this.staffService.resetForgottenPassword({
+        email: changeMyPasswordDto.email,
+        otp: changeMyPasswordDto.otp,
+        newPassword: changeMyPasswordDto.newPassword,
+      });
+      return response.render('auth/sign-in-page', {
+        title: 'تسجيل الدخول',
+        layout: 'auth',
+        successMessage: 'تم تغيير كلمة المرور. يمكنك تسجيل الدخول الآن.',
+      });
     }
 
-    response.render(
-      'staff/temporary-password-page',
-      staffShell({
-        title: 'تم إنشاء الحساب',
-        // TODO: compute from the permissions service once the cancel route exists
-        permissions: { canCancelInvitation: false },
-        ...result,
-      }),
-    );
+    const staffId = request.session.staffId;
+    if (!staffId) throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
+    await this.staffService.changeMyPassword(changeMyPasswordDto, staffId);
+
+    const location = `/staff/${encodeURIComponent(staffId)}`;
+    if (!wantsHtml(request)) {
+      return response.json({ success: true });
+    }
+    if (request.get('HX-Request') === 'true') {
+      return response.setHeader('HX-Redirect', location).status(204).end();
+    }
+    return response.redirect(303, location);
   }
 }

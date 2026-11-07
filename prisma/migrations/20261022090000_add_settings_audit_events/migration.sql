@@ -1,0 +1,5 @@
+-- AlterEnum
+ALTER TYPE "AuditAction" ADD VALUE 'SETTINGS_UPDATED';
+
+-- AlterEnum
+ALTER TYPE "AuditTarget" ADD VALUE 'SETTINGS';

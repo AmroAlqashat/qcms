@@ -24,6 +24,7 @@
                 hx-target="#invitation-{{id}}"
                 hx-swap="delete"
                 hx-disabled-elt="find button[type='submit']">
+            {{> ui/csrf}}
             <button type="button"
                     class="min-h-11 rounded-lg border border-red-200 px-3 text-xs font-bold text-red-700 hover:bg-red-50"
                     data-dialog-open="cancel-invitation-{{id}}">إلغاء الدعوة</button>

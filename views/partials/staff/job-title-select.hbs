@@ -1,0 +1,13 @@
+<div class="min-w-0">
+  <label for="{{id}}" class="mb-2 block text-sm font-semibold">المسمى الوظيفي</label>
+  <select id="{{id}}" name="jobTitle" required
+          class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm text-[#12383b]"
+          aria-describedby="{{id}}-hint {{id}}-error" {{#if error}}aria-invalid="true"{{/if}}>
+    <option value="" disabled>اختر المسمى الوظيفي</option>
+    {{#each options}}
+      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+    {{/each}}
+  </select>
+  <p id="{{id}}-hint" class="mt-1 text-xs leading-6 text-slate-600">وصف وظيفي فقط؛ تُدار صلاحيات الحساب بشكل مستقل.</p>
+  <p id="{{id}}-error" class="mt-1 text-xs text-red-700" {{#unless error}}hidden{{/unless}}>{{error}}</p>
+</div>
