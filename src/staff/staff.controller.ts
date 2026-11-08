@@ -1,3 +1,14 @@
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import {
+  ConfirmEmailChangeDto,
+  RequestEmailChangeDto,
+} from './dto/change-email.dto';
+import { AccountSecurityErrorFilter } from './helpers/filters/account-security-error.filter';
+import { accountSecurityView } from './helpers/account-security-view';
+import {
+  regenerateSession,
+  saveSession,
+} from '../auth/helpers/sessions.helpers';
 import {
   Body,
   Controller,
@@ -10,7 +21,6 @@ import {
   Render,
   Req,
   Res,
-  UnauthorizedException,
   UseFilters,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
@@ -29,7 +39,7 @@ import {
 } from './helpers/staff-profile-formatters';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { EditPermissionsDto } from './dto/edit-permissions.dto';
-import { changeMyPasswordDto } from './dto/change-my-password.dto';
+import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
 import { ForgotPasswordEmailDto } from './dto/forgot-password-email.dto';
 import { Public } from '../auth/decorators/route-access.decorator';
 
@@ -129,12 +139,16 @@ export class StaffController {
 
   @Get('edit/:id')
   @Render('staff/staff-edit-profile-page')
-  async showEditStaffForm(@Param('id') staffId: string) {
+  async showEditStaffForm(
+    @Param('id') staffId: string,
+    @CurrentUser() actor: { id: string },
+  ) {
     const staff = await this.staffService.showStaffEditPage(staffId);
 
     return {
       staff: {
         ...staff,
+        isActor: staff.id === actor.id,
         initial: staff.fullName?.trim().charAt(0) ?? '',
         dateOfBirthValue: staff.dateOfBirth?.toISOString().slice(0, 10) ?? '',
         permissions: {
@@ -142,11 +156,6 @@ export class StaffController {
         },
       },
     };
-  }
-
-  @Post('edit/:id/send-otp')
-  async sendOtpToEditStaffEmail(@Param('id') staffId: string) {
-    await this.staffService.sendChangeEmailOtp(staffId);
   }
 
   @Post('edit/:id')
@@ -240,18 +249,105 @@ export class StaffController {
   }
 
   @Get('reset-my-password')
-  getChangePasswordPage(@Res() response: Response) {
-    response.setHeader('Cache-Control', 'no-store');
-    return response.render('staff/reset-my-password-page', {
-      title: 'تغيير كلمة المرور',
-      layout: 'auth',
-    });
+  async getChangePasswordPage(
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    const staff = await this.staffService.getAccountSecurity(actor.id);
+    return response.render(
+      request.get('HX-Request') === 'true'
+        ? 'partials/ui/otp-dialog'
+        : 'staff/account-security-page',
+      {
+        ...accountSecurityView('password', staff.email),
+        layout: request.get('HX-Request') === 'true' ? false : 'main',
+      },
+    );
+  }
+
+  @Get('change-email')
+  async getChangeEmailDialog(
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    const staff = await this.staffService.getAccountSecurity(actor.id);
+    return response.render(
+      request.get('HX-Request') === 'true'
+        ? 'partials/staff/change-email-dialog'
+        : 'staff/account-security-page',
+      {
+        ...accountSecurityView('email', '', false),
+        currentEmail: staff.email,
+        layout: request.get('HX-Request') === 'true' ? false : 'main',
+      },
+    );
+  }
+
+  @Post('change-email/send-otp')
+  @UseFilters(AccountSecurityErrorFilter)
+  async requestEmailChange(
+    @CurrentUser() actor: { id: string },
+    @Body() dto: RequestEmailChangeDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.sendChangeEmailOtp(
+      actor.id,
+      dto,
+      request.session.sessionVersion!,
+    );
+    return response.render(
+      request.get('HX-Request') === 'true'
+        ? 'partials/ui/otp-dialog'
+        : 'staff/account-security-page',
+      {
+        ...accountSecurityView('email', dto.email, true, true),
+        layout: request.get('HX-Request') === 'true' ? false : 'main',
+      },
+    );
+  }
+
+  @Post('change-email/resend-otp')
+  @UseFilters(AccountSecurityErrorFilter)
+  async resendEmailChange(
+    @CurrentUser() actor: { id: string },
+    @Body() dto: ForgotPasswordEmailDto,
+    @Req() request: Request,
+  ) {
+    await this.staffService.resendChangeEmailOtp(
+      actor.id,
+      dto.email,
+      request.session.sessionVersion!,
+    );
+    return { message: 'تم إرسال رمز التحقق إلى البريد الجديد' };
+  }
+
+  @Post('change-email')
+  @UseFilters(AccountSecurityErrorFilter)
+  async changeEmail(
+    @CurrentUser() actor: { id: string },
+    @Body() dto: ConfirmEmailChangeDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    const version = await this.staffService.changeEmail(
+      actor.id,
+      dto,
+      request.session.sessionVersion!,
+    );
+    await this.renewAccountSession(request, actor.id, version);
+    return this.accountChanged(
+      request,
+      response,
+      `/staff/${encodeURIComponent(actor.id)}`,
+    );
   }
 
   @Public()
   @Get('forgot-my-password')
   getForgotPasswordPage(@Res() response: Response) {
-    response.setHeader('Cache-Control', 'no-store');
     return response.render('staff/forgot-my-password-page', {
       title: 'نسيت كلمة المرور',
       layout: 'auth',
@@ -259,31 +355,60 @@ export class StaffController {
   }
 
   @Public()
-  @Post('forgot-my-password/send-otp')
+  @Post(['forgot-my-password/send-otp', 'forgot-my-password/resend-otp'])
+  @UseFilters(AccountSecurityErrorFilter)
   async sendForgotPasswordOtp(
-    @Body() emailDto: ForgotPasswordEmailDto,
+    @Body() dto: ForgotPasswordEmailDto,
+    @Req() request: Request,
     @Res() response: Response,
   ) {
-    response.setHeader('Cache-Control', 'no-store');
     try {
-      await this.staffService.sendForgotPasswordOtp(emailDto.email);
+      await this.staffService.sendForgotPasswordOtp(dto.email);
     } catch (error: unknown) {
+      // Keep the same response for unknown accounts and account-specific cooldowns.
       if (
         !(error instanceof HttpException) ||
         error.getStatus() !== Number(HttpStatus.TOO_MANY_REQUESTS)
-      ) {
+      )
         throw error;
-      }
     }
+    const notice =
+      'إذا كان البريد مرتبطًا بحساب نشط، فسيصلك رمز تحقق. انتظر دقيقة قبل إعادة الإرسال.';
+    if (
+      request.path.endsWith('/resend-otp') &&
+      request.get('HX-Request') === 'true'
+    )
+      return response.json({ message: notice });
+    return response.render(
+      request.get('HX-Request') === 'true'
+        ? 'partials/ui/otp-dialog'
+        : 'staff/forgot-my-password-page',
+      {
+        ...accountSecurityView('forgot-password', dto.email, true, true),
+        notice,
+        resetStep: true,
+        layout: request.get('HX-Request') === 'true' ? false : 'auth',
+      },
+    );
+  }
 
-    return response.render('staff/forgot-my-password-page', {
-      title: 'إعادة تعيين كلمة المرور',
-      layout: 'auth',
-      resetStep: true,
-      email: emailDto.email.trim().toLowerCase(),
-      notice:
-        'إذا كان البريد الإلكتروني مرتبطًا بحساب نشط، فسيصلك رمز التحقق. إذا طلبت رمزًا مؤخرًا، انتظر دقيقة قبل المحاولة مجددًا.',
-    });
+  @Public()
+  @Post('forgot-my-password/reset')
+  @UseFilters(AccountSecurityErrorFilter)
+  async resetForgottenPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.resetForgottenPassword(dto);
+    // Recovery never creates an authenticated session, including in a logged-in tab.
+    await regenerateSession(request);
+    await saveSession(request);
+    return this.accountChanged(
+      request,
+      response,
+      '/auth/signIn?passwordReset=1',
+    );
   }
 
   @Get(':id')
@@ -421,48 +546,59 @@ export class StaffController {
   }
 
   @Post('reset-my-password/send-otp')
+  @UseFilters(AccountSecurityErrorFilter)
   async sendChangePasswordOtp(
     @CurrentUser() actor: { id: string },
-    @Res() response: Response,
+    @Req() request: Request,
   ) {
-    response.setHeader('Cache-Control', 'no-store');
-    await this.staffService.sendChangePasswordOtp(actor.id);
-    return response.status(200).json({ message: 'تم إرسال رمز التحقق' });
+    await this.staffService.sendChangePasswordOtp(
+      actor.id,
+      request.session.sessionVersion!,
+    );
+    return { message: 'تم إرسال رمز التحقق' };
   }
 
-  @Public()
   @Post('reset-my-password')
+  @UseFilters(AccountSecurityErrorFilter)
   async changeMyPassword(
-    @Body() changeMyPasswordDto: changeMyPasswordDto,
+    @Body() dto: ChangeMyPasswordDto,
+    @CurrentUser() actor: { id: string },
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    response.setHeader('Cache-Control', 'no-store');
+    const version = await this.staffService.changeMyPassword(
+      dto,
+      actor.id,
+      request.session.sessionVersion!,
+    );
+    await this.renewAccountSession(request, actor.id, version);
+    return this.accountChanged(
+      request,
+      response,
+      `/staff/${encodeURIComponent(actor.id)}`,
+    );
+  }
 
-    if (changeMyPasswordDto.email) {
-      await this.staffService.resetForgottenPassword({
-        email: changeMyPasswordDto.email,
-        otp: changeMyPasswordDto.otp,
-        newPassword: changeMyPasswordDto.newPassword,
-      });
-      return response.render('auth/sign-in-page', {
-        title: 'تسجيل الدخول',
-        layout: 'auth',
-        successMessage: 'تم تغيير كلمة المرور. يمكنك تسجيل الدخول الآن.',
-      });
-    }
+  private async renewAccountSession(
+    request: Request,
+    staffId: string,
+    sessionVersion: number,
+  ) {
+    await regenerateSession(request);
+    request.session.staffId = staffId;
+    request.session.sessionVersion = sessionVersion;
+    request.session.loggedInAt = Date.now();
+    await saveSession(request);
+  }
 
-    const staffId = request.session.staffId;
-    if (!staffId) throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
-    await this.staffService.changeMyPassword(changeMyPasswordDto, staffId);
-
-    const location = `/staff/${encodeURIComponent(staffId)}`;
-    if (!wantsHtml(request)) {
-      return response.json({ success: true });
-    }
-    if (request.get('HX-Request') === 'true') {
+  private accountChanged(
+    request: Request,
+    response: Response,
+    location: string,
+  ) {
+    if (request.get('HX-Request') === 'true')
       return response.setHeader('HX-Redirect', location).status(204).end();
-    }
+    if (!wantsHtml(request)) return response.json({ success: true });
     return response.redirect(303, location);
   }
 }

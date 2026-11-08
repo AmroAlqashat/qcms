@@ -31,6 +31,7 @@ export class AuthService {
       select: {
         id: true,
         passwordHash: true,
+        sessionVersion: true,
         status: true,
         mustChangePassword: true,
       },
@@ -49,6 +50,7 @@ export class AuthService {
       await regenerateSession(request);
 
       request.session.staffId = staff.id;
+      request.session.sessionVersion = staff.sessionVersion;
       request.session.loggedInAt = Date.now();
 
       await saveSession(request);
@@ -61,6 +63,7 @@ export class AuthService {
 
       request.session.onboardingStep = {
         staffId: staff.id,
+        sessionVersion: staff.sessionVersion,
         step: 'VERIFY_OTP',
         startedAt: Date.now(),
       };
@@ -105,6 +108,7 @@ export class AuthService {
   async completeOnboardingProfile(
     staffId: string,
     profile: CompleteOnboardingProfileDto,
+    sessionVersion: number,
   ) {
     const fullName = profile.fullName.trim();
     const nationalId = profile.nationalId?.trim();
@@ -121,6 +125,7 @@ export class AuthService {
       const updated = await this.prisma.staffMembers.updateMany({
         where: {
           id: staffId,
+          sessionVersion,
           status: StaffStatus.PENDING,
           isDeleted: false,
           mustChangePassword: true,
@@ -156,15 +161,17 @@ export class AuthService {
   async changeOnboardingPassword(
     staffId: string,
     changeOnboardingPasswordDto: ChangeOnboardingPasswordDto,
+    sessionVersion: number,
   ) {
     const { newPassword } = changeOnboardingPasswordDto;
 
     const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId, isDeleted: false },
+      where: { id: staffId, isDeleted: false, sessionVersion },
       select: {
         status: true,
         mustChangePassword: true,
         passwordHash: true,
+        sessionVersion: true,
         fullName: true,
         jobTitle: true,
         nationalId: true,
@@ -205,16 +212,18 @@ export class AuthService {
       type: argon2.argon2id,
     });
 
-    await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const changed = await tx.staffMembers.updateMany({
         where: {
           id: staffId,
+          sessionVersion,
           status: StaffStatus.PENDING,
           isDeleted: false,
           mustChangePassword: true,
         },
         data: {
           passwordHash,
+          sessionVersion: { increment: 1 },
           mustChangePassword: false,
           status: StaffStatus.ACTIVE,
         },
@@ -233,6 +242,8 @@ export class AuthService {
         targetId: staffId,
         isSuccess: true,
       });
+      await tx.oTPs.deleteMany({ where: { staffId } });
+      return sessionVersion + 1;
     });
   }
 }

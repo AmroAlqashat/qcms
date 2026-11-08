@@ -54,7 +54,8 @@ export class SessionAuthGuard implements CanActivate {
         !staff ||
         staff.isDeleted ||
         staff.status !== StaffStatus.PENDING ||
-        !staff.mustChangePassword
+        !staff.mustChangePassword ||
+        onboarding.sessionVersion !== staff.sessionVersion
       ) {
         await destroySession(request);
         return this.deny(request, response);
@@ -72,7 +73,8 @@ export class SessionAuthGuard implements CanActivate {
       !staff ||
       staff.isDeleted ||
       staff.status !== StaffStatus.ACTIVE ||
-      staff.mustChangePassword
+      staff.mustChangePassword ||
+      request.session.sessionVersion !== staff.sessionVersion
     ) {
       await destroySession(request);
       return this.deny(request, response);
@@ -90,6 +92,7 @@ export class SessionAuthGuard implements CanActivate {
         mustChangePassword: true,
         isDeleted: true,
         isSuperAdmin: true,
+        sessionVersion: true,
       },
     });
   }

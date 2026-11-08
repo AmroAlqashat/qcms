@@ -21,33 +21,17 @@
       maxlength="120"
       error=errors.fullName
     }}
-    <div class='grid gap-4 sm:grid-cols-2'>
-    {{> ui/field
-      id="edit-email"
-      name="email"
-      label="البريد الإلكتروني"
-      type="email"
-      value=staff.email
-      required=true
-      maxlength="254"
-      error=errors.email
-    }}
-    
-    {{> ui/field
-      id="edit-otp"
-      name="otp"
-      label="رمز التحقق للبريد الإلكتروني"
-      type="numeric"
-      maxlength="6"
-      error=errors.otp
-    }}
+    <div class='rounded-xl border border-slate-200 p-4'>
+      <p class='text-sm font-bold'>البريد الإلكتروني</p>
+      <p class='mt-1 break-all text-sm text-slate-600' dir='ltr'>{{staff.email}}</p>
+      {{#if staff.isActor}}
+        <a href='/staff/change-email' hx-get='/staff/change-email' hx-target='#modal-root' hx-swap='innerHTML' data-replace-dialog
+          class='mt-2 inline-flex min-h-11 items-center text-sm font-bold text-[#287a73] underline'>تغيير البريد الإلكتروني</a>
+        <p class='text-xs leading-6 text-slate-600'>تغيير البريد خطوة مستقلة. احفظ تعديلات الملف أولًا إذا أردت الاحتفاظ بها.</p>
+      {{else}}
+        <p class='mt-2 text-xs text-slate-600'>يستطيع الموظف تغيير بريده من حسابه بعد التحقق.</p>
+      {{/if}}
     </div>
-    {{> ui/send-otp
-      actionPrefix="/staff/edit/"
-      staffId=staff.id
-      actionSuffix="/send-otp"
-      label="إرسال رمز التحقق"
-    }}
     {{> ui/field
       id="edit-nationalId"
       name="nationalId"

@@ -1,0 +1,7 @@
+<section class='mx-auto max-w-xl space-y-4 p-5'>
+  <h1 class='text-xl font-bold'>{{title}}</h1>
+  <p class='text-sm leading-7 text-slate-600'>أكمل الخطوات داخل نافذة التحقق. لن يتم حفظ أي تغيير عند إغلاقها.</p>
+  <button type='button' data-dialog-open='{{#if verification}}{{dialogId}}{{else}}change-email-dialog{{/if}}' class='min-h-11 rounded-xl bg-[#287a73] px-5 py-3 font-bold text-white'>متابعة</button>
+  <a href='/' class='inline-flex min-h-11 items-center px-3 text-sm underline'>العودة</a>
+</section>
+{{#if verification}}{{> ui/otp-dialog}}{{else}}{{> staff/change-email-dialog}}{{/if}}

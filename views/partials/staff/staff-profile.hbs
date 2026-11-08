@@ -47,9 +47,12 @@
       {{/if}}
 
       {{#if staff.isActor}}
+        <a href='/staff/change-email' hx-get='/staff/change-email' hx-target='#modal-root' hx-swap='innerHTML' aria-haspopup='dialog'
+          class='inline-flex min-h-11 items-center justify-center rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73]'>تغيير البريد الإلكتروني</a>
         <a
           class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
           href='/staff/reset-my-password'
+          hx-get='/staff/reset-my-password' hx-target='#modal-root' hx-swap='innerHTML' aria-haspopup='dialog'
         >
           تغيير كلمة المرور
         </a>

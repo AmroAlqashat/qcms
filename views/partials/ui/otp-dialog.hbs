@@ -1,0 +1,22 @@
+{{#> ui/dialog id=dialogId icon="mail" heading=heading description=description sensitive=true}}
+  {{#if notice}}<p class='mb-4 rounded-xl bg-[#f0faf9] p-3 text-sm leading-7' role='status'>{{notice}}</p>{{/if}}
+  {{#if email}}<p class='mb-4 text-sm leading-7'>البريد الإلكتروني: <bdi class='break-all font-bold' dir='ltr'>{{email}}</bdi></p>{{/if}}
+  {{#if emailChange}}<p class='mb-4 text-sm text-slate-600'>لن يتغير بريدك الحالي حتى تؤكد الرمز وتحفظ التغيير.</p>{{/if}}
+  <form action='{{action}}' method='post' hx-post='{{action}}' hx-target='#modal-root' hx-swap='innerHTML'
+    hx-disabled-elt='find button[type="submit"]' class='space-y-4' data-password-confirmation>
+    {{> ui/csrf}}
+    {{> ui/form-error error=error}}
+    {{#if sendEmail}}<input type='hidden' name='email' value='{{email}}'>{{/if}}
+    {{> ui/otp-input id=dialogId error=errors.otp}}
+    {{#if passwordFields}}
+      {{> ui/field id="account-new-password" name="newPassword" label="كلمة المرور الجديدة" type="password" password=true required=true minlength="8" maxlength="128" autocomplete="new-password" dir="ltr" error=errors.newPassword hint="8 أحرف على الأقل، وبحد أقصى 128 حرفًا."}}
+      {{> ui/field id="account-confirm-password" name="confirmPassword" label="تأكيد كلمة المرور الجديدة" type="password" password=true required=true minlength="8" maxlength="128" autocomplete="new-password" dir="ltr" error=errors.confirmPassword}}
+    {{/if}}
+    <div class='flex flex-wrap justify-start gap-2'>
+      {{> ui/submit label=submitLabel}}
+      {{> ui/cancel}}
+    </div>
+  </form>
+  {{> ui/send-otp id=dialogId action=resendAction email=email sendEmail=sendEmail alreadySent=alreadySent prompt="لم يصلك رمز التحقق؟" label="إرسال رمز التحقق"}}
+  {{#if restartHref}}<a class='mt-4 inline-flex min-h-11 items-center text-sm font-bold text-[#287a73] underline' href='{{restartHref}}'>تغيير البريد أو بدء الطلب من جديد</a>{{/if}}
+{{/ui/dialog}}

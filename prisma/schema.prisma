@@ -11,6 +11,7 @@ datasource db {
 model StaffMembers {
   id                     String                     @id @default(uuid())
   email                  String                     @unique
+  sessionVersion         Int                        @default(0)
   passwordHash           String?
   fullName               String?
   jobTitle               JobTitle?
@@ -25,7 +26,7 @@ model StaffMembers {
   isDeleted              Boolean                    @default(false)
   auditEvents            AuditEvents[]
   directPermissionGrants DirectPermissionGrants[]
-  OTP                    OTPs?
+  OTP                    OTPs[]
   roleGrants             RoleStaffAssignments[]
   activityAssignments    StaffActivityAssignments[]
   classAssignments       StaffClassAssignments[]
@@ -271,13 +272,24 @@ model Settings {
 }
 
 model OTPs {
-  id        String       @id @default(uuid())
-  staffId   String       @unique
-  codeHash  String       @db.VarChar(64)
-  expiresAt DateTime
-  sentAt    DateTime     @default(now())
-  attempts  Int          @default(0)
-  Staff     StaffMembers @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  id          String       @id @default(uuid())
+  staffId     String
+  purpose     OtpPurpose
+  targetEmail String?
+  codeHash    String       @db.VarChar(64)
+  expiresAt   DateTime
+  sentAt      DateTime     @default(now())
+  attempts    Int          @default(0)
+  Staff       StaffMembers @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, purpose])
+}
+
+enum OtpPurpose {
+  ONBOARDING
+  PASSWORD_CHANGE
+  PASSWORD_RESET
+  EMAIL_CHANGE
 }
 
 model sessions {

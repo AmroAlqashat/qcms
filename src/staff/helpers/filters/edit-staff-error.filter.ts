@@ -55,8 +55,8 @@ export class EditStaffErrorFilter implements ExceptionFilter {
         staffShell({
           staff: {
             ...staff,
+            isActor: staff.id === req.session.staffId,
             fullName: form.fullName ?? staff.fullName,
-            email: form.email ?? staff.email,
             nationalId: form.nationalId ?? staff.nationalId,
             jobTitle: form.jobTitle ?? staff.jobTitle,
             jobTitleOptions: jobTitleOptions(form.jobTitle ?? staff.jobTitle),

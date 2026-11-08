@@ -6,10 +6,12 @@ declare module 'express-session' {
   interface SessionData {
     csrfToken?: string;
     staffId?: string;
+    sessionVersion?: number;
     loggedInAt?: number;
 
     onboardingStep?: {
       staffId: string;
+      sessionVersion: number;
       step: OnboardingStep;
       startedAt: number;
     };

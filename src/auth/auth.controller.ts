@@ -1,3 +1,4 @@
+import { OtpPurpose } from '@prisma/client';
 import { SetupService } from '../setup/setup.service';
 import { SignInErrorFilter } from './filters/sign-in-error.filter';
 import { OnboardingErrorFilter } from './filters/onboarding-error.filter';
@@ -35,7 +36,7 @@ export class AuthController {
 
   @Public()
   @Get('signIn')
-  async showSignInPage(@Res() res: Response) {
+  async showSignInPage(@Req() req: Request, @Res() res: Response) {
     res.setHeader('Cache-Control', 'no-store');
 
     const { needsSetup } = await this.setupService.getSetupStatus();
@@ -44,6 +45,10 @@ export class AuthController {
     return res.render('auth/sign-in-page', {
       title: 'تسجيل الدخول',
       layout: 'auth',
+      successMessage:
+        req.query.passwordReset === '1'
+          ? 'تم تغيير كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.'
+          : undefined,
     });
   }
 
@@ -104,7 +109,12 @@ export class AuthController {
       throw new UnauthorizedException('جلسة التحقق غير صالحة');
     }
 
-    await this.otp.issueOtp(onboarding.staffId);
+    await this.otp.issueOtp(
+      onboarding.staffId,
+      OtpPurpose.ONBOARDING,
+      undefined,
+      onboarding.sessionVersion,
+    );
 
     return res.status(200).json({
       message: 'تم إرسال رمز التحقق',
@@ -131,7 +141,11 @@ export class AuthController {
       throw new UnauthorizedException('جلسة التحقق غير صالحة');
     }
 
-    await this.otp.verifyOnboardingOtp(onboarding.staffId, otpDto.code);
+    await this.otp.verifyOnboardingOtp(
+      onboarding.staffId,
+      otpDto.otp,
+      onboarding.sessionVersion,
+    );
 
     req.session.onboardingStep = {
       ...onboarding,
@@ -196,7 +210,11 @@ export class AuthController {
       throw new UnauthorizedException('استكمال معلومات الحساب غير متاح');
     }
 
-    await this.authService.completeOnboardingProfile(onboarding.staffId, dto);
+    await this.authService.completeOnboardingProfile(
+      onboarding.staffId,
+      dto,
+      onboarding.sessionVersion,
+    );
 
     req.session.onboardingStep = {
       ...onboarding,
@@ -258,12 +276,17 @@ export class AuthController {
 
     const staffId = onboarding.staffId;
 
-    await this.authService.changeOnboardingPassword(staffId, dto);
+    const sessionVersion = await this.authService.changeOnboardingPassword(
+      staffId,
+      dto,
+      onboarding.sessionVersion,
+    );
 
     // A new session ID replaces the onboarding session.
     await regenerateSession(req);
 
     req.session.staffId = staffId;
+    req.session.sessionVersion = sessionVersion;
     req.session.loggedInAt = Date.now();
 
     await saveSession(req);

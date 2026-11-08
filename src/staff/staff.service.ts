@@ -19,6 +19,7 @@ import {
   StaffActivityAssignments,
   StaffClassAssignments,
   StaffStatus,
+  OtpPurpose,
   JobTitle,
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
@@ -29,8 +30,12 @@ import { FilteredStaffDto } from './dto/filter-staff.dto';
 import { EditStaffDto } from './dto/edit-staff.dto';
 import { RolesService } from '../roles/roles.service';
 import { EditPermissionsDto } from './dto/edit-permissions.dto';
-import { changeMyPasswordDto } from './dto/change-my-password.dto';
+import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import {
+  ConfirmEmailChangeDto,
+  RequestEmailChangeDto,
+} from './dto/change-email.dto';
 import { OtpService } from '../mail/otp.serivce';
 
 @Injectable()
@@ -278,37 +283,23 @@ export class StaffService {
   ) {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        let staff: {
-          id: string;
-          email: string;
-          fullName: string | null;
-          jobTitle: JobTitle | null;
-          status: StaffStatus;
-        } | null = null;
-
-        if (editStaffDto.otp !== null && editStaffDto.otp !== undefined) {
-          if (await this.otpService.verifyStaffOtp(staffId, editStaffDto.otp))
-            staff = await tx.staffMembers.update({
-              where: { id: staffId, isDeleted: false },
-              data: {
-                email: editStaffDto.email,
-                fullName: editStaffDto.fullName,
-                jobTitle: editStaffDto.jobTitle,
-                phone: editStaffDto.phoneNumber,
-                dateOfBirth: editStaffDto.dateOfBirth,
-              },
-            });
-        }
-        if (staff === null)
-          staff = await tx.staffMembers.update({
-            where: { id: staffId, isDeleted: false },
-            data: {
-              fullName: editStaffDto.fullName,
-              jobTitle: editStaffDto.jobTitle,
-              phone: editStaffDto.phoneNumber,
-              dateOfBirth: editStaffDto.dateOfBirth,
-            },
-          });
+        const staff = await tx.staffMembers.update({
+          where: { id: staffId, isDeleted: false },
+          data: {
+            fullName: editStaffDto.fullName,
+            jobTitle: editStaffDto.jobTitle,
+            nationalId: editStaffDto.nationalId,
+            phone: editStaffDto.phoneNumber,
+            dateOfBirth: editStaffDto.dateOfBirth,
+          },
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            jobTitle: true,
+            status: true,
+          },
+        });
         await this.audit.record(tx, {
           actorId,
           actionType: 'STAFF_UPDATED',
@@ -324,8 +315,8 @@ export class StaffService {
         error.code === 'P2002'
       )
         throw new ConflictException({
-          message: 'a conflict has occured',
-          errors: { email: 'a conflict has occured' },
+          message: 'بيانات الملف مستخدمة بالفعل',
+          errors: { nationalId: 'تحقق من الرقم الوطني' },
         });
       throw error;
     }
@@ -560,7 +551,10 @@ export class StaffService {
         await this.assertStaffManageable(staffId, tx);
         await tx.staffMembers.update({
           where: { id: staffId, isDeleted: false },
-          data: { status: StaffStatus.INACTIVE },
+          data: {
+            status: StaffStatus.INACTIVE,
+            sessionVersion: { increment: 1 },
+          },
         });
         await this.audit.record(tx, {
           actorId,
@@ -666,6 +660,7 @@ export class StaffService {
             where: { id: staffId, isDeleted: false },
             data: {
               isDeleted: true,
+              sessionVersion: { increment: 1 },
               status: StaffStatus.INACTIVE,
               mustChangePassword: true,
               fullName: null,
@@ -715,6 +710,7 @@ export class StaffService {
         where: { id: staffId, isDeleted: false },
         data: {
           passwordHash,
+          sessionVersion: { increment: 1 },
           mustChangePassword: false,
         },
       });
@@ -731,6 +727,7 @@ export class StaffService {
         isSuccess: true,
       });
 
+      await tx.oTPs.deleteMany({ where: { staffId } });
       return temporaryPassword;
     });
   }
@@ -790,7 +787,7 @@ export class StaffService {
               id: existingStaff.id,
               isDeleted: true,
             },
-            data,
+            data: { ...data, sessionVersion: { increment: 1 } },
             select,
           });
         } else {
@@ -892,115 +889,247 @@ export class StaffService {
     }
   }
 
-  public async sendChangePasswordOtp(staffId: string) {
-    await this.otpService.issueOtp(staffId);
+  async getAccountSecurity(staffId: string) {
+    const staff = await this.loadActiveAccount(staffId);
+    return { id: staff.id, email: staff.email };
   }
 
-  public async changeMyPassword(
-    changeMyPasswordDto: changeMyPasswordDto,
+  private async loadActiveAccount(
     staffId: string,
+    sessionVersion?: number,
+    db: Prisma.TransactionClient = this.prisma,
   ) {
-    const staff = await this.prisma.staffMembers.findFirst({
+    const staff = await db.staffMembers.findFirst({
       where: {
         id: staffId,
+        sessionVersion,
         isDeleted: false,
         status: StaffStatus.ACTIVE,
         mustChangePassword: false,
       },
-      select: { id: true },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        sessionVersion: true,
+      },
     });
     if (!staff) throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
-
-    await this.otpService.verifyStaffOtp(staffId, changeMyPasswordDto.otp);
-    await this.ChangeStaffPassword(changeMyPasswordDto.newPassword, staffId);
+    return staff;
   }
 
-  public async sendForgotPasswordOtp(email: string) {
+  async sendChangePasswordOtp(staffId: string, sessionVersion: number) {
+    await this.otpService.issueOtp(
+      staffId,
+      OtpPurpose.PASSWORD_CHANGE,
+      undefined,
+      sessionVersion,
+    );
+  }
+
+  async changeMyPassword(
+    dto: ChangeMyPasswordDto,
+    staffId: string,
+    sessionVersion: number,
+  ) {
+    const staff = await this.loadActiveAccount(staffId, sessionVersion);
+    return this.changeStaffPassword(dto, staff, OtpPurpose.PASSWORD_CHANGE);
+  }
+
+  async sendForgotPasswordOtp(email: string) {
     const staff = await this.prisma.staffMembers.findFirst({
       where: {
         email: email.trim().toLowerCase(),
         isDeleted: false,
         status: StaffStatus.ACTIVE,
+        mustChangePassword: false,
       },
-      select: { id: true },
+      select: { id: true, sessionVersion: true },
     });
-
-    if (staff) await this.otpService.issueOtp(staff.id);
+    if (staff)
+      await this.otpService.issueOtp(
+        staff.id,
+        OtpPurpose.PASSWORD_RESET,
+        undefined,
+        staff.sessionVersion,
+      );
   }
 
-  public async sendChangeEmailOtp(staffId: string) {
+  async resetForgottenPassword(dto: ForgotPasswordDto) {
     const staff = await this.prisma.staffMembers.findFirst({
       where: {
-        id: staffId,
+        email: dto.email.trim().toLowerCase(),
         isDeleted: false,
         status: StaffStatus.ACTIVE,
+        mustChangePassword: false,
       },
-      select: { id: true },
+      select: { id: true, email: true, sessionVersion: true },
     });
-
-    if (staff) await this.otpService.issueOtp(staffId);
-  }
-
-  public async resetForgottenPassword(forgotPasswordDto: ForgotPasswordDto) {
-    const staff = await this.prisma.staffMembers.findFirst({
-      where: {
-        email: forgotPasswordDto.email.trim().toLowerCase(),
-        isDeleted: false,
-        status: StaffStatus.ACTIVE,
-      },
-      select: { id: true },
-    });
-
-    if (!staff) {
+    if (!staff)
       throw new UnprocessableEntityException({
         message: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
         errors: { otp: 'رمز التحقق غير صحيح أو منتهي الصلاحية' },
       });
-    }
-
-    try {
-      await this.otpService.verifyStaffOtp(staff.id, forgotPasswordDto.otp);
-    } catch (error: unknown) {
-      if (error instanceof UnprocessableEntityException) {
-        throw new UnprocessableEntityException({
-          message: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
-          errors: { otp: 'رمز التحقق غير صحيح أو منتهي الصلاحية' },
-        });
-      }
-      throw error;
-    }
-
-    await this.ChangeStaffPassword(forgotPasswordDto.newPassword, staff.id);
+    await this.changeStaffPassword(dto, staff, OtpPurpose.PASSWORD_RESET);
   }
 
-  private async ChangeStaffPassword(newPass: string, staffId: string) {
-    try {
-      const passhash = await argon2.hash(newPass, {
-        type: argon2.argon2id,
-      });
-
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.staffMembers.update({
-          where: { id: staffId },
-          data: { passwordHash: passhash },
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            jobTitle: true,
-            status: true,
-          },
+  private async changeStaffPassword(
+    dto: ChangeMyPasswordDto,
+    staff: { id: string; email: string; sessionVersion: number },
+    purpose: OtpPurpose,
+  ) {
+    return this.otpService.withVerifiedOtp(
+      staff.id,
+      purpose,
+      dto.otp,
+      async (tx) => {
+        await this.loadActiveAccount(staff.id, staff.sessionVersion, tx);
+        // Reject invalid codes before performing expensive password hashing.
+        const passwordHash = await argon2.hash(dto.newPassword, {
+          type: argon2.argon2id,
         });
+
+        const updated = await tx.staffMembers.update({
+          where: {
+            id: staff.id,
+            email: staff.email,
+            sessionVersion: staff.sessionVersion,
+          },
+          data: { passwordHash, sessionVersion: { increment: 1 } },
+          select: { sessionVersion: true },
+        });
+        // Outstanding challenges were issued before this credential change.
+        await tx.oTPs.deleteMany({ where: { staffId: staff.id } });
+        await this.audit.record(tx, {
+          actorId: staff.id,
+          actionType: AuditAction.STAFF_UPDATED,
+          targetType: AuditTarget.STAFF,
+          targetId: staff.id,
+          isSuccess: true,
+        });
+        return updated.sessionVersion;
+      },
+      staff.email,
+    );
+  }
+
+  private async assertEmailAvailable(
+    email: string,
+    staffId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ) {
+    const existing = await db.staffMembers.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (existing)
+      throw new ConflictException({
+        message:
+          existing.id === staffId
+            ? 'هذا هو بريدك الإلكتروني الحالي'
+            : 'البريد الإلكتروني مستخدم بالفعل',
+        errors: {
+          email:
+            existing.id === staffId
+              ? 'أدخل بريدًا إلكترونيًا مختلفًا'
+              : 'البريد الإلكتروني مستخدم بالفعل',
+        },
       });
+  }
+
+  async sendChangeEmailOtp(
+    staffId: string,
+    dto: RequestEmailChangeDto,
+    sessionVersion: number,
+  ) {
+    const staff = await this.loadActiveAccount(staffId, sessionVersion);
+    if (
+      !staff.passwordHash ||
+      !(await argon2.verify(staff.passwordHash, dto.currentPassword))
+    ) {
+      throw new UnprocessableEntityException({
+        message: 'كلمة المرور الحالية غير صحيحة',
+        errors: { currentPassword: 'كلمة المرور الحالية غير صحيحة' },
+      });
+    }
+    const email = dto.email.trim().toLowerCase();
+    await this.assertEmailAvailable(email, staffId);
+    await this.otpService.issueOtp(
+      staffId,
+      OtpPurpose.EMAIL_CHANGE,
+      email,
+      sessionVersion,
+    );
+  }
+
+  async resendChangeEmailOtp(
+    staffId: string,
+    email: string,
+    sessionVersion: number,
+  ) {
+    await this.loadActiveAccount(staffId, sessionVersion);
+    const challenge = await this.prisma.oTPs.findUnique({
+      where: { staffId_purpose: { staffId, purpose: OtpPurpose.EMAIL_CHANGE } },
+    });
+    if (
+      !challenge ||
+      challenge.targetEmail !== email ||
+      challenge.expiresAt <= new Date()
+    ) {
+      throw new ConflictException(
+        'ابدأ تغيير البريد مجددًا وأدخل كلمة المرور الحالية.',
+      );
+    }
+    await this.assertEmailAvailable(email, staffId);
+    await this.otpService.issueOtp(
+      staffId,
+      OtpPurpose.EMAIL_CHANGE,
+      email,
+      sessionVersion,
+    );
+  }
+
+  async changeEmail(
+    staffId: string,
+    dto: ConfirmEmailChangeDto,
+    sessionVersion: number,
+  ) {
+    const email = dto.email.trim().toLowerCase();
+    try {
+      return await this.otpService.withVerifiedOtp(
+        staffId,
+        OtpPurpose.EMAIL_CHANGE,
+        dto.otp,
+        async (tx) => {
+          await this.loadActiveAccount(staffId, sessionVersion, tx);
+          await this.assertEmailAvailable(email, staffId, tx);
+          const updated = await tx.staffMembers.update({
+            where: { id: staffId, sessionVersion },
+            data: { email, sessionVersion: { increment: 1 } },
+            select: { sessionVersion: true },
+          });
+          await tx.oTPs.deleteMany({ where: { staffId } });
+          await this.audit.record(tx, {
+            actorId: staffId,
+            actionType: AuditAction.STAFF_UPDATED,
+            targetType: AuditTarget.STAFF,
+            targetId: staffId,
+            isSuccess: true,
+          });
+          return updated.sessionVersion;
+        },
+        email,
+      );
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
-      )
+      ) {
         throw new ConflictException({
-          message: 'a conflict has occured',
-          errors: { email: 'a conflict has occured' },
+          message: 'البريد الإلكتروني مستخدم بالفعل',
+          errors: { email: 'البريد الإلكتروني مستخدم بالفعل' },
         });
+      }
       throw error;
     }
   }
