@@ -45,7 +45,7 @@ export class StaffService {
     private readonly audit: AuditService,
     private readonly rolesSerive: RolesService,
     private readonly otpService: OtpService,
-  ) {}
+  ) { }
 
   async assertStaffManageable(
     staffId: string,
@@ -323,123 +323,158 @@ export class StaffService {
   }
 
   async cancelPendingInvitation(staffId: string) {
-    // Using deleteMany here because prisma.staffMembers.delete does not allow us to put more than one condition + deleteMany with unique id is the same.
-    const { count } = await this.prisma.staffMembers.deleteMany({
-      where: {
-        id: staffId,
-        status: 'PENDING',
-        isDeleted: false,
-      },
-    });
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          // Preserve the account identity and history for future invitations.
+          const { count } = await tx.staffMembers.updateMany({
+            where: {
+              id: staffId,
+              status: StaffStatus.PENDING,
+              isDeleted: false,
+            },
+            data: {
+              isDeleted: true,
+              status: StaffStatus.INACTIVE,
+              mustChangePassword: true,
+              sessionVersion: { increment: 1 },
+              fullName: null,
+              jobTitle: null,
+              passwordHash: null,
+              dateOfBirth: null,
+              nationalId: null,
+              phone: null,
+            },
+          });
 
-    if (count === 0) {
-      throw new NotFoundException('لم يتم العثور على الحساب المعلق');
+          if (count === 0) {
+            throw new NotFoundException(
+              'لم يتم العثور على دعوة معلقة لهذا الموظف',
+            );
+          }
+
+          await tx.oTPs.deleteMany({ where: { staffId } });
+          await tx.roleStaffAssignments.deleteMany({ where: { staffId } });
+          await tx.directPermissionGrants.deleteMany({ where: { staffId } });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
+        throw new ConflictException(
+          'تغيّرت بيانات الموظف أثناء إلغاء الدعوة. حدّث الصفحة وأعد المحاولة',
+        );
+      }
+      throw error;
     }
   }
 
   async showFilteredStaff(filterDto: FilteredStaffDto) {
-    const {
-      searchField,
-      status,
-      isDeleted = false,
-      halaqa,
-      role,
-      page,
-      limit,
-    } = filterDto;
-    const skip = (page! - 1) * limit!;
+      const {
+        searchField,
+        status,
+        isDeleted = false,
+        halaqa,
+        role,
+        page,
+        limit,
+      } = filterDto;
+      const skip = (page! - 1) * limit!;
 
-    //validate foreign keys
-    await this.validateRelations(halaqa, role);
+      //validate foreign keys
+      await this.validateRelations(halaqa, role);
 
-    const where: Prisma.StaffMembersWhereInput = { isDeleted };
+      const where: Prisma.StaffMembersWhereInput = { isDeleted };
 
-    //define search parameters
-    if (searchField) {
-      where.OR = [
-        { fullName: { contains: searchField, mode: 'insensitive' } },
-        {
-          jobTitle: {
-            in: Object.values(JobTitle).filter(
-              (title) =>
-                jobTitleLabels[title].includes(searchField) ||
-                title.toLowerCase().includes(searchField.toLowerCase()),
-            ),
+      //define search parameters
+      if (searchField) {
+        where.OR = [
+          { fullName: { contains: searchField, mode: 'insensitive' } },
+          {
+            jobTitle: {
+              in: Object.values(JobTitle).filter(
+                (title) =>
+                  jobTitleLabels[title].includes(searchField) ||
+                  title.toLowerCase().includes(searchField.toLowerCase()),
+              ),
+            },
           },
-        },
-      ];
+        ];
+      }
+      if (status) where.status = status;
+      else if (!isDeleted) where.status = { not: StaffStatus.PENDING };
+      if (halaqa)
+        where.classAssignments = { some: { halaqaId: halaqa, endedAt: null } };
+      if (role) where.roleGrants = { some: { roleId: role } };
+      //search
+      const staffList = await this.prisma.staffMembers.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      });
+      return staffList.map((staff) => ({
+        ...staff,
+        jobTitleLabel: staff.jobTitle ? jobTitleLabels[staff.jobTitle] : '',
+      }));
     }
-    if (status) where.status = status;
-    else if (!isDeleted) where.status = { not: StaffStatus.PENDING };
-    if (halaqa)
-      where.classAssignments = { some: { halaqaId: halaqa, endedAt: null } };
-    if (role) where.roleGrants = { some: { roleId: role } };
-    //search
-    const staffList = await this.prisma.staffMembers.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-    });
-    return staffList.map((staff) => ({
-      ...staff,
-      jobTitleLabel: staff.jobTitle ? jobTitleLabels[staff.jobTitle] : '',
-    }));
-  }
 
   async showStaffEditPage(staffId: string) {
-    const staff = await this.prisma.staffMembers.findUnique({
-      where: { id: staffId, isDeleted: false },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        jobTitle: true,
-        nationalId: true,
-        status: true,
-        dateOfBirth: true,
-        phone: true,
-      },
-    });
+      const staff = await this.prisma.staffMembers.findUnique({
+        where: { id: staffId, isDeleted: false },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          jobTitle: true,
+          nationalId: true,
+          status: true,
+          dateOfBirth: true,
+          phone: true,
+        },
+      });
 
-    if (!staff) throw new NotFoundException('الموظف غير موجود');
-    if (staff.status === 'PENDING')
-      throw new BadRequestException('لا يمكن التعديل: دعوة معلّقة');
-    return { ...staff, jobTitleOptions: jobTitleOptions(staff.jobTitle) };
-  }
+      if (!staff) throw new NotFoundException('الموظف غير موجود');
+      if (staff.status === 'PENDING')
+        throw new BadRequestException('لا يمكن التعديل: دعوة معلّقة');
+      return { ...staff, jobTitleOptions: jobTitleOptions(staff.jobTitle) };
+    }
 
   async showStaffFilterOptions(
-    selectedHalaqaId?: string,
-    selectedRoleId?: string,
-  ) {
-    const [classes, templates] = await Promise.all([
-      this.prisma.halaqas.findMany({
-        select: { id: true, name: true },
-        orderBy: { name: 'asc' },
-      }),
-      this.prisma.roles.findMany({
-        where: { isSuperAdminRole: false },
-        select: { id: true, name: true },
-        orderBy: { name: 'asc' },
-      }),
-    ]);
+      selectedHalaqaId ?: string,
+      selectedRoleId ?: string,
+    ) {
+      const [classes, templates] = await Promise.all([
+        this.prisma.halaqas.findMany({
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.roles.findMany({
+          where: { isSuperAdminRole: false },
+          select: { id: true, name: true },
+          orderBy: { name: 'asc' },
+        }),
+      ]);
 
-    return {
-      classes: classes.map((item) => ({
-        ...item,
-        selected: item.id === selectedHalaqaId,
-      })),
-      templates: templates.map((item) => ({
-        ...item,
-        selected: item.id === selectedRoleId,
-      })),
-    };
-  }
+      return {
+        classes: classes.map((item) => ({
+          ...item,
+          selected: item.id === selectedHalaqaId,
+        })),
+        templates: templates.map((item) => ({
+          ...item,
+          selected: item.id === selectedRoleId,
+        })),
+      };
+    }
 
   private async validateRelations(
-    halaqaId?: string,
-    roleId?: string,
-  ): Promise<void> {
+      halaqaId?: string,
+      roleId?: string,
+    ): Promise<void> {
     if (halaqaId) {
       const classExists = await this.prisma.halaqas.findUnique({
         where: { id: halaqaId },
