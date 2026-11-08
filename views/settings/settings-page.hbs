@@ -3,7 +3,12 @@ Durations use minutes / hours respectively. registrationOpen accepts a boolean
 or the form strings "true" / "false"; unset values require an explicit choice.
 initialSettings contains the saved values for change tracking and Cancel.
 currencyOptions may provide {value, label} fallback options. --}}
-<section id='settings-page' aria-labelledby='settings-heading' data-settings-page data-settings-initial="{{initialSettings}}">
+<section
+  id='settings-page'
+  aria-labelledby='settings-heading'
+  data-settings-page
+  data-settings-initial='{{ initialSettings }}'
+>
   <header class='mb-6 flex flex-wrap items-start justify-between gap-4'>
     <div>
       <p class='mb-2 text-sm font-semibold text-[#287a73]'>إدارة المركز</p>
@@ -61,8 +66,12 @@ currencyOptions may provide {value, label} fallback options. --}}
       aria-live='polite'
       data-settings-feedback
       tabindex='-1'
-      {{#unless feedback}}hidden{{/unless}}
-    >{{feedback}}</div>
+      {{#unless feedback}}
+        hidden
+      {{/unless}}
+    >
+      {{ feedback }}
+    </div>
 
     <section
       id='settings-center'
@@ -246,4 +255,3 @@ currencyOptions may provide {value, label} fallback options. --}}
     </noscript>
   </form>
 </section>
-

@@ -56,7 +56,9 @@
       supported('currency', ['JOD', 'SAR', 'AED', 'USD', 'EUR']),
       (value) => `${value} — ${currencyNames?.of(value) || value}`,
     );
-    const fields = [...form.elements].filter((field) => field.name);
+    const fields = [...form.elements].filter(
+      (field) => field.name && field.name !== '_csrf',
+    );
     const saved = JSON.parse(root.dataset.settingsInitial || '{}');
     const initial = new Map(
       fields.map((field) => [
@@ -64,6 +66,7 @@
         Object.hasOwn(saved, field.name) ? String(saved[field.name] ?? '') : '',
       ]),
     );
+
     for (const name of [
       'sessionInactivityTimeoutMinutes',
       'delegateAccessExpiryHours',
