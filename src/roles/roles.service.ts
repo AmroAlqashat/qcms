@@ -24,7 +24,7 @@ export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-  ) { }
+  ) {}
 
   async assertRoleManageable(
     roleId: string,
@@ -143,12 +143,12 @@ export class RolesService {
 
     const selectedRolePermissions = roleId
       ? await this.prisma.rolePermissions.findMany({
-        where: { roleId },
-        select: {
-          permissionId: true,
-          scopeType: true,
-        },
-      })
+          where: { roleId },
+          select: {
+            permissionId: true,
+            scopeType: true,
+          },
+        })
       : [];
 
     const selectedKeys = new Set(

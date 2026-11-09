@@ -45,7 +45,7 @@ export class StaffService {
     private readonly audit: AuditService,
     private readonly rolesSerive: RolesService,
     private readonly otpService: OtpService,
-  ) { }
+  ) {}
 
   async assertStaffManageable(
     staffId: string,
@@ -423,8 +423,7 @@ export class StaffService {
     else if (!isDeleted) where.status = { not: StaffStatus.PENDING };
     if (halaqa)
       where.classAssignments = { some: { halaqaId: halaqa, endedAt: null } };
-    if (role)
-      where.roleGrants = { some: { roleId: role, revokedAt: null } };
+    if (role) where.roleGrants = { some: { roleId: role, revokedAt: null } };
     //search
     const staffList = await this.prisma.staffMembers.findMany({
       where,
