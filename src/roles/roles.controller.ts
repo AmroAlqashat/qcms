@@ -7,7 +7,10 @@ import {
   Render,
   Redirect,
   UseFilters,
+  Req,
+  Res,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { RolesService } from './roles.service';
 import { CreateNewRoleDto } from './dto/create-new-role.dto';
 import { EditRoleDto } from './dto/edit-role.dto';
@@ -43,6 +46,22 @@ export class RolesController {
       activeNav: 'roles',
     };
   }
+  @Post('create')
+  @UseFilters(RolesErrorFilter)
+  async newRole(
+    @Body() createRoleDto: CreateNewRoleDto,
+    @CurrentUser() user: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.rolesService.createRole(createRoleDto, user.id);
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', '/roles');
+      response.status(204).send();
+      return;
+    }
+    response.redirect(303, '/roles');
+  }
 
   @Get('edit/:id')
   @Render('roles/roles-editor')
@@ -60,28 +79,6 @@ export class RolesController {
       accountCount,
     };
   }
-
-  @Get('delete/:id')
-  @Render('roles/roles-delete')
-  async showDeleteRolePage(@Param('id') roleId: string) {
-    const role = await this.rolesService.getRoleById(roleId);
-
-    return {
-      role,
-      activeNav: 'roles',
-    };
-  }
-
-  @Post('create')
-  @Redirect('/roles', 303)
-  @UseFilters(RolesErrorFilter)
-  async newRole(
-    @Body() createRoleDto: CreateNewRoleDto,
-    @CurrentUser() user: { id: string },
-  ) {
-    await this.rolesService.createRole(createRoleDto, user.id);
-  }
-
   @Post('edit/:id')
   @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
@@ -93,13 +90,30 @@ export class RolesController {
     await this.rolesService.editRole(editRoleDto, roleId, user.id);
   }
 
+  @Get('delete/:id')
+  @Render('roles/roles-delete-dialog')
+  async showDeleteRoleDialog(@Param('id') roleId: string) {
+    const role = await this.rolesService.getRoleById(roleId);
+
+    return {
+      role,
+      activeNav: 'roles',
+    };
+  }
   @Post('delete/:id')
-  @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
   async deletedRole(
+    @Req() request: Request,
+    @Res() response: Response,
     @Param('id') roleId: string,
     @CurrentUser() user: { id: string },
   ) {
     await this.rolesService.deleteRole(roleId, user.id);
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', '/roles');
+      response.status(204).send();
+      return;
+    }
+    response.redirect(303, '/roles');
   }
 }

@@ -1,0 +1,12 @@
+{{#> ui/dialog id="change-email-dialog" icon="mail" heading="تغيير البريد الإلكتروني" description="أكد هويتك بكلمة المرور الحالية، ثم تحقق من بريدك الجديد." sensitive=true}}
+  {{#if currentEmail}}<p class='mb-4 text-sm leading-7'>البريد الحالي: <bdi dir='ltr'>{{currentEmail}}</bdi></p>{{/if}}
+  <form action='/staff/change-email/send-otp' method='post' hx-post='/staff/change-email/send-otp'
+    hx-target='#modal-root' hx-swap='innerHTML' hx-disabled-elt='find button[type="submit"]' class='space-y-4'>
+    {{> ui/csrf}}
+    {{> ui/form-error error=error}}
+    {{> ui/field id="new-email" name="email" label="البريد الإلكتروني الجديد" type="email" required=true maxlength="254" autocomplete="email" dir="ltr" value=form.email error=errors.email}}
+    {{> ui/field id="email-current-password" name="currentPassword" label="كلمة المرور الحالية" type="password" password=true required=true minlength="8" maxlength="128" autocomplete="current-password" dir="ltr" error=errors.currentPassword}}
+    <p class='text-xs leading-6 text-slate-600'>سنرسل رمزًا إلى العنوان الجديد. يبقى بريدك الحالي كما هو حتى تؤكد الرمز.</p>
+    <div class='flex flex-wrap justify-start gap-2'>{{> ui/submit label="إرسال رمز إلى البريد الجديد"}}{{> ui/cancel}}</div>
+  </form>
+{{/ui/dialog}}

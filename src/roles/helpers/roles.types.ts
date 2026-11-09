@@ -5,6 +5,7 @@ export type PermissionAction = {
   resource: string;
   action: string;
   scopes: ScopeType[];
+  scopeOptions: { value: ScopeType; label: string }[];
   selected: boolean;
   selectedScope?: string;
 };

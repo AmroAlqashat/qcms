@@ -9,7 +9,8 @@ COPY package.json ./
 RUN npm install
 
 COPY . .
-RUN npx prisma generate \
+# Prisma generation loads the config but does not connect to a database.
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npx prisma generate \
  && ls -la node_modules/.prisma/client
 RUN npm run build
 
@@ -32,11 +33,10 @@ COPY --from=builder /app/dist ./dist
 COPY package.json ./
 
 ENV NODE_ENV=production
-ENV DATABASE_URL="postgresql://neondb_owner:npg_UTAK3sqg9pkm@ep-jolly-snow-b4b986fe-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 EXPOSE 3000
 
 USER nonroot
 CMD ["dist/src/main.js"]
 
 #build command (from project root): docker build -t qcms-backend:latest ./
-#docker run -p 3000:3000 qcms-backend:latest
+#docker run --env-file .env -p 3000:3000 qcms-backend:latest

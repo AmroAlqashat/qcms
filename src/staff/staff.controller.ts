@@ -1,7 +1,20 @@
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import {
+  ConfirmEmailChangeDto,
+  RequestEmailChangeDto,
+} from './dto/change-email.dto';
+import { AccountSecurityErrorFilter } from './helpers/filters/account-security-error.filter';
+import { accountSecurityView } from './helpers/account-security-view';
+import {
+  regenerateSession,
+  saveSession,
+} from '../auth/helpers/sessions.helpers';
 import {
   Body,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Post,
   Query,
@@ -15,8 +28,20 @@ import { InviteStaffDto } from './dto/invite-staff.dto';
 import { StaffService } from './staff.service';
 import { wantsHtml } from '../common/wants-html';
 import { staffShell } from './helpers/staff-shell';
-import { InviteStaffErrorFilter } from './helpers/invite-staff-error.filter';
+import { EditStaffErrorFilter } from './helpers/filters/edit-staff-error.filter';
+import { InviteStaffErrorFilter } from './helpers/filters/invite-staff-error.filter';
 import { FilteredStaffDto } from './dto/filter-staff.dto';
+import { EditStaffDto } from './dto/edit-staff.dto';
+import {
+  formatStaffDate,
+  formatStaffPhone,
+  formatStaffStatus,
+} from './helpers/staff-profile-formatters';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { EditPermissionsDto } from './dto/edit-permissions.dto';
+import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
+import { ForgotPasswordEmailDto } from './dto/forgot-password-email.dto';
+import { Public } from '../auth/decorators/route-access.decorator';
 
 @Controller('staff')
 export class StaffController {
@@ -36,6 +61,9 @@ export class StaffController {
       staffList,
       filters: filterDto,
       filterOptions,
+      permissions: {
+        canInvite: true,
+      },
       activeNav: 'staff',
     };
   }
@@ -53,7 +81,6 @@ export class StaffController {
       activeNav: 'staff',
     };
   }
-
   @Post('invitations/cancel/:id')
   async cancelPendingInvitation(@Param('id') staffId: string) {
     await this.staffService.cancelPendingInvitation(staffId);
@@ -61,25 +88,346 @@ export class StaffController {
     return { success: true };
   }
 
+  @Get('edit/permissions/:id')
+  @Render('partials/staff/permissions-dialog')
+  async showPermissionsDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
+    // GET: load the available choices and the staff member's active selections.
+    // The partial uses selected/selectedScope to reopen the saved state.
+    const [roles, permissions] = await Promise.all([
+      this.staffService.getRoleOptionsForStaff(staffId),
+      this.staffService.getPermissionOptionsForStaff(staffId),
+    ]);
+
+    return {
+      roles,
+      ...permissions,
+      staffId,
+    };
+  }
+
+  @Post('edit/permissions/:id')
+  // The global ValidationPipe transforms and validates the submitted DTO
+  // before this handler passes the target staff ID and acting user's ID onward.
+  async editPermissions(
+    @Param('id') staffId: string,
+    @Body() editPermissionsDto: EditPermissionsDto,
+    @CurrentUser() user: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.editPermissions(
+      staffId,
+      editPermissionsDto,
+      user.id,
+    );
+
+    // Respond only after the transaction succeeds. HX-Redirect navigates the
+    // full page instead of swapping the profile HTML into the permissions dialog.
+    const location = `/staff/${encodeURIComponent(staffId)}`;
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+    // API callers receive JSON; ordinary form submissions use a GET redirect.
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+    response.redirect(303, location);
+  }
+
+  @Get('edit/:id')
+  @Render('staff/staff-edit-profile-page')
+  async showEditStaffForm(
+    @Param('id') staffId: string,
+    @CurrentUser() actor: { id: string },
+  ) {
+    const staff = await this.staffService.showStaffEditPage(staffId);
+
+    return {
+      staff: {
+        ...staff,
+        isActor: staff.id === actor.id,
+        initial: staff.fullName?.trim().charAt(0) ?? '',
+        dateOfBirthValue: staff.dateOfBirth?.toISOString().slice(0, 10) ?? '',
+        permissions: {
+          canChangeStatus: true,
+        },
+      },
+    };
+  }
+
+  @Post('edit/:id')
+  @UseFilters(EditStaffErrorFilter)
+  async editStaff(
+    @Param('id') id: string,
+    @Body() editStaffDto: EditStaffDto,
+    @Req() request: Request,
+    @Res() response: Response,
+    @CurrentUser() actor: { id: string },
+  ) {
+    await this.staffService.editStaff(id, editStaffDto, actor.id);
+
+    const location = `/staff/${encodeURIComponent(id)}`;
+
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
+  }
+
   @Get('invite')
-  @Render('staff/staff-invitation-page')
+  @Render('staff/staff-invitation-dialog')
   showInviteForm() {
     return staffShell({
       title: 'دعوة موظف',
       form: {},
     });
   }
+  @Post('invite')
+  @UseFilters(InviteStaffErrorFilter)
+  async inviteStaff(
+    @Body() inviteStaffDto: InviteStaffDto,
+    @Req() request: Request,
+    @Res() response: Response,
+    @CurrentUser() actor: { id: string },
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+
+    const result = await this.staffService.inviteStaff(
+      inviteStaffDto,
+      actor.id,
+    );
+
+    if (!wantsHtml(request)) {
+      response.json(result);
+      return;
+    }
+
+    response.render(
+      'partials/staff/credentials-dialog',
+      staffShell({
+        title: 'تم إنشاء الحساب',
+        // TODO: compute from the permissions service once the cancel route exists
+        permissions: { canCancelInvitation: false },
+        ...result,
+      }),
+    );
+  }
+
+  @Post('generate-new-password/:id')
+  async generatePassword(
+    @Param('id') id: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    response.setHeader('Cache-Control', 'no-store');
+    const temporaryPassword = await this.staffService.generatePassword(
+      id,
+      actor.id,
+    );
+    const profile = await this.showStaffProfile(id, actor);
+
+    response.render(
+      'staff/admin-generates-password-page',
+      staffShell({
+        ...profile,
+        title: 'إنشاء كلمة مرور',
+        temporaryPassword,
+        isHtmx: request.get('HX-Request') === 'true',
+      }),
+    );
+  }
+
+  @Get('reset-my-password')
+  async getChangePasswordPage(
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    const staff = await this.staffService.getAccountSecurity(actor.id);
+    return response.render(
+      request.get('HX-Request') === 'true'
+        ? 'partials/ui/otp-dialog'
+        : 'staff/account-security-page',
+      {
+        ...accountSecurityView('password', staff.email),
+        layout: request.get('HX-Request') === 'true' ? false : 'main',
+      },
+    );
+  }
+
+  @Get('change-email')
+  async getChangeEmailDialog(
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    const staff = await this.staffService.getAccountSecurity(actor.id);
+    return response.render(
+      request.get('HX-Request') === 'true'
+        ? 'partials/staff/change-email-dialog'
+        : 'staff/account-security-page',
+      {
+        ...accountSecurityView('email', '', false),
+        currentEmail: staff.email,
+        layout: request.get('HX-Request') === 'true' ? false : 'main',
+      },
+    );
+  }
+
+  @Post('change-email/send-otp')
+  @UseFilters(AccountSecurityErrorFilter)
+  async requestEmailChange(
+    @CurrentUser() actor: { id: string },
+    @Body() dto: RequestEmailChangeDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.sendChangeEmailOtp(
+      actor.id,
+      dto,
+      request.session.sessionVersion!,
+    );
+    return response.render(
+      request.get('HX-Request') === 'true'
+        ? 'partials/ui/otp-dialog'
+        : 'staff/account-security-page',
+      {
+        ...accountSecurityView('email', dto.email, true, true),
+        layout: request.get('HX-Request') === 'true' ? false : 'main',
+      },
+    );
+  }
+
+  @Post('change-email/resend-otp')
+  @UseFilters(AccountSecurityErrorFilter)
+  async resendEmailChange(
+    @CurrentUser() actor: { id: string },
+    @Body() dto: ForgotPasswordEmailDto,
+    @Req() request: Request,
+  ) {
+    await this.staffService.resendChangeEmailOtp(
+      actor.id,
+      dto.email,
+      request.session.sessionVersion!,
+    );
+    return { message: 'تم إرسال رمز التحقق إلى البريد الجديد' };
+  }
+
+  @Post('change-email')
+  @UseFilters(AccountSecurityErrorFilter)
+  async changeEmail(
+    @CurrentUser() actor: { id: string },
+    @Body() dto: ConfirmEmailChangeDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    const version = await this.staffService.changeEmail(
+      actor.id,
+      dto,
+      request.session.sessionVersion!,
+    );
+    await this.renewAccountSession(request, actor.id, version);
+    return this.accountChanged(
+      request,
+      response,
+      `/staff/${encodeURIComponent(actor.id)}`,
+    );
+  }
+
+  @Public()
+  @Get('forgot-my-password')
+  getForgotPasswordPage(@Res() response: Response) {
+    return response.render('staff/forgot-my-password-page', {
+      title: 'نسيت كلمة المرور',
+      layout: 'auth',
+    });
+  }
+
+  @Public()
+  @Post(['forgot-my-password/send-otp', 'forgot-my-password/resend-otp'])
+  @UseFilters(AccountSecurityErrorFilter)
+  async sendForgotPasswordOtp(
+    @Body() dto: ForgotPasswordEmailDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    try {
+      await this.staffService.sendForgotPasswordOtp(dto.email);
+    } catch (error: unknown) {
+      // Keep the same response for unknown accounts and account-specific cooldowns.
+      if (
+        !(error instanceof HttpException) ||
+        error.getStatus() !== Number(HttpStatus.TOO_MANY_REQUESTS)
+      )
+        throw error;
+    }
+    const notice =
+      'إذا كان البريد مرتبطًا بحساب نشط، فسيصلك رمز تحقق. انتظر دقيقة قبل إعادة الإرسال.';
+    if (
+      request.path.endsWith('/resend-otp') &&
+      request.get('HX-Request') === 'true'
+    )
+      return response.json({ message: notice });
+    return response.render(
+      request.get('HX-Request') === 'true'
+        ? 'partials/ui/otp-dialog'
+        : 'staff/forgot-my-password-page',
+      {
+        ...accountSecurityView('forgot-password', dto.email, true, true),
+        notice,
+        resetStep: true,
+        layout: request.get('HX-Request') === 'true' ? false : 'auth',
+      },
+    );
+  }
+
+  @Public()
+  @Post('forgot-my-password/reset')
+  @UseFilters(AccountSecurityErrorFilter)
+  async resetForgottenPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.resetForgottenPassword(dto);
+    // Recovery never creates an authenticated session, including in a logged-in tab.
+    await regenerateSession(request);
+    await saveSession(request);
+    return this.accountChanged(
+      request,
+      response,
+      '/auth/signIn?passwordReset=1',
+    );
+  }
 
   @Get(':id')
   @Render('staff/staff-profile-page')
-  async showStaffProfile(@Param('id') id: string) {
+  async showStaffProfile(
+    @Param('id') id: string,
+    @CurrentUser() actor: { id: string },
+  ) {
     const staff = await this.staffService.showStaffProfile(id);
 
     return {
       staff: {
         ...staff,
-        initial: staff.fullName.trim().charAt(0),
-        dateOfBirthLabel: staff.dateOfBirth?.toLocaleDateString('ar'),
+        initial: staff.fullName?.trim().charAt(0) ?? '',
+        dateOfBirthLabel: formatStaffDate(staff.dateOfBirth),
+        nationalIdLabel: staff.nationalId,
+        phoneLabel: formatStaffPhone(staff.phone),
+        statusLabel: formatStaffStatus(staff.status, staff.isDeleted),
+        isActor: id === actor.id,
       },
       assignments: {
         classes: staff.classAssignments.map(({ halaqa }) => halaqa),
@@ -88,40 +436,169 @@ export class StaffController {
         directGrantsLabel: 'تُتاح في إصدار لاحق',
       },
       permissions: {
-        canEditStaff: true,
-        canManageAssignments: true,
-        canDeactivate: true,
-        canDelete: true,
+        canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
+        canGeneratePassword: actor.id !== staff.id && !staff.isDeleted,
+        canEditStaff: !staff.isDeleted,
+        canManagePermissions: !staff.isDeleted && !staff.isSuperAdmin,
+        canChangeStatus: !staff.isDeleted && !staff.isSuperAdmin,
+        canDelete: !staff.isDeleted && !staff.isSuperAdmin,
       },
       effectivePermissionCount: 0,
       activeNav: 'staff',
     };
   }
 
-  @Post('invite')
-  @UseFilters(InviteStaffErrorFilter)
-  async inviteStaff(
-    @Body() inviteStaffDto: InviteStaffDto,
+  @Get('deactivate/:id')
+  @Render('staff/staff-deactivate-page')
+  async showDeactivateStaffDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
+    return {
+      staff: { id: staffId },
+    };
+  }
+  @Post('deactivate/:id')
+  @Render('staff/staff-page')
+  async deactivateStaff(
+    @Param('id') staffId: string,
+    @CurrentUser() actor: { id: string },
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    response.setHeader('Cache-Control', 'no-store');
-
-    const result = await this.staffService.inviteStaff(inviteStaffDto);
+    await this.staffService.deactivateStaff(staffId, actor.id);
+    const location = '/staff';
 
     if (!wantsHtml(request)) {
-      response.json(result);
+      response.json({ success: true });
       return;
     }
 
-    response.render(
-      'staff/temporary-password-page',
-      staffShell({
-        title: 'تم إنشاء الحساب',
-        // TODO: compute from the permissions service once the cancel route exists
-        permissions: { canCancelInvitation: false },
-        ...result,
-      }),
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
+  }
+
+  @Get('delete/:id')
+  @Render('staff/staff-delete-page')
+  async showDeleteStaffDialog(@Param('id') staffId: string) {
+    await this.staffService.assertStaffManageable(staffId);
+    return {
+      staff: { id: staffId },
+    };
+  }
+  @Post('delete/:id')
+  @Render('staff/staff-page')
+  async deleteStaff(
+    @Param('id') staffId: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.deleteStaff(staffId, actor.id);
+    const location = '/staff';
+
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
+    return;
+  }
+
+  @Get('activate/:id')
+  @Render('staff/staff-activate-page')
+  showactivateStaffDialog(@Param('id') staffId: string) {
+    return {
+      staff: { id: staffId },
+    };
+  }
+  @Post('activate/:id')
+  @Render('staff/staff-page')
+  async activateStaff(
+    @Param('id') staffId: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.activateStaff(staffId, actor.id);
+    const location = '/staff';
+
+    if (!wantsHtml(request)) {
+      response.json({ success: true });
+      return;
+    }
+
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).end();
+      return;
+    }
+
+    response.redirect(303, location);
+    return;
+  }
+
+  @Post('reset-my-password/send-otp')
+  @UseFilters(AccountSecurityErrorFilter)
+  async sendChangePasswordOtp(
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+  ) {
+    await this.staffService.sendChangePasswordOtp(
+      actor.id,
+      request.session.sessionVersion!,
     );
+    return { message: 'تم إرسال رمز التحقق' };
+  }
+
+  @Post('reset-my-password')
+  @UseFilters(AccountSecurityErrorFilter)
+  async changeMyPassword(
+    @Body() dto: ChangeMyPasswordDto,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    const version = await this.staffService.changeMyPassword(
+      dto,
+      actor.id,
+      request.session.sessionVersion!,
+    );
+    await this.renewAccountSession(request, actor.id, version);
+    return this.accountChanged(
+      request,
+      response,
+      `/staff/${encodeURIComponent(actor.id)}`,
+    );
+  }
+
+  private async renewAccountSession(
+    request: Request,
+    staffId: string,
+    sessionVersion: number,
+  ) {
+    await regenerateSession(request);
+    request.session.staffId = staffId;
+    request.session.sessionVersion = sessionVersion;
+    request.session.loggedInAt = Date.now();
+    await saveSession(request);
+  }
+
+  private accountChanged(
+    request: Request,
+    response: Response,
+    location: string,
+  ) {
+    if (request.get('HX-Request') === 'true')
+      return response.setHeader('HX-Redirect', location).status(204).end();
+    if (!wantsHtml(request)) return response.json({ success: true });
+    return response.redirect(303, location);
   }
 }

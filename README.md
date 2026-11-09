@@ -1,5 +1,7 @@
 # QCMS — Quran Center Management System
 
+[README](README.md) | [Local Dev](docs/local-development.md)
+
 > An Arabic-first, right-to-left web application that gives a Quran memorisation centre one auditable record per student — replacing paper registers, notebooks and separate fee ledgers with a single system.
 
 ---
@@ -8,8 +10,7 @@
 
 - [About](#about)
 - [Scope](#scope)
-- [Getting Started](#getting-started)
-- [Database](#database)
+- [Local Dev](docs/local-development.md)
 - [Branching & Workflow](#branching--workflow)
 - [Documentation](#documentation)
 
@@ -34,57 +35,13 @@ Two decisions shape the system more than any other:
 
 Full requirement-level detail lives in the SRS — see [Documentation](#documentation).
 
-## Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 20.x
-- [PostgreSQL](https://www.postgresql.org/) (local install or Docker)
-- npm
-
-### Installation
-
-```bash
-git clone https://github.com/AmroAlqashat/qcms.git
-cd qcms
-npm ci
-```
-
-### Environment variables
-
-```bash
-cp .env.example .env
-# then fill in the values in .env
-```
-
-### Running locally
-
-```bash
-npm run start:dev
-```
-
-The app starts in watch mode and restarts automatically on file changes.
-
-## Database
-
-Schema lives in `prisma/schema.prisma`.
-
-```bash
-# Generate the Prisma Client
-npx prisma generate
-
-# Apply migrations (creates the database schema)
-npx prisma migrate dev
-
-# Inspect the database with a local GUI
-npx prisma studio
-```
-
 ## Branching & Workflow
 
 - All work happens on a feature branch, merged into `main` via pull request.
 - `main` is protected: checks must pass before merging.
 
 ## Documentation
+
+- **[Local Dev](docs/local-development.md)** — installation, configuration, setup, recovery, and running the app.
 
 - **SRS (Software Requirements Specification)** — the full requirements baseline this project is built against.

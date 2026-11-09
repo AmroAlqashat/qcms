@@ -29,7 +29,12 @@
       <option value="ACTIVE" {{#if (eq filters.status 'ACTIVE') }}selected{{/if}}>نشط</option>
       <option value="INACTIVE"
               {{#if (eq filters.status 'INACTIVE') }}selected{{/if}}>موقوف</option>
-      <option value="DELETED" {{#if (eq filters.status 'DELETED') }}selected{{/if}}>محذوف</option>
+    </select>
+    <label for="filter-deleted" class="sr-only">الحذف</label>
+    <select id="filter-deleted" name="isDeleted" data-auto-submit
+            class="min-h-11 rounded-full border border-slate-200 bg-white px-3 text-sm">
+      <option value="false" {{#unless filters.isDeleted}}selected{{/unless}}>غير المحذوفين</option>
+      <option value="true" {{#if filters.isDeleted}}selected{{/if}}>المحذوفون</option>
     </select>
     <label for="filter-class" class="sr-only">الحلقة</label><select id="filter-halaqa"
         name="halaqa"

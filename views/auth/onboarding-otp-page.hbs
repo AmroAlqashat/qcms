@@ -1,0 +1,7 @@
+{{#> auth/card}}
+  {{> auth/heading heading="تأكيد البريد الإلكتروني" description="أكد بريدك للمتابعة إلى استكمال الملف الشخصي."}}
+  {{> auth/steps-activation-code}}
+  <button type='button' data-dialog-open='onboarding-otp-dialog' class='min-h-11 w-full rounded-xl bg-[#287a73] px-5 py-3 font-bold text-white'>فتح نافذة التحقق</button>
+  <a href='/auth/signIn' class='mt-4 inline-flex min-h-11 items-center text-sm font-bold text-[#287a73] underline'>العودة إلى تسجيل الدخول</a>
+{{/auth/card}}
+{{> ui/otp-dialog dialogId="onboarding-otp-dialog" heading="تأكيد البريد الإلكتروني" description="أرسل رمزًا إلى بريدك المسجّل، ثم أدخله للمتابعة." action="/auth/onboarding/verify-otp" resendAction="/auth/onboarding/send-otp" submitLabel="تأكيد الرمز والمتابعة"}}
