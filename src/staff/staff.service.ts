@@ -153,6 +153,21 @@ export class StaffService {
           });
           if (!staff) throw new NotFoundException('الموظف غير موجود');
 
+          // Reject invalid selections before replacing existing assignments.
+          if (new Set(roleIds).size !== roleIds.length) {
+            throw new UnprocessableEntityException('قوالب الصلاحيات مكررة');
+          }
+
+          const roles = await tx.roles.findMany({
+            where: { id: { in: roleIds } },
+            select: { id: true },
+          });
+          if (roles.length !== roleIds.length) {
+            throw new UnprocessableEntityException(
+              'أحد قوالب الصلاحيات المحددة غير موجود',
+            );
+          }
+
           // Validate duplicate pairs and enforce the UI's one-scope-per-action
           // rule on the server too; callers can bypass the browser form.
           const selectedKeys = new Set<string>();
@@ -373,108 +388,108 @@ export class StaffService {
   }
 
   async showFilteredStaff(filterDto: FilteredStaffDto) {
-      const {
-        searchField,
-        status,
-        isDeleted = false,
-        halaqa,
-        role,
-        page,
-        limit,
-      } = filterDto;
-      const skip = (page! - 1) * limit!;
+    const {
+      searchField,
+      status,
+      isDeleted = false,
+      halaqa,
+      role,
+      page,
+      limit,
+    } = filterDto;
+    const skip = (page! - 1) * limit!;
 
-      //validate foreign keys
-      await this.validateRelations(halaqa, role);
+    //validate foreign keys
+    await this.validateRelations(halaqa, role);
 
-      const where: Prisma.StaffMembersWhereInput = { isDeleted };
+    const where: Prisma.StaffMembersWhereInput = { isDeleted };
 
-      //define search parameters
-      if (searchField) {
-        where.OR = [
-          { fullName: { contains: searchField, mode: 'insensitive' } },
-          {
-            jobTitle: {
-              in: Object.values(JobTitle).filter(
-                (title) =>
-                  jobTitleLabels[title].includes(searchField) ||
-                  title.toLowerCase().includes(searchField.toLowerCase()),
-              ),
-            },
+    //define search parameters
+    if (searchField) {
+      where.OR = [
+        { fullName: { contains: searchField, mode: 'insensitive' } },
+        {
+          jobTitle: {
+            in: Object.values(JobTitle).filter(
+              (title) =>
+                jobTitleLabels[title].includes(searchField) ||
+                title.toLowerCase().includes(searchField.toLowerCase()),
+            ),
           },
-        ];
-      }
-      if (status) where.status = status;
-      else if (!isDeleted) where.status = { not: StaffStatus.PENDING };
-      if (halaqa)
-        where.classAssignments = { some: { halaqaId: halaqa, endedAt: null } };
-      if (role) where.roleGrants = { some: { roleId: role } };
-      //search
-      const staffList = await this.prisma.staffMembers.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      });
-      return staffList.map((staff) => ({
-        ...staff,
-        jobTitleLabel: staff.jobTitle ? jobTitleLabels[staff.jobTitle] : '',
-      }));
+        },
+      ];
     }
+    if (status) where.status = status;
+    else if (!isDeleted) where.status = { not: StaffStatus.PENDING };
+    if (halaqa)
+      where.classAssignments = { some: { halaqaId: halaqa, endedAt: null } };
+    if (role) where.roleGrants = { some: { roleId: role } };
+    //search
+    const staffList = await this.prisma.staffMembers.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    });
+    return staffList.map((staff) => ({
+      ...staff,
+      jobTitleLabel: staff.jobTitle ? jobTitleLabels[staff.jobTitle] : '',
+    }));
+  }
 
   async showStaffEditPage(staffId: string) {
-      const staff = await this.prisma.staffMembers.findUnique({
-        where: { id: staffId, isDeleted: false },
-        select: {
-          id: true,
-          email: true,
-          fullName: true,
-          jobTitle: true,
-          nationalId: true,
-          status: true,
-          dateOfBirth: true,
-          phone: true,
-        },
-      });
+    const staff = await this.prisma.staffMembers.findUnique({
+      where: { id: staffId, isDeleted: false },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        jobTitle: true,
+        nationalId: true,
+        status: true,
+        dateOfBirth: true,
+        phone: true,
+      },
+    });
 
-      if (!staff) throw new NotFoundException('الموظف غير موجود');
-      if (staff.status === 'PENDING')
-        throw new BadRequestException('لا يمكن التعديل: دعوة معلّقة');
-      return { ...staff, jobTitleOptions: jobTitleOptions(staff.jobTitle) };
-    }
+    if (!staff) throw new NotFoundException('الموظف غير موجود');
+    if (staff.status === 'PENDING')
+      throw new BadRequestException('لا يمكن التعديل: دعوة معلّقة');
+    return { ...staff, jobTitleOptions: jobTitleOptions(staff.jobTitle) };
+  }
 
   async showStaffFilterOptions(
-      selectedHalaqaId ?: string,
-      selectedRoleId ?: string,
-    ) {
-      const [classes, templates] = await Promise.all([
-        this.prisma.halaqas.findMany({
-          select: { id: true, name: true },
-          orderBy: { name: 'asc' },
-        }),
-        this.prisma.roles.findMany({
-          where: { isSuperAdminRole: false },
-          select: { id: true, name: true },
-          orderBy: { name: 'asc' },
-        }),
-      ]);
+    selectedHalaqaId?: string,
+    selectedRoleId?: string,
+  ) {
+    const [classes, templates] = await Promise.all([
+      this.prisma.halaqas.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.roles.findMany({
+        where: { isSuperAdminRole: false },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
 
-      return {
-        classes: classes.map((item) => ({
-          ...item,
-          selected: item.id === selectedHalaqaId,
-        })),
-        templates: templates.map((item) => ({
-          ...item,
-          selected: item.id === selectedRoleId,
-        })),
-      };
-    }
+    return {
+      classes: classes.map((item) => ({
+        ...item,
+        selected: item.id === selectedHalaqaId,
+      })),
+      templates: templates.map((item) => ({
+        ...item,
+        selected: item.id === selectedRoleId,
+      })),
+    };
+  }
 
   private async validateRelations(
-      halaqaId?: string,
-      roleId?: string,
-    ): Promise<void> {
+    halaqaId?: string,
+    roleId?: string,
+  ): Promise<void> {
     if (halaqaId) {
       const classExists = await this.prisma.halaqas.findUnique({
         where: { id: halaqaId },
