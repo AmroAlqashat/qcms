@@ -45,8 +45,8 @@ export class SettingsDto {
   @Transform(({ value }: { value: unknown }) => formInteger(value))
   @IsInt({ message: 'مهلة خمول الجلسة يجب أن تكون عددًا صحيحًا بالدقائق' })
   @Min(1, { message: 'مهلة خمول الجلسة يجب ألا تقل عن دقيقة واحدة' })
-  @Max(Number.MAX_SAFE_INTEGER, {
-    message: 'مهلة خمول الجلسة أكبر من الحد المدعوم',
+  @Max(43_200, {
+    message: 'مهلة خمول الجلسة يجب ألا تتجاوز 43200 دقيقة (30 يومًا)',
   })
   sessionInactivityTimeoutMinutes: number;
 

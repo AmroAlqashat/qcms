@@ -20,9 +20,14 @@ export class SettingsService {
     });
     if (!row) return this.defaultTimeOut;
 
-    const minutes = Number(row.value);
+    const minutes =
+      typeof row.value === 'number' || typeof row.value === 'string'
+        ? Number(row.value)
+        : NaN;
     const value =
-      Number.isFinite(minutes) && minutes > 0 ? minutes : this.defaultTimeOut;
+      Number.isInteger(minutes) && minutes >= 1 && minutes <= 43_200
+        ? minutes
+        : this.defaultTimeOut;
     this.cache.set(key, { value, expiresAt: Date.now() + this.ttlMs });
     return value;
   }

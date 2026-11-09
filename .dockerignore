@@ -1,3 +1,8 @@
 node_modules/
 .github/
 dist
+
+.env
+.env.*
+!.env.example
+.git

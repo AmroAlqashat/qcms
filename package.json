@@ -11,7 +11,7 @@
     "start": "nest start",
     "start:dev": "concurrently -k -n nest,css -c blue,magenta \"nest start --watch\" \"npm run css:dev\"",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/src/main.js",
     "lint": "eslint \"{src,apps,libs}/**/*.ts\"",
     "lint:fix": "eslint \"{src,apps,libs}/**/*.ts\" --fix",
     "css:dev": "tailwindcss -i ./assets/styles/tailwind.css -o ./public/css/source.css --watch",

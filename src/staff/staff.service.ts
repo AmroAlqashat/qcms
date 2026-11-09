@@ -761,7 +761,6 @@ export class StaffService {
         data: {
           passwordHash,
           sessionVersion: { increment: 1 },
-          mustChangePassword: false,
         },
       });
 

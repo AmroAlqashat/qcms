@@ -204,10 +204,11 @@ currencyOptions may provide {value, label} fallback options. --}}
             name="sessionInactivityTimeoutMinutes"
             label="مهلة خمول الجلسة (بالدقائق)"
             type="number"
+            max="43200"
             value=settings.sessionInactivityTimeoutMinutes.value
             required=true
             inputmode="numeric"
-            hint="المدة دون نشاط قبل انتهاء الجلسة وطلب تسجيل الدخول مجدداً."
+            hint="المدة دون نشاط قبل طلب تسجيل الدخول مجددًا. من دقيقة واحدة إلى 43200 دقيقة (30 يومًا)."
             error=errors.sessionInactivityTimeoutMinutes
           }}
         </div>

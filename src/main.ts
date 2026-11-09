@@ -23,6 +23,9 @@ async function bootstrap() {
   if (!sessionSecret) throw new Error('SESSION_SECRET is required');
   if (!databaseUrl) throw new Error('DATABASE_URL is required');
 
+  // Production traffic must reach the app only through one trusted load balancer.
+  if (isProduction) app.set('trust proxy', 1);
+
   const PgSession = connectPgSimple(session);
 
   app.use(
