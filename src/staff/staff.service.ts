@@ -423,7 +423,8 @@ export class StaffService {
     else if (!isDeleted) where.status = { not: StaffStatus.PENDING };
     if (halaqa)
       where.classAssignments = { some: { halaqaId: halaqa, endedAt: null } };
-    if (role) where.roleGrants = { some: { roleId: role } };
+    if (role)
+      where.roleGrants = { some: { roleId: role, revokedAt: null } };
     //search
     const staffList = await this.prisma.staffMembers.findMany({
       where,

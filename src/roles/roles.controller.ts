@@ -47,13 +47,20 @@ export class RolesController {
     };
   }
   @Post('create')
-  @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
   async newRole(
     @Body() createRoleDto: CreateNewRoleDto,
     @CurrentUser() user: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
   ) {
     await this.rolesService.createRole(createRoleDto, user.id);
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', '/roles');
+      response.status(204).send();
+      return;
+    }
+    response.redirect(303, '/roles');
   }
 
   @Get('edit/:id')
