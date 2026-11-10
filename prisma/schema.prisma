@@ -8,270 +8,239 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model StaffMembers {
+  id                     String                     @id @default(uuid())
+  email                  String                     @unique
+  sessionVersion         Int                        @default(0)
+  passwordHash           String?
+  fullName               String?
+  jobTitle               JobTitle?
+  status                 StaffStatus                @default(INACTIVE)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  dateOfBirth            DateTime?                  @db.Date
+  mustChangePassword     Boolean
+  nationalId             String?                    @db.VarChar(30)
+  phone                  String?                    @db.VarChar(20)
+  isSuperAdmin           Boolean                    @default(false)
+  isDeleted              Boolean                    @default(false)
+  auditEvents            AuditEvents[]
+  directPermissionGrants DirectPermissionGrants[]
+  OTP                    OTPs[]
+  roleGrants             RoleStaffAssignments[]
+  activityAssignments    StaffActivityAssignments[]
+  classAssignments       StaffClassAssignments[]
+
+  @@index([isDeleted, createdAt])
+}
+
+model Permissions {
+  id                     String                   @id @default(uuid())
+  resource               String
+  action                 String
+  category               String
+  allowedScopes          ScopeType[]
+  directPermissionGrants DirectPermissionGrants[]
+  rolePermissions        RolePermissions[]
+  permission_actions     permission_actions       @relation(fields: [action], references: [id], onDelete: Cascade, map: "action_permission_frk")
+  permission_resources   permission_resources     @relation(fields: [resource], references: [id], onDelete: Cascade, map: "resource_permission_frk")
+
+  @@unique([resource, action], map: "resource_action_unique_key")
+}
+
+model DirectPermissionGrants {
+  id           String       @id @default(uuid())
+  staffId      String
+  permissionId String
+  scopeType    ScopeType
+  grantedById  String
+  grantedAt    DateTime     @default(now())
+  revokedAt    DateTime?
+  permission   Permissions  @relation(fields: [permissionId], references: [id])
+  staff        StaffMembers @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, permissionId, scopeType])
+}
+
+model Roles {
+  isSuperAdminRole Boolean                @default(false)
+  id               String                 @id @default(uuid())
+  name             String                 @unique
+  description      String?
+  createdAt        DateTime               @default(now())
+  rolePermissions  RolePermissions[]
+  staffGrants      RoleStaffAssignments[]
+
+}
+
+model RolePermissions {
+  id           String      @id @default(uuid())
+  roleId       String
+  permissionId String
+  scopeType    ScopeType
+  permission   Permissions @relation(fields: [permissionId], references: [id])
+  role         Roles       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId, scopeType])
+}
+
+model RoleStaffAssignments {
+  id          String       @id @default(uuid())
+  staffId     String
+  grantedById String
+  grantedAt   DateTime     @default(now())
+  revokedAt   DateTime?
+  roleId      String
+  role        Roles        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  staff       StaffMembers @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, roleId])
+  @@index([roleId, revokedAt])
+}
+
+model StaffClassAssignments {
+  id         String       @id @default(uuid())
+  assignedAt DateTime?    @default(now())
+  endedAt    DateTime?
+  staffId    String
+  halaqaId   String
+  halaqa     Halaqas      @relation(fields: [halaqaId], references: [id])
+  staff      StaffMembers @relation(fields: [staffId], references: [id])
+
+  @@index([staffId, endedAt])
+  @@index([halaqaId, endedAt])
+}
+
+model StaffActivityAssignments {
+  id         String       @id @default(uuid())
+  assignedAt DateTime?    @default(now())
+  endedAt    DateTime?
+  staffId    String
+  activityId String
+  activity   Activities   @relation(fields: [activityId], references: [id])
+  staff      StaffMembers @relation(fields: [staffId], references: [id])
+
+  @@index([staffId, endedAt])
+  @@index([activityId, endedAt])
+}
+
+model AuditEvents {
+  id         String        @id @default(uuid())
+  actorId    String?
+  targetId   String
+  createdAt  DateTime      @default(now())
+  isSuccess  Boolean
+  roleName   String?
+  actionType AuditAction
+  targetType AuditTarget
+  actor      StaffMembers? @relation(fields: [actorId], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([actorId])
+}
+
+model Terms {
+  id                String              @id @default(uuid())
+  name              String
+  startDate         DateTime
+  endDate           DateTime
+  archivedAt        DateTime?
+  halaqas           Halaqas[]
+  termRegistrations TermRegistrations[]
+}
+
+model Halaqas {
+  id               String                  @id @default(uuid())
+  termId           String
+  name             String
+  meetingDays      Json
+  activities       Activities[]
+  enrollments      Enrollments[]
+  term             Terms                   @relation(fields: [termId], references: [id])
+  transfersFrom    HalaqaTransfers[]       @relation("TransferFrom")
+  transfersTo      HalaqaTransfers[]       @relation("TransferTo")
+  staffAssignments StaffClassAssignments[]
+}
+
 model Activities {
-  id                       String                     @id
-  name                     String
-  level                    ActivityLevel
-  halaqaId                 String?
-  date                     DateTime
-  Halaqas                  Halaqas?                   @relation(fields: [halaqaId], references: [id])
-  ActivityParticipants     ActivityParticipants[]
-  StaffActivityAssignments StaffActivityAssignments[]
+  id               String                     @id @default(uuid())
+  name             String
+  level            ActivityLevel
+  halaqaId         String?
+  date             DateTime
+  halaqa           Halaqas?                   @relation(fields: [halaqaId], references: [id])
+  participants     ActivityParticipants[]
+  staffAssignments StaffActivityAssignments[]
+}
+
+model Enrollments {
+  id         String    @id @default(uuid())
+  studentId  String
+  halaqaId   String
+  enrolledAt DateTime  @default(now())
+  endedAt    DateTime?
+  halaqa     Halaqas   @relation(fields: [halaqaId], references: [id])
+  student    Students  @relation(fields: [studentId], references: [id])
+}
+
+model HalaqaTransfers {
+  id            String   @id @default(uuid())
+  studentId     String
+  fromHalaqaId  String
+  toHalaqaId    String
+  actingStaffId String
+  transferredAt DateTime @default(now())
+  fromHalaqa    Halaqas  @relation("TransferFrom", fields: [fromHalaqaId], references: [id])
+  student       Students @relation(fields: [studentId], references: [id])
+  toHalaqa      Halaqas  @relation("TransferTo", fields: [toHalaqaId], references: [id])
 }
 
 model ActivityParticipants {
   studentId  String
   activityId String
   attendedAt DateTime?
-  Activities Activities @relation(fields: [activityId], references: [id])
-  Students   Students   @relation(fields: [studentId], references: [id])
+  activity   Activities @relation(fields: [activityId], references: [id])
+  student    Students   @relation(fields: [studentId], references: [id])
 
   @@id([studentId, activityId])
 }
 
-model AuditEvents {
-  id           String        @id
-  actorId      String?
-  targetId     String
-  createdAt    DateTime      @default(now())
-  isSuccess    Boolean
-  roleName     String?
-  actionType   AuditAction
-  targetType   AuditTarget
-  StaffMembers StaffMembers? @relation(fields: [actorId], references: [id])
-
-  @@index([actorId])
-  @@index([targetType, targetId])
+model Students {
+  id                String                 @id @default(uuid())
+  fullName          String
+  dateOfBirth       DateTime
+  nationalId        String                 @unique
+  createdAt         DateTime               @default(now())
+  activityEntries   ActivityParticipants[]
+  enrollments       Enrollments[]
+  guardianLinks     GuardianStudentLinks[]
+  transfers         HalaqaTransfers[]
+  specialCaseNotes  SpecialCaseNotes[]
+  termRegistrations TermRegistrations[]
 }
 
-model DirectPermissionGrants {
-  id           String       @id
-  staffId      String
-  permissionId String
-  scopeType    ScopeType
-  grantedById  String
-  grantedAt    DateTime     @default(now())
-  revokedAt    DateTime?
-  Permissions  Permissions  @relation(fields: [permissionId], references: [id])
-  StaffMembers StaffMembers @relation(fields: [staffId], references: [id])
-
-  @@unique([staffId, permissionId, scopeType])
-}
-
-model Enrollments {
-  id         String    @id
-  studentId  String
-  halaqaId   String
-  enrolledAt DateTime  @default(now())
-  endedAt    DateTime?
-  Halaqas    Halaqas   @relation(fields: [halaqaId], references: [id])
-  Students   Students  @relation(fields: [studentId], references: [id])
+model Guardians {
+  id             String                 @id @default(uuid())
+  fullName       String
+  primaryPhone   String
+  secondaryPhone String?
+  createdAt      DateTime               @default(now())
+  studentLinks   GuardianStudentLinks[]
 }
 
 model GuardianStudentLinks {
-  id          String    @id
+  id          String    @id @default(uuid())
   guardianId  String
   studentId   String
   createdById String
   removedAt   DateTime?
   removedById String?
-  Guardians   Guardians @relation(fields: [guardianId], references: [id])
-  Students    Students  @relation(fields: [studentId], references: [id])
-}
-
-model Guardians {
-  id                   String                 @id
-  fullName             String
-  primaryPhone         String
-  secondaryPhone       String?
-  createdAt            DateTime               @default(now())
-  GuardianStudentLinks GuardianStudentLinks[]
-}
-
-model HalaqaTransfers {
-  id                                            String   @id
-  studentId                                     String
-  fromHalaqaId                                  String
-  toHalaqaId                                    String
-  actingStaffId                                 String
-  transferredAt                                 DateTime @default(now())
-  Halaqas_HalaqaTransfers_fromHalaqaIdToHalaqas Halaqas  @relation("HalaqaTransfers_fromHalaqaIdToHalaqas", fields: [fromHalaqaId], references: [id])
-  Students                                      Students @relation(fields: [studentId], references: [id])
-  Halaqas_HalaqaTransfers_toHalaqaIdToHalaqas   Halaqas  @relation("HalaqaTransfers_toHalaqaIdToHalaqas", fields: [toHalaqaId], references: [id])
-}
-
-model Halaqas {
-  id                                                    String                  @id
-  termId                                                String
-  name                                                  String
-  meetingDays                                           Json
-  Activities                                            Activities[]
-  Enrollments                                           Enrollments[]
-  HalaqaTransfers_HalaqaTransfers_fromHalaqaIdToHalaqas HalaqaTransfers[]       @relation("HalaqaTransfers_fromHalaqaIdToHalaqas")
-  HalaqaTransfers_HalaqaTransfers_toHalaqaIdToHalaqas   HalaqaTransfers[]       @relation("HalaqaTransfers_toHalaqaIdToHalaqas")
-  Terms                                                 Terms                   @relation(fields: [termId], references: [id])
-  StaffClassAssignments                                 StaffClassAssignments[]
-}
-
-model OTPs {
-  id           String       @id
-  staffId      String
-  codeHash     String       @db.VarChar(64)
-  expiresAt    DateTime
-  sentAt       DateTime     @default(now())
-  attempts     Int          @default(0)
-  purpose      OtpPurpose
-  targetEmail  String?
-  StaffMembers StaffMembers @relation(fields: [staffId], references: [id], onDelete: Cascade)
-
-  @@unique([staffId, purpose])
-}
-
-model Permissions {
-  id                     String                   @id
-  category               String
-  allowedScopes          ScopeType[]
-  resource               Int
-  action                 Int
-  DirectPermissionGrants DirectPermissionGrants[]
-  permission_actions     permission_actions       @relation(fields: [action], references: [id], onDelete: Cascade, map: "action_permission_frk")
-  permission_resources   permission_resources     @relation(fields: [resource], references: [id], onDelete: Cascade, map: "resource_permission_frk")
-  RolePermissions        RolePermissions[]
-
-  @@unique([resource, action], map: "resource_action_unique_key")
-  @@index([id])
-}
-
-model RolePermissions {
-  id           String      @id
-  roleId       String
-  permissionId String
-  scopeType    ScopeType
-  Permissions  Permissions @relation(fields: [permissionId], references: [id])
-  Roles        Roles       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@unique([roleId, permissionId, scopeType])
-  @@index([id])
-}
-
-model RoleStaffAssignments {
-  id           String       @id
-  staffId      String
-  grantedById  String
-  grantedAt    DateTime     @default(now())
-  revokedAt    DateTime?
-  roleId       String
-  Roles        Roles        @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  StaffMembers StaffMembers @relation(fields: [staffId], references: [id])
-
-  @@unique([staffId, roleId])
-}
-
-model Roles {
-  id                   String                 @id
-  name                 String                 @unique
-  description          String?
-  createdAt            DateTime               @default(now())
-  isSuperAdminRole     Boolean                @default(false)
-  RolePermissions      RolePermissions[]
-  RoleStaffAssignments RoleStaffAssignments[]
-
-  @@index([id])
-}
-
-model Settings {
-  id      String   @id
-  key     String
-  value   Json
-  setById String
-  setAt   DateTime @default(now())
-
-  @@index([key, setAt])
-}
-
-model SpecialCaseNotes {
-  id        String   @id
-  studentId String
-  note      String
-  authorId  String
-  createdAt DateTime @default(now())
-  Students  Students @relation(fields: [studentId], references: [id])
-}
-
-model StaffActivityAssignments {
-  id           String       @id
-  assignedAt   DateTime?    @default(now())
-  endedAt      DateTime?
-  staffId      String
-  activityId   String
-  Activities   Activities   @relation(fields: [activityId], references: [id])
-  StaffMembers StaffMembers @relation(fields: [staffId], references: [id])
-
-  @@index([staffId, endedAt])
-}
-
-model StaffClassAssignments {
-  id           String       @id
-  assignedAt   DateTime?    @default(now())
-  endedAt      DateTime?
-  staffId      String
-  halaqaId     String
-  Halaqas      Halaqas      @relation(fields: [halaqaId], references: [id])
-  StaffMembers StaffMembers @relation(fields: [staffId], references: [id])
-
-  @@index([staffId, endedAt])
-}
-
-model StaffMembers {
-  id                       String                     @id
-  email                    String                     @unique
-  passwordHash             String?
-  fullName                 String?
-  status                   StaffStatus                @default(INACTIVE)
-  createdAt                DateTime                   @default(now())
-  updatedAt                DateTime
-  dateOfBirth              DateTime?                  @db.Date
-  mustChangePassword       Boolean
-  nationalId               String?                    @db.VarChar(30)
-  phone                    String?                    @db.VarChar(20)
-  isDeleted                Boolean                    @default(false)
-  isSuperAdmin             Boolean                    @default(false)
-  jobTitle                 JobTitle?
-  sessionVersion           Int                        @default(0)
-  AuditEvents              AuditEvents[]
-  DirectPermissionGrants   DirectPermissionGrants[]
-  OTPs                     OTPs[]
-  RoleStaffAssignments     RoleStaffAssignments[]
-  StaffActivityAssignments StaffActivityAssignments[]
-  StaffClassAssignments    StaffClassAssignments[]
-
-  @@index([id])
-}
-
-model Students {
-  id                   String                 @id
-  fullName             String
-  dateOfBirth          DateTime
-  nationalId           String                 @unique
-  createdAt            DateTime               @default(now())
-  ActivityParticipants ActivityParticipants[]
-  Enrollments          Enrollments[]
-  GuardianStudentLinks GuardianStudentLinks[]
-  HalaqaTransfers      HalaqaTransfers[]
-  SpecialCaseNotes     SpecialCaseNotes[]
-  TermRegistrations    TermRegistrations[]
-}
-
-model SystemSetups {
-  id             Int       @id @default(1)
-  tokenHash      String?
-  tokenExpiresAt DateTime?
-  failedAttempts Int       @default(0)
-  completedAt    DateTime?
+  guardian    Guardians @relation(fields: [guardianId], references: [id])
+  student     Students  @relation(fields: [studentId], references: [id])
 }
 
 model TermRegistrations {
-  id              String             @id
+  id              String             @id @default(uuid())
   studentId       String
   termId          String
   status          RegistrationStatus @default(PENDING)
@@ -279,34 +248,50 @@ model TermRegistrations {
   decidedById     String?
   decidedAt       DateTime?
   rejectionReason String?
-  Students        Students           @relation(fields: [studentId], references: [id])
-  Terms           Terms              @relation(fields: [termId], references: [id])
+  student         Students           @relation(fields: [studentId], references: [id])
+  term            Terms              @relation(fields: [termId], references: [id])
 
   @@unique([studentId, termId])
 }
 
-model Terms {
-  id                String              @id
-  name              String
-  startDate         DateTime
-  endDate           DateTime
-  archivedAt        DateTime?
-  Halaqas           Halaqas[]
-  TermRegistrations TermRegistrations[]
+model SpecialCaseNotes {
+  id        String   @id @default(uuid())
+  studentId String
+  note      String
+  authorId  String
+  createdAt DateTime @default(now())
+  student   Students @relation(fields: [studentId], references: [id])
 }
 
-model permission_actions {
-  id          Int           @id @default(autoincrement())
-  eng_name    String        @unique(map: "action_eng_name_unique")
-  arb_name    String
-  Permissions Permissions[]
+model Settings {
+  id      String   @id @default(uuid())
+  key     String
+  value   Json
+  setById String
+  setAt   DateTime @default(now())
+
+  @@index([key, setAt, id])
 }
 
-model permission_resources {
-  id          Int           @id @default(autoincrement())
-  eng_name    String        @unique(map: "resource_eng_name_unique")
-  arb_name    String
-  Permissions Permissions[]
+model OTPs {
+  id          String       @id @default(uuid())
+  staffId     String
+  purpose     OtpPurpose
+  targetEmail String?
+  codeHash    String       @db.VarChar(64)
+  expiresAt   DateTime
+  sentAt      DateTime     @default(now())
+  attempts    Int          @default(0)
+  Staff       StaffMembers @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, purpose])
+}
+
+enum OtpPurpose {
+  ONBOARDING
+  PASSWORD_CHANGE
+  PASSWORD_RESET
+  EMAIL_CHANGE
 }
 
 model sessions {
@@ -317,12 +302,32 @@ model sessions {
   @@index([expire], map: "IDX_session_expire")
 }
 
+enum StaffStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum ScopeType {
+  CENTER_WIDE
+  ASSIGNED_CLASS
+  OWN_ACCOUNT
+}
+
 enum ActivityLevel {
   CENTER_WIDE
   HALAQA_SPECIFIC
 }
 
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum AuditAction {
+  SYSTEM_SETUP_COMPLETED
+  SUPERADMIN_RECOVERED
   STAFF_ONBOARDING_COMPLETED
   STAFF_INVITED
   STAFF_ACTIVATED
@@ -334,8 +339,6 @@ enum AuditAction {
   ROLE_CREATED
   ROLE_UPDATED
   ROLE_DELETED
-  SYSTEM_SETUP_COMPLETED
-  SUPERADMIN_RECOVERED
 }
 
 enum AuditTarget {
@@ -352,27 +355,24 @@ enum JobTitle {
   MISC
 }
 
-enum OtpPurpose {
-  ONBOARDING
-  PASSWORD_CHANGE
-  PASSWORD_RESET
-  EMAIL_CHANGE
+model SystemSetups {
+  id             Int       @id @default(1)
+  tokenHash      String?
+  tokenExpiresAt DateTime?
+  failedAttempts Int       @default(0)
+  completedAt    DateTime?
 }
 
-enum RegistrationStatus {
-  PENDING
-  APPROVED
-  REJECTED
+model permission_actions {
+  id          String        @id @default(uuid())
+  eng_name    String        @unique(map: "action_eng_name_unique")
+  arb_name    String
+  Permissions Permissions[]
 }
 
-enum ScopeType {
-  CENTER_WIDE
-  ASSIGNED_CLASS
-  OWN_ACCOUNT
-}
-
-enum StaffStatus {
-  ACTIVE
-  INACTIVE
-  PENDING
+model permission_resources {
+  id          String        @id @default(uuid())
+  eng_name    String        @unique(map: "resource_eng_name_unique")
+  arb_name    String
+  Permissions Permissions[]
 }

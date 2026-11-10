@@ -1,24 +1,11 @@
 import {
-  CanActivate,
-  ExecutionContext,
   ForbiddenException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import type { Request } from 'express';
 import type { ScopeType } from '@prisma/client';
-import {
-  permission,
-  type PermissionAccess,
-} from '../decorators/permissions-access.decorator';
-import { PrismaService } from '../../prisma/prisma.service';
-
-type AuthenticatedRequest = Request & {
-  user?: { id: string; isSuperAdmin: boolean };
-  permissionScope?: ScopeType;
-};
+import { PrismaService } from '../prisma/prisma.service';
+import type { PermissionAccess } from './decorators/permissions-access.decorator';
 
 const scopePriority: ScopeType[] = [
   'CENTER_WIDE',
@@ -27,25 +14,13 @@ const scopePriority: ScopeType[] = [
 ];
 
 @Injectable()
-export class PermissionGuard implements CanActivate {
-  constructor(
-    private readonly reflector: Reflector,
-    private readonly prisma: PrismaService,
-  ) {}
+export class AuthorizationService {
+  constructor(private readonly prisma: PrismaService) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermission =
-      this.reflector.getAllAndOverride<PermissionAccess>(permission, [
-        context.getHandler(),
-        context.getClass(),
-      ]);
-
-    if (!requiredPermission) return true;
-
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const staffId = request.user?.id;
-    if (!staffId) throw new UnauthorizedException();
-
+  async getAllowedScope(
+    staffId: string,
+    requiredPermission: PermissionAccess,
+  ): Promise<ScopeType> {
     const endpointPermission =
       await this.findEndpointPermission(requiredPermission);
     const staffGrants = await this.getStaffPermissionGrants(staffId);
@@ -66,8 +41,7 @@ export class PermissionGuard implements CanActivate {
       );
     }
 
-    request.permissionScope = highestScope;
-    return true;
+    return highestScope;
   }
 
   private async findEndpointPermission(permission: PermissionAccess) {
@@ -106,19 +80,19 @@ export class PermissionGuard implements CanActivate {
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
       select: {
-        RoleStaffAssignments: {
+        roleGrants: {
           where: { revokedAt: null },
           select: {
-            Roles: {
+            role: {
               select: {
-                RolePermissions: {
+                rolePermissions: {
                   select: { permissionId: true, scopeType: true },
                 },
               },
             },
           },
         },
-        DirectPermissionGrants: {
+        directPermissionGrants: {
           where: { revokedAt: null },
           select: { permissionId: true, scopeType: true },
         },
@@ -127,13 +101,13 @@ export class PermissionGuard implements CanActivate {
 
     if (!staff) throw new NotFoundException('No such staff member');
 
-    const grants = staff.DirectPermissionGrants.map((grant) => ({
+    const grants = staff.directPermissionGrants.map((grant) => ({
       permissionId: grant.permissionId,
       scopeType: grant.scopeType,
     }));
 
-    for (const assignment of staff.RoleStaffAssignments) {
-      for (const rolePermission of assignment.Roles.RolePermissions) {
+    for (const assignment of staff.roleGrants) {
+      for (const rolePermission of assignment.role.rolePermissions) {
         grants.push({
           permissionId: rolePermission.permissionId,
           scopeType: rolePermission.scopeType,

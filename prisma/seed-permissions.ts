@@ -1,12 +1,13 @@
 import { config } from 'dotenv';
+import { actionKeys, resourceKeys } from './permission-catalog-labels';
 import { Prisma, PrismaClient, ScopeType } from '@prisma/client';
 
 // From the QCMS permission catalog. The compact scopes are expanded below:
-// C = CENTER_WIDE, H = ASSIGNED_CLASS, A = ASSIGNED_ACTIVITY, O = OWN_ACCOUNT.
+// C = CENTER_WIDE, H = ASSIGNED_CLASS, O = OWN_ACCOUNT.
 // Keep resource/action labels aligned with the names used by your authorization checks.
 const permissionCatalog = [
-  { resource: 'الطلاب', action: 'عرض', category: 'الطلاب', scopes: 'CHA' },
-  { resource: 'الطلاب', action: 'تعديل', category: 'الطلاب', scopes: 'CHA' },
+  { resource: 'الطلاب', action: 'عرض', category: 'الطلاب', scopes: 'CH' },
+  { resource: 'الطلاب', action: 'تعديل', category: 'الطلاب', scopes: 'CH' },
   {
     resource: 'الطلاب',
     action: 'تسكين في حلقة',
@@ -23,7 +24,7 @@ const permissionCatalog = [
     resource: 'الحالات الخاصة',
     action: 'عرض',
     category: 'الطلاب',
-    scopes: 'CHA',
+    scopes: 'CH',
   },
   {
     resource: 'الحالات الخاصة',
@@ -201,7 +202,7 @@ const permissionCatalog = [
     resource: 'الأنشطة',
     action: 'عرض',
     category: 'الحلقات والأنشطة',
-    scopes: 'CA',
+    scopes: 'C',
   },
   {
     resource: 'الأنشطة',
@@ -213,7 +214,7 @@ const permissionCatalog = [
     resource: 'الأنشطة',
     action: 'تعديل',
     category: 'الحلقات والأنشطة',
-    scopes: 'CA',
+    scopes: 'C',
   },
   {
     resource: 'الأنشطة',
@@ -225,13 +226,13 @@ const permissionCatalog = [
     resource: 'الأنشطة',
     action: 'تسجيل طالب أو حلقة',
     category: 'الحلقات والأنشطة',
-    scopes: 'CA',
+    scopes: 'C',
   },
   {
     resource: 'الأنشطة',
     action: 'إلغاء تسجيل مشارك',
     category: 'الحلقات والأنشطة',
-    scopes: 'CA',
+    scopes: 'C',
   },
   {
     resource: 'الأنشطة',
@@ -243,7 +244,7 @@ const permissionCatalog = [
     resource: 'التقويم',
     action: 'عرض',
     category: 'الحلقات والأنشطة',
-    scopes: 'CHA',
+    scopes: 'CH',
   },
   {
     resource: 'تفويض الوصول',
@@ -275,9 +276,9 @@ const permissionCatalog = [
     category: 'الحلقات والأنشطة',
     scopes: 'H',
   },
-  { resource: 'الحضور', action: 'عرض', category: 'الحضور', scopes: 'CHA' },
-  { resource: 'الحضور', action: 'تسجيل', category: 'الحضور', scopes: 'CHA' },
-  { resource: 'الحضور', action: 'تعديل', category: 'الحضور', scopes: 'CHA' },
+  { resource: 'الحضور', action: 'عرض', category: 'الحضور', scopes: 'CH' },
+  { resource: 'الحضور', action: 'تسجيل', category: 'الحضور', scopes: 'CH' },
+  { resource: 'الحضور', action: 'تعديل', category: 'الحضور', scopes: 'CH' },
   { resource: 'الحفظ', action: 'عرض', category: 'التسميع', scopes: 'CH' },
   { resource: 'الحفظ', action: 'تسجيل', category: 'التسميع', scopes: 'CH' },
   {
@@ -552,12 +553,12 @@ const permissionCatalog = [
     category: 'استيراد البيانات',
     scopes: 'C',
   },
-  { resource: 'التقارير', action: 'عرض', category: 'التقارير', scopes: 'CHA' },
+  { resource: 'التقارير', action: 'عرض', category: 'التقارير', scopes: 'CH' },
   {
     resource: 'التقارير',
     action: 'تصدير',
     category: 'التقارير',
-    scopes: 'CHA',
+    scopes: 'CH',
   },
   {
     resource: 'التقرير اليومي للمركز',
@@ -637,27 +638,44 @@ const permissionCatalog = [
 const scopeByCode: Record<string, ScopeType> = {
   C: ScopeType.CENTER_WIDE,
   H: ScopeType.ASSIGNED_CLASS,
-  A: ScopeType.ASSIGNED_ACTIVITY,
   O: ScopeType.OWN_ACCOUNT,
 };
 
 export async function seedPermissions(tx: Prisma.TransactionClient) {
+  const resources = new Map<string, string>();
+  const actions = new Map<string, string>();
+
   for (const item of permissionCatalog) {
+    if (!resources.has(item.resource)) {
+      const engName = resourceKeys[item.resource];
+      if (!engName) throw new Error('Missing permission resource key');
+      const resource = await tx.permission_resources.upsert({
+        where: { eng_name: engName },
+        update: { arb_name: item.resource },
+        create: { eng_name: engName, arb_name: item.resource },
+        select: { id: true },
+      });
+      resources.set(item.resource, resource.id);
+    }
+    if (!actions.has(item.action)) {
+      const engName = actionKeys[item.action];
+      if (!engName) throw new Error('Missing permission action key');
+      const action = await tx.permission_actions.upsert({
+        where: { eng_name: engName },
+        update: { arb_name: item.action },
+        create: { eng_name: engName, arb_name: item.action },
+        select: { id: true },
+      });
+      actions.set(item.action, action.id);
+    }
+
+    const resource = resources.get(item.resource)!;
+    const action = actions.get(item.action)!;
     const allowedScopes = [...item.scopes].map((code) => scopeByCode[code]);
     await tx.permissions.upsert({
-      where: {
-        resource_action: { resource: item.resource, action: item.action },
-      },
-      update: {
-        category: item.category,
-        allowedScopes,
-      },
-      create: {
-        resource: item.resource,
-        action: item.action,
-        category: item.category,
-        allowedScopes,
-      },
+      where: { resource_action: { resource, action } },
+      update: { category: item.category, allowedScopes },
+      create: { resource, action, category: item.category, allowedScopes },
     });
   }
 
