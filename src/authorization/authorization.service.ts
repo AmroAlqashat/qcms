@@ -36,9 +36,7 @@ export class AuthorizationService {
     );
 
     if (!highestScope) {
-      throw new ForbiddenException(
-        'You do not have permission to access this resource',
-      );
+      throw new ForbiddenException('ليس لديك صلاحية للوصول إلى هذا المورد');
     }
 
     return highestScope;
@@ -57,7 +55,7 @@ export class AuthorizationService {
     ]);
 
     if (!action || !resource) {
-      throw new NotFoundException('No such permission action or resource');
+      throw new NotFoundException('الإجراء أو المورد المطلوب غير موجود');
     }
 
     const endpointPermission = await this.prisma.permissions.findUnique({
@@ -69,7 +67,7 @@ export class AuthorizationService {
 
     if (!endpointPermission) {
       throw new NotFoundException(
-        'No permission exists for this action and resource',
+        'لا توجد صلاحية لهذا الإجراء على المورد المحدد',
       );
     }
 
@@ -99,7 +97,7 @@ export class AuthorizationService {
       },
     });
 
-    if (!staff) throw new NotFoundException('No such staff member');
+    if (!staff) throw new NotFoundException('الموظف غير موجود');
 
     const grants = staff.directPermissionGrants.map((grant) => ({
       permissionId: grant.permissionId,

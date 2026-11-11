@@ -36,7 +36,7 @@ export class PermissionGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const staffId = request.user?.id;
-    if (!staffId) throw new UnauthorizedException();
+    if (!staffId) throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
 
     request.permissionScope = await this.authorization.getAllowedScope(
       staffId,

@@ -17,7 +17,7 @@ export const CurrentPermissionScope = createParamDecorator(
       .getRequest<PermissionScopedRequest>();
 
     if (!request.permissionScope) {
-      throw new ForbiddenException('No permission scope was resolved');
+      throw new ForbiddenException('تعذر تحديد نطاق الصلاحية لهذا الطلب');
     }
 
     return request.permissionScope;
