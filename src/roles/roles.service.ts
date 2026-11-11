@@ -155,7 +155,7 @@ export class RolesService {
       selectedRolePermissions.map((rp) => `${rp.permissionId}:${rp.scopeType}`),
     );
 
-    const grouped = permissions.reduce<Record<string, PermissionGroupDraft>>(
+    const grouped = permissions.reduce<Record<number, PermissionGroupDraft>>(
       (acc, permission) => {
         const group = (acc[permission.category] ??= {
           category: permission.category,
@@ -377,7 +377,7 @@ export class RolesService {
       },
     });
 
-    const key = (resource: string, action: string) =>
+    const key = (resource: number, action: number) =>
       JSON.stringify([resource, action]);
 
     const permissionsByKey = new Map(

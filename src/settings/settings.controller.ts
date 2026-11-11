@@ -13,12 +13,14 @@ import { SettingsErrorFilter } from './settings-error.filter';
 import { SettingsService } from './settings.service';
 import { SettingsDto } from './dto/settings.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { permission } from '../authorization/decorators/permissions-access.decorator';
 
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
+  @permission({ permission_action: 'read', permission_resource: 'settings' })
   @Render('settings/settings-page')
   async showSettingsPage() {
     const settings = await this.settingsService.getSettings();
@@ -38,6 +40,7 @@ export class SettingsController {
   }
 
   @Post()
+  @permission({ permission_action: 'edit', permission_resource: 'settings' })
   @UseFilters(SettingsErrorFilter)
   async saveSettingsChanges(
     @Body() settingsDto: SettingsDto,

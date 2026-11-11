@@ -641,9 +641,17 @@ const scopeByCode: Record<string, ScopeType> = {
   O: ScopeType.OWN_ACCOUNT,
 };
 
+function getScopeType(code: string): ScopeType {
+  const scopeType = scopeByCode[code];
+  if (!scopeType) {
+    throw new Error(`Unsupported permission scope code: ${code}`);
+  }
+  return scopeType;
+}
+
 export async function seedPermissions(tx: Prisma.TransactionClient) {
-  const resources = new Map<string, string>();
-  const actions = new Map<string, string>();
+  const resources = new Map<string, number>();
+  const actions = new Map<string, number>();
 
   for (const item of permissionCatalog) {
     if (!resources.has(item.resource)) {
@@ -671,7 +679,7 @@ export async function seedPermissions(tx: Prisma.TransactionClient) {
 
     const resource = resources.get(item.resource)!;
     const action = actions.get(item.action)!;
-    const allowedScopes = [...item.scopes].map((code) => scopeByCode[code]);
+    const allowedScopes = [...item.scopes].map(getScopeType);
     await tx.permissions.upsert({
       where: { resource_action: { resource, action } },
       update: { category: item.category, allowedScopes },

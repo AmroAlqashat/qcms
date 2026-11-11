@@ -16,12 +16,14 @@ import { CreateNewRoleDto } from './dto/create-new-role.dto';
 import { EditRoleDto } from './dto/edit-role.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RolesErrorFilter } from './helpers/roles-error.filter';
+import { permission } from '../authorization/decorators/permissions-access.decorator';
 
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
+  @permission({ permission_action: 'read', permission_resource: 'roles' })
   @Render('roles/roles-list')
   async ShowListRolesPage() {
     const roles = await this.rolesService.listRoles();
@@ -36,6 +38,7 @@ export class RolesController {
   }
 
   @Get('create')
+  @permission({ permission_action: 'create', permission_resource: 'roles' })
   @Render('roles/roles-editor')
   async showCreateRolePage() {
     const permissionsData =
@@ -47,6 +50,7 @@ export class RolesController {
     };
   }
   @Post('create')
+  @permission({ permission_action: 'create', permission_resource: 'roles' })
   @UseFilters(RolesErrorFilter)
   async newRole(
     @Body() createRoleDto: CreateNewRoleDto,
@@ -64,6 +68,7 @@ export class RolesController {
   }
 
   @Get('edit/:id')
+  @permission({ permission_action: 'edit', permission_resource: 'roles' })
   @Render('roles/roles-editor')
   async showEditRolePage(@Param('id') roleId: string) {
     const [role, permissionsData, accountCount] = await Promise.all([
@@ -80,6 +85,7 @@ export class RolesController {
     };
   }
   @Post('edit/:id')
+  @permission({ permission_action: 'edit', permission_resource: 'roles' })
   @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
   async editedRole(
@@ -91,6 +97,7 @@ export class RolesController {
   }
 
   @Get('delete/:id')
+  @permission({ permission_action: 'delete', permission_resource: 'roles' })
   @Render('roles/roles-delete-dialog')
   async showDeleteRoleDialog(@Param('id') roleId: string) {
     const role = await this.rolesService.getRoleById(roleId);
@@ -101,6 +108,7 @@ export class RolesController {
     };
   }
   @Post('delete/:id')
+  @permission({ permission_action: 'delete', permission_resource: 'roles' })
   @UseFilters(RolesErrorFilter)
   async deletedRole(
     @Req() request: Request,

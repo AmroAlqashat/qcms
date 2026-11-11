@@ -11,10 +11,8 @@ datasource db {
 model StaffMembers {
   id                     String                     @id @default(uuid())
   email                  String                     @unique
-  sessionVersion         Int                        @default(0)
   passwordHash           String?
   fullName               String?
-  jobTitle               JobTitle?
   status                 StaffStatus                @default(INACTIVE)
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
@@ -22,8 +20,10 @@ model StaffMembers {
   mustChangePassword     Boolean
   nationalId             String?                    @db.VarChar(30)
   phone                  String?                    @db.VarChar(20)
-  isSuperAdmin           Boolean                    @default(false)
   isDeleted              Boolean                    @default(false)
+  isSuperAdmin           Boolean                    @default(false)
+  jobTitle               JobTitle?
+  sessionVersion         Int                        @default(0)
   auditEvents            AuditEvents[]
   directPermissionGrants DirectPermissionGrants[]
   OTP                    OTPs[]
@@ -36,10 +36,10 @@ model StaffMembers {
 
 model Permissions {
   id                     String                   @id @default(uuid())
-  resource               String
-  action                 String
   category               String
   allowedScopes          ScopeType[]
+  resource               Int
+  action                 Int
   directPermissionGrants DirectPermissionGrants[]
   rolePermissions        RolePermissions[]
   permission_actions     permission_actions       @relation(fields: [action], references: [id], onDelete: Cascade, map: "action_permission_frk")
@@ -63,14 +63,13 @@ model DirectPermissionGrants {
 }
 
 model Roles {
-  isSuperAdminRole Boolean                @default(false)
   id               String                 @id @default(uuid())
   name             String                 @unique
   description      String?
   createdAt        DateTime               @default(now())
+  isSuperAdminRole Boolean                @default(false)
   rolePermissions  RolePermissions[]
   staffGrants      RoleStaffAssignments[]
-
 }
 
 model RolePermissions {
@@ -156,9 +155,9 @@ model Halaqas {
   meetingDays      Json
   activities       Activities[]
   enrollments      Enrollments[]
-  term             Terms                   @relation(fields: [termId], references: [id])
   transfersFrom    HalaqaTransfers[]       @relation("TransferFrom")
   transfersTo      HalaqaTransfers[]       @relation("TransferTo")
+  term             Terms                   @relation(fields: [termId], references: [id])
   staffAssignments StaffClassAssignments[]
 }
 
@@ -276,22 +275,15 @@ model Settings {
 model OTPs {
   id          String       @id @default(uuid())
   staffId     String
-  purpose     OtpPurpose
-  targetEmail String?
   codeHash    String       @db.VarChar(64)
   expiresAt   DateTime
   sentAt      DateTime     @default(now())
   attempts    Int          @default(0)
+  purpose     OtpPurpose
+  targetEmail String?
   Staff       StaffMembers @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@unique([staffId, purpose])
-}
-
-enum OtpPurpose {
-  ONBOARDING
-  PASSWORD_CHANGE
-  PASSWORD_RESET
-  EMAIL_CHANGE
 }
 
 model sessions {
@@ -300,6 +292,35 @@ model sessions {
   expire DateTime @db.Timestamp(6)
 
   @@index([expire], map: "IDX_session_expire")
+}
+
+model SystemSetups {
+  id             Int       @id @default(1)
+  tokenHash      String?
+  tokenExpiresAt DateTime?
+  failedAttempts Int       @default(0)
+  completedAt    DateTime?
+}
+
+model permission_actions {
+  id          Int           @id @default(autoincrement())
+  eng_name    String        @unique(map: "action_eng_name_unique")
+  arb_name    String
+  permissions Permissions[]
+}
+
+model permission_resources {
+  id          Int           @id @default(autoincrement())
+  eng_name    String        @unique(map: "resource_eng_name_unique")
+  arb_name    String
+  permissions Permissions[]
+}
+
+enum OtpPurpose {
+  ONBOARDING
+  PASSWORD_CHANGE
+  PASSWORD_RESET
+  EMAIL_CHANGE
 }
 
 enum StaffStatus {
@@ -326,8 +347,6 @@ enum RegistrationStatus {
 }
 
 enum AuditAction {
-  SYSTEM_SETUP_COMPLETED
-  SUPERADMIN_RECOVERED
   STAFF_ONBOARDING_COMPLETED
   STAFF_INVITED
   STAFF_ACTIVATED
@@ -339,6 +358,8 @@ enum AuditAction {
   ROLE_CREATED
   ROLE_UPDATED
   ROLE_DELETED
+  SYSTEM_SETUP_COMPLETED
+  SUPERADMIN_RECOVERED
 }
 
 enum AuditTarget {
@@ -353,26 +374,4 @@ enum JobTitle {
   TEACHER
   FINANCE
   MISC
-}
-
-model SystemSetups {
-  id             Int       @id @default(1)
-  tokenHash      String?
-  tokenExpiresAt DateTime?
-  failedAttempts Int       @default(0)
-  completedAt    DateTime?
-}
-
-model permission_actions {
-  id          String        @id @default(uuid())
-  eng_name    String        @unique(map: "action_eng_name_unique")
-  arb_name    String
-  Permissions Permissions[]
-}
-
-model permission_resources {
-  id          String        @id @default(uuid())
-  eng_name    String        @unique(map: "resource_eng_name_unique")
-  arb_name    String
-  Permissions Permissions[]
 }
