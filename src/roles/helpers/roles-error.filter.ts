@@ -3,6 +3,7 @@ import {
   Catch,
   ConflictException,
   ExceptionFilter,
+  ForbiddenException,
   HttpException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -10,6 +11,9 @@ import type { Request, Response } from 'express';
 import { wantsHtml } from '../../common/wants-html';
 import { RolesService } from '../roles.service';
 import type { PermissionColumns } from '../helpers/roles.types';
+import type { ScopeType } from '@prisma/client';
+
+type PermissionScopedRequest = Request & { permissionScope?: ScopeType };
 
 type SubmittedPermission = {
   resource: string;
@@ -23,10 +27,14 @@ export class RolesErrorFilter implements ExceptionFilter {
 
   async catch(exception: HttpException, host: ArgumentsHost) {
     const context = host.switchToHttp();
-    const request = context.getRequest<Request>();
+    const request = context.getRequest<PermissionScopedRequest>();
     const response = context.getResponse<Response>();
     const status = exception.getStatus();
     const body = exception.getResponse();
+    const scope = request.permissionScope;
+    if (!scope) {
+      throw new ForbiddenException('No permission scope was resolved');
+    }
 
     if (!wantsHtml(request)) {
       response
@@ -49,7 +57,7 @@ export class RolesErrorFilter implements ExceptionFilter {
         : {};
 
     if (request.path.startsWith('/roles/delete/')) {
-      const role = await this.loadRole(roleId);
+      const role = await this.loadRole(roleId, scope);
 
       if (!role) {
         this.redirectToList(request, response);
@@ -68,7 +76,7 @@ export class RolesErrorFilter implements ExceptionFilter {
       return;
     }
 
-    const editor = await this.loadEditor(roleId);
+    const editor = await this.loadEditor(roleId, scope);
     if (!editor) {
       this.redirectToList(request, response);
       return;
@@ -103,22 +111,22 @@ export class RolesErrorFilter implements ExceptionFilter {
       });
   }
 
-  private async loadRole(roleId?: string) {
+  private async loadRole(roleId: string | undefined, scope: ScopeType) {
     if (!roleId) {
       return null;
     }
 
     try {
-      return await this.rolesService.getRoleById(roleId);
+      return await this.rolesService.getRoleById(roleId, scope);
     } catch {
       return null;
     }
   }
 
-  private async loadEditor(roleId?: string) {
+  private async loadEditor(roleId: string | undefined, scope: ScopeType) {
     try {
       const role = roleId
-        ? await this.rolesService.getRoleById(roleId)
+        ? await this.rolesService.getRoleById(roleId, scope)
         : undefined;
 
       if (roleId && !role) {
@@ -126,7 +134,7 @@ export class RolesErrorFilter implements ExceptionFilter {
       }
 
       const permissionsData =
-        await this.rolesService.getPermissionsWithCategory(roleId);
+        await this.rolesService.getPermissionsWithCategory(roleId, scope);
 
       return { role, permissionsData };
     } catch {
@@ -160,8 +168,8 @@ export class RolesErrorFilter implements ExceptionFilter {
           for (const action of resource.actions) {
             const selected = submitted.find(
               (permission) =>
-                permission.resource === action.resource &&
-                permission.action === action.action,
+                permission.resource === String(action.resource) &&
+                permission.action === String(action.action),
             );
 
             action.selected = selected !== undefined;

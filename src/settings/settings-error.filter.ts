@@ -2,11 +2,15 @@ import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
+  ForbiddenException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import type { ScopeType } from '@prisma/client';
 import { wantsHtml } from '../common/wants-html';
 import { SettingsService } from './settings.service';
+
+type PermissionScopedRequest = Request & { permissionScope?: ScopeType };
 
 @Catch(UnprocessableEntityException)
 export class SettingsErrorFilter implements ExceptionFilter {
@@ -14,14 +18,19 @@ export class SettingsErrorFilter implements ExceptionFilter {
 
   async catch(exception: UnprocessableEntityException, host: ArgumentsHost) {
     const http = host.switchToHttp();
-    const request = http.getRequest<Request>();
+    const request = http.getRequest<PermissionScopedRequest>();
     const response = http.getResponse<Response>();
     if (!wantsHtml(request)) {
       response.status(422).json(exception.getResponse());
       return;
     }
 
-    const stored = await this.settingsService.getSettings();
+    const scope = request.permissionScope;
+    if (!scope) {
+      throw new ForbiddenException('No permission scope was resolved');
+    }
+
+    const stored = await this.settingsService.getSettings(scope);
     const initialSettings = JSON.stringify(
       Object.fromEntries(
         Object.entries(stored).map(([key, setting]) => [key, setting.value]),

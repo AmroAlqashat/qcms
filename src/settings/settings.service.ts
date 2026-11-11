@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ScopeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsDto } from './dto/settings.dto';
 
@@ -8,6 +9,14 @@ export class SettingsService {
   private cache = new Map<string, { value: number; expiresAt: number }>();
   private readonly ttlMs = 60_000;
   private readonly defaultTimeOut = 30;
+
+  private assertCenterWideScope(scope: ScopeType): void {
+    if (scope !== ScopeType.CENTER_WIDE) {
+      throw new ForbiddenException(
+        'This operation requires center-wide settings permission',
+      );
+    }
+  }
 
   async getSessionTimeoutMinutes(): Promise<number> {
     const key = 'sessionInactivityTimeoutMinutes';
@@ -32,7 +41,8 @@ export class SettingsService {
     return value;
   }
 
-  async getSettings() {
+  async getSettings(scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     const settings = await this.prisma.settings.findMany({
       distinct: ['key'],
       orderBy: [{ setAt: 'desc' }, { id: 'desc' }],
@@ -50,7 +60,12 @@ export class SettingsService {
     return settingsObject;
   }
 
-  async saveChanges(settingsDto: SettingsDto, actorId: string) {
+  async saveChanges(
+    settingsDto: SettingsDto,
+    actorId: string,
+    scope: ScopeType,
+  ) {
+    this.assertCenterWideScope(scope);
     // Fetch current settings.
     const dbSettings = await this.prisma.settings.findMany({
       distinct: ['key'],

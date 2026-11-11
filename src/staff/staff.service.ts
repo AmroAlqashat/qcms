@@ -21,6 +21,7 @@ import {
   StaffStatus,
   OtpPurpose,
   JobTitle,
+  ScopeType,
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -37,6 +38,7 @@ import {
   RequestEmailChangeDto,
 } from './dto/change-email.dto';
 import { OtpService } from '../mail/otp.serivce';
+import { error } from 'console';
 
 @Injectable()
 export class StaffService {
@@ -62,7 +64,27 @@ export class StaffService {
       );
   }
 
-  async getRoleOptionsForStaff(staffId: string) {
+  private assertStaffScope(
+    actorId: string,
+    staffId: string,
+    scope: ScopeType,
+  ): void {
+    if (scope === ScopeType.CENTER_WIDE) return;
+    if (scope === ScopeType.OWN_ACCOUNT && actorId === staffId) return;
+
+    throw new ForbiddenException('You may not access this staff member');
+  }
+
+  assertCenterWideScope(scope: ScopeType): void {
+    if (scope !== ScopeType.CENTER_WIDE) {
+      throw new ForbiddenException(
+        'This operation requires center-wide staff permission',
+      );
+    }
+  }
+
+  async getRoleOptionsForStaff(staffId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     // Show all roles, checking only those returned by the active-grants lookup.
     const [roles, usedRoles] = await Promise.all([
       this.rolesSerive.getRoles(),
@@ -77,7 +99,8 @@ export class StaffService {
     }));
   }
 
-  async getPermissionOptionsForStaff(staffId: string) {
+  async getPermissionOptionsForStaff(staffId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     // Combine the permission catalog with active direct grants. Revoked rows
     // remain in the database but must not appear checked when reopening.
     const [permissionsData, grants] = await Promise.all([
@@ -129,7 +152,9 @@ export class StaffService {
     staffId: string,
     editPermissionsDto: EditPermissionsDto,
     actorId: string,
+    scope: ScopeType,
   ) {
+    this.assertCenterWideScope(scope);
     // The form submits the complete desired selection, not just changes.
     // Empty arrays therefore remove all roles and revoke all active direct grants.
     const { roleIds = [], permissions = [] } = editPermissionsDto;
@@ -295,7 +320,9 @@ export class StaffService {
     staffId: string,
     editStaffDto: EditStaffDto,
     actorId: string,
+    scope: ScopeType,
   ) {
+    this.assertStaffScope(actorId, staffId, scope);
     try {
       return await this.prisma.$transaction(async (tx) => {
         const staff = await tx.staffMembers.update({
@@ -337,7 +364,8 @@ export class StaffService {
     }
   }
 
-  async cancelPendingInvitation(staffId: string) {
+  async cancelPendingInvitation(staffId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     try {
       await this.prisma.$transaction(
         async (tx) => {
@@ -387,7 +415,11 @@ export class StaffService {
     }
   }
 
-  async showFilteredStaff(filterDto: FilteredStaffDto) {
+  async showFilteredStaff(
+    filterDto: FilteredStaffDto,
+    actorId: string,
+    scope: ScopeType,
+  ) {
     const {
       searchField,
       status,
@@ -399,10 +431,16 @@ export class StaffService {
     } = filterDto;
     const skip = (page! - 1) * limit!;
 
-    //validate foreign keys
-    await this.validateRelations(halaqa, role);
-
     const where: Prisma.StaffMembersWhereInput = { isDeleted };
+    if (scope === ScopeType.OWN_ACCOUNT) {
+      where.id = actorId;
+    } else if (scope !== ScopeType.CENTER_WIDE) {
+      throw new ForbiddenException(
+        'This scope cannot be used to list staff members',
+      );
+    } else {
+      await this.validateRelations(halaqa, role);
+    }
 
     //define search parameters
     if (searchField) {
@@ -437,7 +475,8 @@ export class StaffService {
     }));
   }
 
-  async showStaffEditPage(staffId: string) {
+  async showStaffEditPage(staffId: string, actorId: string, scope: ScopeType) {
+    this.assertStaffScope(actorId, staffId, scope);
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId, isDeleted: false },
       select: {
@@ -449,6 +488,7 @@ export class StaffService {
         status: true,
         dateOfBirth: true,
         phone: true,
+        isSuperAdmin: true,
       },
     });
 
@@ -509,7 +549,9 @@ export class StaffService {
     }
   }
 
-  async showStaffProfile(staffId: string) {
+  async showStaffProfile(actorId: string, staffId: string, scope: ScopeType) {
+    this.assertStaffScope(actorId, staffId, scope);
+
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
       select: {
@@ -560,7 +602,9 @@ export class StaffService {
     };
   }
 
-  async showPendingStaff() {
+  async showPendingStaff(scope: ScopeType) {
+    this.assertCenterWideScope(scope);
+
     const staff = await this.prisma.staffMembers.findMany({
       where: { status: 'PENDING', mustChangePassword: true, isDeleted: false },
       select: {
@@ -575,7 +619,8 @@ export class StaffService {
     return staff;
   }
 
-  async deactivateStaff(staffId: string, actorId: string) {
+  async deactivateStaff(staffId: string, actorId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     await this.assertStaffManageable(staffId);
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId, isDeleted: false },
@@ -627,7 +672,8 @@ export class StaffService {
     }
   }
 
-  async activateStaff(staffId: string, actorId: string) {
+  async activateStaff(staffId: string, actorId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId, isDeleted: false },
       select: {
@@ -667,7 +713,8 @@ export class StaffService {
     }
   }
 
-  async deleteStaff(staffId: string, actorId: string) {
+  async deleteStaff(staffId: string, actorId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     try {
       return await this.prisma.$transaction(
         async (tx) => {
@@ -744,7 +791,8 @@ export class StaffService {
     }
   }
 
-  async generatePassword(staffId: string, actorId: string) {
+  async generatePassword(staffId: string, actorId: string, scope: ScopeType) {
+    this.assertStaffScope(actorId, staffId, scope);
     if (staffId === actorId) {
       throw new ForbiddenException('استخدم صفحة تغيير كلمة المرور الخاصة بك');
     }
@@ -781,7 +829,12 @@ export class StaffService {
     });
   }
 
-  async inviteStaff(inviteStaffDto: InviteStaffDto, actorId: string) {
+  async inviteStaff(
+    inviteStaffDto: InviteStaffDto,
+    actorId: string,
+    scope: ScopeType,
+  ) {
+    this.assertCenterWideScope(scope);
     const { email, fullName, jobTitle } = inviteStaffDto;
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -853,6 +906,64 @@ export class StaffService {
           targetId: staff.id,
           isSuccess: true,
         });
+
+        const readAction = await tx.permission_actions.findUnique({
+          where: { eng_name: 'read' },
+          select: { id: true },
+        });
+
+        const editAction = await tx.permission_actions.findUnique({
+          where: { eng_name: 'edit' },
+          select: { id: true },
+        });
+
+        const employeeResource = await tx.permission_resources.findUnique({
+          where: { eng_name: 'staff' },
+          select: { id: true },
+        });
+
+        if (!readAction || !employeeResource || !editAction)
+          throw new UnauthorizedException('an error has occured');
+
+        const viewOwnAccountPerm = await tx.permissions.findUnique({
+          where: {
+            resource_action: {
+              action: readAction?.id,
+              resource: employeeResource?.id,
+            },
+          },
+        });
+        const editOwnAccountPerm = await tx.permissions.findUnique({
+          where: {
+            resource_action: {
+              resource: employeeResource.id,
+              action: editAction.id,
+            },
+          },
+        });
+
+        if (!viewOwnAccountPerm || !editOwnAccountPerm)
+          throw new error('view own account permission not found ?!!');
+
+        const confirmPermAssignment =
+          await tx.directPermissionGrants.createManyAndReturn({
+            data: [
+              {
+                grantedById: actorId,
+                scopeType: ScopeType.OWN_ACCOUNT,
+                staffId: staff.id,
+                permissionId: viewOwnAccountPerm.id,
+              },
+              {
+                grantedById: actorId,
+                scopeType: ScopeType.OWN_ACCOUNT,
+                staffId: staff.id,
+                permissionId: editOwnAccountPerm.id,
+              },
+            ],
+          });
+
+        if (confirmPermAssignment.length !== 2) throw new error('');
 
         return { staff, temporaryPassword };
       });

@@ -2,8 +2,9 @@ import type { ScopeType } from '@prisma/client';
 
 export type PermissionAction = {
   id: string;
-  resource: string;
-  action: string;
+  resource: number;
+  action: number;
+  actionName: string;
   scopes: ScopeType[];
   scopeOptions: { value: ScopeType; label: string }[];
   selected: boolean;

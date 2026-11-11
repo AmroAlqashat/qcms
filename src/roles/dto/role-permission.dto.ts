@@ -1,12 +1,17 @@
-import { IsEnum, IsString, IsNotEmpty } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsNotEmpty, Min } from 'class-validator';
 import { ScopeType } from '@prisma/client';
 
 export class RolePermissionDto {
-  @IsString({ message: 'المورد غير صالح' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   @IsNotEmpty({ message: 'المورد مطلوب' })
   resource: number;
 
-  @IsString({ message: 'الإجراء غير صالح' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   @IsNotEmpty({ message: 'الإجراء مطلوب' })
   action: number;
 

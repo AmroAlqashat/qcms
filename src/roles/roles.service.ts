@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { AuditAction, AuditTarget, Prisma } from '@prisma/client';
+import { AuditAction, AuditTarget, Prisma, ScopeType } from '@prisma/client';
 import { scopeLabels } from '../common/scope-labels-map';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -26,6 +26,14 @@ export class RolesService {
     private readonly audit: AuditService,
   ) {}
 
+  assertCenterWideScope(scope: ScopeType): void {
+    if (scope !== ScopeType.CENTER_WIDE) {
+      throw new ForbiddenException(
+        'This operation requires center-wide role permission',
+      );
+    }
+  }
+
   async assertRoleManageable(
     roleId: string,
     db: Prisma.TransactionClient = this.prisma,
@@ -39,7 +47,8 @@ export class RolesService {
       throw new ForbiddenException('لا يمكن تعديل أو حذف قالب مدير النظام');
   }
 
-  async getRoleAccountCount(roleId: string) {
+  async getRoleAccountCount(roleId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     const accountCount = await this.prisma.roles.findFirst({
       where: { id: roleId },
       select: {
@@ -58,7 +67,8 @@ export class RolesService {
     return accountCount._count.staffGrants;
   }
 
-  async deleteRole(roleId: string, actorId: string) {
+  async deleteRole(roleId: string, actorId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     //validate if user may delete this role
 
     try {
@@ -108,7 +118,8 @@ export class RolesService {
     return usedRoles;
   }
 
-  async listRoles() {
+  async listRoles(scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     const roles = await this.prisma.roles.findMany({
       where: { isSuperAdminRole: false },
       orderBy: { createdAt: 'asc' },
@@ -129,7 +140,11 @@ export class RolesService {
     return roles;
   }
 
-  async getPermissionsWithCategory(roleId?: string): Promise<PermissionsData> {
+  async getPermissionsWithCategory(
+    roleId?: string,
+    scope?: ScopeType,
+  ): Promise<PermissionsData> {
+    if (scope) this.assertCenterWideScope(scope);
     const permissions = await this.prisma.permissions.findMany({
       orderBy: [{ category: 'asc' }, { resource: 'asc' }, { action: 'asc' }],
       select: {
@@ -138,6 +153,12 @@ export class RolesService {
         resource: true,
         action: true,
         allowedScopes: true,
+        permission_resources: {
+          select: { arb_name: true },
+        },
+        permission_actions: {
+          select: { arb_name: true },
+        },
       },
     });
 
@@ -164,7 +185,7 @@ export class RolesService {
         });
 
         const resource = (group.resources[permission.resource] ??= {
-          name: permission.resource,
+          name: permission.permission_resources.arb_name,
           actions: [],
         });
 
@@ -181,6 +202,7 @@ export class RolesService {
           id: permission.id,
           resource: permission.resource,
           action: permission.action,
+          actionName: permission.permission_actions.arb_name,
           scopes: permission.allowedScopes,
           scopeOptions: permission.allowedScopes.map((scope) => ({
             value: scope,
@@ -219,7 +241,8 @@ export class RolesService {
     };
   }
 
-  async getRoleById(roleId: string) {
+  async getRoleById(roleId: string, scope: ScopeType) {
+    this.assertCenterWideScope(scope);
     await this.assertRoleManageable(roleId);
     const role = await this.prisma.roles.findUnique({
       where: { id: roleId },
@@ -232,7 +255,12 @@ export class RolesService {
     return role;
   }
 
-  async createRole(createNewRoleDto: CreateNewRoleDto, actorId: string) {
+  async createRole(
+    createNewRoleDto: CreateNewRoleDto,
+    actorId: string,
+    scope: ScopeType,
+  ) {
+    this.assertCenterWideScope(scope);
     const { name, description, permissions } = createNewRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 
@@ -274,7 +302,13 @@ export class RolesService {
     }
   }
 
-  async editRole(editRoleDto: EditRoleDto, roleId: string, actorId: string) {
+  async editRole(
+    editRoleDto: EditRoleDto,
+    roleId: string,
+    actorId: string,
+    scope: ScopeType,
+  ) {
+    this.assertCenterWideScope(scope);
     const { name, description, permissions } = editRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 
