@@ -1,8 +1,48 @@
 <script>
   (() => {
+    const animations = new WeakMap();
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    // Delegation also covers permission dialogs inserted later by HTMX.
+    document.addEventListener('click', (event) => {
+      const summary = event.target.closest('[data-permission-group] > summary');
+      if (!summary) return;
+
+      const folder = summary.parentElement;
+      const previous = animations.get(folder);
+      const opening = previous ? !previous.opening : !folder.open;
+      const startHeight = folder.getBoundingClientRect().height;
+      event.preventDefault();
+      previous?.animation.cancel();
+      animations.delete(folder);
+      folder.removeAttribute('data-closing');
+
+      if (reducedMotion.matches || typeof folder.animate !== 'function') {
+        folder.open = opening;
+        return;
+      }
+
+      // Measure both natural states, then keep content visible until closing ends.
+      folder.open = opening;
+      const endHeight = folder.getBoundingClientRect().height;
+      folder.open = true;
+      folder.toggleAttribute('data-closing', !opening);
+      const animation = folder.animate([{ height: `${startHeight}px` }, { height: `${endHeight}px` }], {
+        duration: 320,
+        easing: 'ease-in-out',
+      });
+      animations.set(folder, { animation, opening });
+      animation.onfinish = () => {
+        folder.open = opening;
+        folder.removeAttribute('data-closing');
+        animations.delete(folder);
+      };
+    });
+  })();
+
+  (() => {
     const updatePermissions = (form) => {
-      const selected = (root) =>
-        root.querySelectorAll('input[name="permissions"]:checked').length;
+      const selected = (root) => root.querySelectorAll('input[name="permissions"]:checked').length;
 
       form.querySelectorAll('[data-permission-group]').forEach((group) => {
         const count = group.querySelector('[data-permission-count]');
@@ -31,9 +71,7 @@
     };
 
     const initializePermissions = () => {
-      document
-        .querySelectorAll('[data-permission-editor]')
-        .forEach(updatePermissions);
+      document.querySelectorAll('[data-permission-editor]').forEach(updatePermissions);
     };
 
     document.addEventListener('click', (event) => {
@@ -86,9 +124,7 @@
       }
 
       // Only checked actions become entries. With none checked, map returns [].
-      const permissions = [
-        ...form.querySelectorAll('input[name="permissions"]:checked'),
-      ].map((input) => {
+      const permissions = [...form.querySelectorAll('input[name="permissions"]:checked')].map((input) => {
         const action = input.closest('[data-permission-action]');
         const scope = action?.querySelector('[data-permission-scope]')?.value;
 
@@ -115,8 +151,7 @@
     document.addEventListener('htmx:beforeSwap', (event) => {
       const xhr = event.detail.xhr;
       const isFragmentError = xhr.status >= 400 && xhr.status < 500;
-      const isMarkedFragment =
-        xhr.getResponseHeader('X-QCMS-Fragment') === 'true';
+      const isMarkedFragment = xhr.getResponseHeader('X-QCMS-Fragment') === 'true';
       const isMarkedToast = xhr.getResponseHeader('X-QCMS-Toast') === 'true';
 
       if ((isFragmentError && isMarkedFragment) || (xhr.status >= 400 && xhr.status < 600 && isMarkedToast)) {
@@ -149,37 +184,33 @@
 
   (() => {
     const initializeToasts = () => {
-      document
-        .querySelectorAll('[data-toast]:not([data-toast-initialized])')
-        .forEach((toast) => {
-          toast.dataset.toastInitialized = 'true';
-          window.setTimeout(() => toast.remove(), 5000);
-        });
+      document.querySelectorAll('[data-toast]:not([data-toast-initialized])').forEach((toast) => {
+        toast.dataset.toastInitialized = 'true';
+        window.setTimeout(() => toast.remove(), 5000);
+      });
     };
 
     const initializeStaffUi = () => {
-      document
-        .querySelectorAll('dialog[data-auto-open]:not([open])')
-        .forEach((dialog) => {
-          if (!dialog.dataset.modalCleanupBound) {
-            dialog.dataset.modalCleanupBound = 'true';
-            dialog.addEventListener('cancel', () => {
-              window.setTimeout(() => {
-                if (!dialog.open && dialog.closest('#modal-root')) {
-                  dialog.remove();
-                }
-              });
+      document.querySelectorAll('dialog[data-auto-open]:not([open])').forEach((dialog) => {
+        if (!dialog.dataset.modalCleanupBound) {
+          dialog.dataset.modalCleanupBound = 'true';
+          dialog.addEventListener('cancel', () => {
+            window.setTimeout(() => {
+              if (!dialog.open && dialog.closest('#modal-root')) {
+                dialog.remove();
+              }
             });
-          }
+          });
+        }
 
-          dialog.showModal();
+        dialog.showModal();
 
-          const focusTarget = dialog.querySelector(
-            '[data-form-error], [aria-invalid="true"], input:not([type="hidden"]), button[data-dialog-close]',
-          );
+        const focusTarget = dialog.querySelector(
+          '[data-form-error], [aria-invalid="true"], input:not([type="hidden"]), button[data-dialog-close]',
+        );
 
-          focusTarget?.focus({ preventScroll: true });
-        });
+        focusTarget?.focus({ preventScroll: true });
+      });
     };
 
     document.addEventListener('click', async (event) => {
@@ -200,10 +231,7 @@
 
         input.type = visible ? 'text' : 'password';
         control.setAttribute('aria-pressed', String(visible));
-        control.setAttribute(
-          'aria-label',
-          visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور',
-        );
+        control.setAttribute('aria-label', visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور');
       }
 
       if (control.hasAttribute('data-copy')) {
@@ -249,12 +277,10 @@
           return;
         }
 
-        dialog
-          .querySelectorAll('[data-sensitive-credentials] input')
-          .forEach((input) => {
-            input.value = '';
-            input.removeAttribute('value');
-          });
+        dialog.querySelectorAll('[data-sensitive-credentials] input').forEach((input) => {
+          input.value = '';
+          input.removeAttribute('value');
+        });
 
         if (dialog.closest('#modal-root')) {
           dialog.remove();

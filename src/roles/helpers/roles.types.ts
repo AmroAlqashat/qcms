@@ -5,7 +5,6 @@ export type PermissionAction = {
   resource: number;
   action: number;
   actionName: string;
-  scopes: ScopeType[];
   scopeOptions: { value: ScopeType; label: string }[];
   selected: boolean;
   selectedScope?: string;
@@ -22,13 +21,7 @@ export type PermissionGroup = {
   resources: PermissionResource[];
 };
 
-export type PermissionGroupDraft = Omit<PermissionGroup, 'resources'> & {
-  resources: Record<string, PermissionResource>;
-};
-
-export type PermissionColumns = PermissionGroup[][];
-
 export type PermissionsData = {
-  permissionColumns: PermissionColumns;
+  permissionGroups: PermissionGroup[];
   selectedPermissionCount: number;
 };

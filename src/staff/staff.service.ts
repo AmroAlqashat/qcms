@@ -1,3 +1,4 @@
+import { error } from 'console';
 import {
   jobTitleLabels,
   jobTitleOptions,
@@ -38,14 +39,17 @@ import {
   RequestEmailChangeDto,
 } from './dto/change-email.dto';
 import { OtpService } from '../mail/otp.serivce';
-import { error } from 'console';
+import {
+  buildPermissionsData,
+  permissionCatalogQuery,
+} from '../roles/helpers/permission-view';
 
 @Injectable()
 export class StaffService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly rolesSerive: RolesService,
+    private readonly rolesService: RolesService,
     private readonly otpService: OtpService,
   ) {}
 
@@ -83,69 +87,121 @@ export class StaffService {
     }
   }
 
-  async getRoleOptionsForStaff(staffId: string, scope: ScopeType) {
+  async getRoleOptionsForStaff(
+    editedStaffId: string,
+    scope: ScopeType,
+    editorId: string,
+  ) {
     this.assertCenterWideScope(scope);
-    // Show all roles, checking only those returned by the active-grants lookup.
-    const [roles, usedRoles] = await Promise.all([
-      this.rolesSerive.getRoles(),
-      this.rolesSerive.getUsedRoles(staffId),
+    const staff = await this.prisma.staffMembers.findUnique({
+      where: { id: editorId },
+      select: { isSuperAdmin: true },
+    });
+
+    if (!staff) throw new NotFoundException('الموظف غير موجود');
+
+    const [roles, usedRoles, actorUsedRoles] = await Promise.all([
+      this.rolesService.getRoles(),
+      this.rolesService.getUsedRoles(editedStaffId),
+      this.rolesService.getUsedRoles(editorId),
     ]);
 
     const selectedRoles = new Set(usedRoles.map((role) => role.roleId));
 
-    return roles.map((role) => ({
+    const staffAssignedRoles = staff.isSuperAdmin
+      ? roles
+      : roles.filter((role) =>
+          actorUsedRoles.some((assignment) => assignment.roleId === role.id),
+        );
+
+    return staffAssignedRoles.map((role) => ({
       ...role,
       selected: selectedRoles.has(role.id),
     }));
   }
 
-  async getPermissionOptionsForStaff(staffId: string, scope: ScopeType) {
-    this.assertCenterWideScope(scope);
-    // Combine the permission catalog with active direct grants. Revoked rows
-    // remain in the database but must not appear checked when reopening.
-    const [permissionsData, grants] = await Promise.all([
-      this.rolesSerive.getPermissionsWithCategory(),
-      this.prisma.directPermissionGrants.findMany({
-        where: { staffId, revokedAt: null },
-        select: { permissionId: true, scopeType: true },
-      }),
-    ]);
+  // Read current assignment authority again inside the save transaction; never
+  // trust the choices shown by an earlier GET request.
+  private async getAssignmentAccess(
+    editorId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ) {
+    const editor = await db.staffMembers.findUnique({
+      where: { id: editorId, isDeleted: false },
+      select: {
+        isSuperAdmin: true,
+        roleGrants: {
+          where: { revokedAt: null, role: { isSuperAdminRole: false } },
+          select: { roleId: true },
+        },
+        directPermissionGrants: {
+          where: { revokedAt: null },
+          select: {
+            permissionId: true,
+            scopeType: true,
+            permission: { select: { allowedScopes: true } },
+          },
+        },
+      },
+    });
+    if (!editor) throw new NotFoundException('الموظف غير موجود');
 
-    // The same permission can have historical rows for different scopes,
-    // so identify a selection by both the permission ID and its scope.
-    const selectedKeys = new Set(
-      grants.map((grant) => `${grant.permissionId}:${grant.scopeType}`),
-    );
-
-    let total = 0;
-
-    for (const column of permissionsData.permissionColumns) {
-      for (const group of column) {
-        group.selectedCount = 0;
-
-        for (const resource of group.resources) {
-          for (const action of resource.actions) {
-            // One dropdown can display one scope per action. For legacy data
-            // with several active scopes, show the first in allowedScopes order;
-            // saving that selection will revoke the other active scope rows.
-            const selectedScope = action.scopes.find((scope) =>
-              selectedKeys.has(`${action.id}:${scope}`),
-            );
-
-            action.selected = selectedScope !== undefined;
-            action.selectedScope = selectedScope;
-
-            if (action.selected) group.selectedCount++;
-          }
-        }
-
-        total += group.selectedCount;
-      }
+    const permissionScopes = new Map<string, Set<ScopeType>>();
+    for (const grant of editor.directPermissionGrants) {
+      if (!grant.permission.allowedScopes.includes(grant.scopeType)) continue;
+      const scopes =
+        permissionScopes.get(grant.permissionId) ?? new Set<ScopeType>();
+      scopes.add(grant.scopeType);
+      permissionScopes.set(grant.permissionId, scopes);
     }
+    return {
+      isSuperAdmin: editor.isSuperAdmin,
+      roleIds: editor.roleGrants.map((grant) => grant.roleId),
+      permissionScopes,
+    };
+  }
 
-    // Count checked actions, not historical grant rows, for the UI badges.
-    permissionsData.selectedPermissionCount = total;
-    return permissionsData;
+  async getPermissionOptionsForStaff(
+    editedStaffId: string,
+    scope: ScopeType,
+    editorId: string,
+  ) {
+    this.assertCenterWideScope(scope);
+    const access = await this.getAssignmentAccess(editorId);
+    const permissions = await this.prisma.permissions.findMany({
+      ...permissionCatalogQuery,
+      where: access.isSuperAdmin
+        ? {}
+        : { id: { in: [...access.permissionScopes.keys()] } },
+      select: {
+        ...permissionCatalogQuery.select,
+        directPermissionGrants: {
+          where: { staffId: editedStaffId, revokedAt: null },
+          select: { scopeType: true },
+        },
+      },
+    });
+
+    // One dropdown cannot represent an additional, unmanageable saved scope.
+    // Hide that action entirely and preserve it when saving.
+    const available = access.isSuperAdmin
+      ? permissions
+      : permissions
+          .filter((permission) =>
+            permission.directPermissionGrants.every((grant) =>
+              access.permissionScopes.get(permission.id)?.has(grant.scopeType),
+            ),
+          )
+          .map((permission) => ({
+            ...permission,
+            allowedScopes: permission.allowedScopes.filter((allowedScope) =>
+              access.permissionScopes.get(permission.id)?.has(allowedScope),
+            ),
+          }));
+
+    return buildPermissionsData(available, (permission) =>
+      permission.directPermissionGrants.map((grant) => grant.scopeType),
+    );
   }
 
   async editPermissions(
@@ -155,8 +211,8 @@ export class StaffService {
     scope: ScopeType,
   ) {
     this.assertCenterWideScope(scope);
-    // The form submits the complete desired selection, not just changes.
-    // Empty arrays therefore remove all roles and revoke all active direct grants.
+    // The form replaces only the assignments this editor can manage.
+    // Empty selections preserve every assignment outside that authority.
     const { roleIds = [], permissions = [] } = editPermissionsDto;
 
     try {
@@ -165,6 +221,7 @@ export class StaffService {
       await this.prisma.$transaction(
         async (tx) => {
           await this.assertStaffManageable(staffId, tx);
+          const access = await this.getAssignmentAccess(actorId, tx);
           const protectedRole = await tx.roles.findFirst({
             where: { id: { in: roleIds }, isSuperAdminRole: true },
           });
@@ -191,6 +248,13 @@ export class StaffService {
             throw new UnprocessableEntityException(
               'أحد قوالب الصلاحيات المحددة غير موجود',
             );
+          }
+
+          if (
+            !access.isSuperAdmin &&
+            roleIds.some((roleId) => !access.roleIds.includes(roleId))
+          ) {
+            throw new ForbiddenException('لا يمكنك إسناد قالب غير مسند إليك');
           }
 
           // Validate duplicate pairs and enforce the UI's one-scope-per-action
@@ -227,6 +291,14 @@ export class StaffService {
             if (!permission.allowedScopes.includes(scope)) {
               throw new UnprocessableEntityException('نطاق غير مسموح للصلاحية');
             }
+            if (
+              !access.isSuperAdmin &&
+              !access.permissionScopes.get(permissionId)?.has(scope)
+            ) {
+              throw new ForbiddenException(
+                'لا يمكنك إسناد صلاحية أو نطاق غير ممنوح لك مباشرة',
+              );
+            }
           }
 
           // Compare the requested pairs with active grants. Matching pairs
@@ -235,20 +307,52 @@ export class StaffService {
             where: { staffId, revokedAt: null },
             select: { id: true, permissionId: true, scopeType: true },
           });
+          const blockedPermissionIds = new Set(
+            activeGrants
+              .filter(
+                (grant) =>
+                  !access.isSuperAdmin &&
+                  !access.permissionScopes
+                    .get(grant.permissionId)
+                    ?.has(grant.scopeType),
+              )
+              .map((grant) => grant.permissionId),
+          );
+          if (
+            permissions.some((grant) =>
+              blockedPermissionIds.has(grant.permissionId),
+            )
+          ) {
+            throw new ForbiddenException(
+              'لا يمكنك تعديل صلاحية لها نطاق خارج صلاحياتك',
+            );
+          }
           const activeKeys = new Set(
             activeGrants.map((g) => `${g.permissionId}:${g.scopeType}`),
           );
           const revokedIds = activeGrants
             .filter(
-              (g) => !selectedKeys.has(`${g.permissionId}:${g.scopeType}`),
+              (g) =>
+                !blockedPermissionIds.has(g.permissionId) &&
+                (access.isSuperAdmin ||
+                  access.permissionScopes
+                    .get(g.permissionId)
+                    ?.has(g.scopeType)) &&
+                !selectedKeys.has(`${g.permissionId}:${g.scopeType}`),
             )
             .map((g) => g.id);
           const now = new Date();
 
-          // Keep the existing role replacement behavior: delete this staff
-          // member's role rows, then recreate only the submitted roleIds.
-          // An empty role selection deliberately skips creation.
-          await tx.roleStaffAssignments.deleteMany({ where: { staffId } });
+          // Replace manageable roles only; hidden assignments remain untouched.
+          await tx.roleStaffAssignments.deleteMany({
+            where: {
+              staffId,
+              role: { isSuperAdminRole: false },
+              ...(access.isSuperAdmin
+                ? {}
+                : { roleId: { in: access.roleIds } }),
+            },
+          });
           if (roleIds.length) {
             await tx.roleStaffAssignments.createMany({
               data: roleIds.map((roleId) => ({

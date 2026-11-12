@@ -10,7 +10,7 @@ import {
 import type { Request, Response } from 'express';
 import { wantsHtml } from '../../common/wants-html';
 import { RolesService } from '../roles.service';
-import type { PermissionColumns } from '../helpers/roles.types';
+import type { PermissionGroup } from '../helpers/roles.types';
 import type { ScopeType } from '@prisma/client';
 
 type PermissionScopedRequest = Request & { permissionScope?: ScopeType };
@@ -85,7 +85,7 @@ export class RolesErrorFilter implements ExceptionFilter {
     const { role, permissionsData } = editor;
 
     permissionsData.selectedPermissionCount = this.restoreSubmittedPermissions(
-      permissionsData.permissionColumns,
+      permissionsData.permissionGroups,
       requestBody,
     );
 
@@ -151,7 +151,7 @@ export class RolesErrorFilter implements ExceptionFilter {
   }
 
   private restoreSubmittedPermissions(
-    permissionColumns: PermissionColumns,
+    permissionGroups: PermissionGroup[],
     requestBody: Record<string, unknown>,
   ): number {
     const submitted = this.parseSubmittedPermissions(
@@ -160,25 +160,23 @@ export class RolesErrorFilter implements ExceptionFilter {
     );
     let selectedPermissionCount = 0;
 
-    for (const column of permissionColumns) {
-      for (const group of column) {
-        group.selectedCount = 0;
+    for (const group of permissionGroups) {
+      group.selectedCount = 0;
 
-        for (const resource of group.resources) {
-          for (const action of resource.actions) {
-            const selected = submitted.find(
-              (permission) =>
-                permission.resource === String(action.resource) &&
-                permission.action === String(action.action),
-            );
+      for (const resource of group.resources) {
+        for (const action of resource.actions) {
+          const selected = submitted.find(
+            (permission) =>
+              permission.resource === String(action.resource) &&
+              permission.action === String(action.action),
+          );
 
-            action.selected = selected !== undefined;
-            action.selectedScope = selected?.scope;
+          action.selected = selected !== undefined;
+          action.selectedScope = selected?.scope;
 
-            if (action.selected) {
-              group.selectedCount++;
-              selectedPermissionCount++;
-            }
+          if (action.selected) {
+            group.selectedCount++;
+            selectedPermissionCount++;
           }
         }
       }
@@ -212,13 +210,15 @@ export class RolesErrorFilter implements ExceptionFilter {
         const permission = entry as Record<string, unknown>;
 
         if (
-          typeof permission.resource === 'string' &&
-          typeof permission.action === 'string'
+          (typeof permission.resource === 'string' ||
+            typeof permission.resource === 'number') &&
+          (typeof permission.action === 'string' ||
+            typeof permission.action === 'number')
         ) {
           return [
             {
-              resource: permission.resource,
-              action: permission.action,
+              resource: String(permission.resource),
+              action: String(permission.action),
               scope:
                 typeof permission.scope === 'string'
                   ? permission.scope
@@ -241,7 +241,10 @@ export class RolesErrorFilter implements ExceptionFilter {
         return [];
       }
 
-      const scope = scopes[`${resource}:${action}`] ?? scopes[resource];
+      const scope =
+        scopes[`${resource}::${action}`] ??
+        scopes[`${resource}:${action}`] ??
+        scopes[resource];
 
       return [
         {

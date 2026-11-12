@@ -48,7 +48,7 @@ import { ScopeType } from '@prisma/client';
 
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) {}
+  constructor(private readonly staffService: StaffService) { }
 
   @Get()
   @permission({ permission_action: 'read', permission_resource: 'staff' })
@@ -62,9 +62,9 @@ export class StaffController {
       this.staffService.showFilteredStaff(filterDto, actor.id, scope),
       scope === ScopeType.CENTER_WIDE
         ? this.staffService.showStaffFilterOptions(
-            filterDto.halaqa,
-            filterDto.role,
-          )
+          filterDto.halaqa,
+          filterDto.role,
+        )
         : Promise.resolve({ classes: [], templates: [] }),
     ]);
     return {
@@ -112,13 +112,14 @@ export class StaffController {
   async showPermissionsDialog(
     @Param('id') staffId: string,
     @CurrentPermissionScope() scope: ScopeType,
+    @CurrentUser() user: { id: string },
   ) {
     await this.staffService.assertStaffManageable(staffId);
     // GET: load the available choices and the staff member's active selections.
     // The partial uses selected/selectedScope to reopen the saved state.
     const [roles, permissions] = await Promise.all([
-      this.staffService.getRoleOptionsForStaff(staffId, scope),
-      this.staffService.getPermissionOptionsForStaff(staffId, scope),
+      this.staffService.getRoleOptionsForStaff(staffId, scope, user.id),
+      this.staffService.getPermissionOptionsForStaff(staffId, scope, user.id),
     ]);
 
     return {

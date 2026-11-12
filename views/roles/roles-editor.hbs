@@ -87,16 +87,12 @@
         error=errors.permissions
       }}
       <div class='grid items-start gap-4 xl:grid-cols-2'>
-        {{#each permissionColumns}}
-          <div class='space-y-4'>
-            {{#each this}}
-              {{#> permissions/folder prefix="ملف " category=category selectedCount=selectedCount}}
-                {{#each resources}}
-                  {{> permissions/resource}}
-                {{/each}}
-              {{/permissions/folder}}
+        {{#each permissionGroups}}
+          {{#> permissions/folder prefix="ملف " category=category selectedCount=selectedCount}}
+            {{#each resources}}
+              {{> permissions/resource}}
             {{/each}}
-          </div>
+          {{/permissions/folder}}
         {{/each}}
       </div>
       <div class='flex flex-wrap items-center justify-between gap-2'>

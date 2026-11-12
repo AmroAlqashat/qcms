@@ -6,18 +6,16 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AuditAction, AuditTarget, Prisma, ScopeType } from '@prisma/client';
-import { scopeLabels } from '../common/scope-labels-map';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateNewRoleDto } from './dto/create-new-role.dto';
 import { EditRoleDto } from './dto/edit-role.dto';
 import { RolePermissionDto } from './dto/role-permission.dto';
-import type {
-  PermissionColumns,
-  PermissionGroup,
-  PermissionGroupDraft,
-  PermissionsData,
-} from './helpers/roles.types';
+import type { PermissionsData } from './helpers/roles.types';
+import {
+  buildPermissionsData,
+  permissionCatalogQuery,
+} from './helpers/permission-view';
 
 @Injectable()
 export class RolesService {
@@ -146,99 +144,20 @@ export class RolesService {
   ): Promise<PermissionsData> {
     if (scope) this.assertCenterWideScope(scope);
     const permissions = await this.prisma.permissions.findMany({
-      orderBy: [{ category: 'asc' }, { resource: 'asc' }, { action: 'asc' }],
+      ...permissionCatalogQuery,
       select: {
-        id: true,
-        category: true,
-        resource: true,
-        action: true,
-        allowedScopes: true,
-        permission_resources: {
-          select: { arb_name: true },
-        },
-        permission_actions: {
-          select: { arb_name: true },
+        ...permissionCatalogQuery.select,
+        rolePermissions: {
+          // A new role has no saved selections.
+          where: { roleId: roleId ?? '' },
+          select: { scopeType: true },
         },
       },
     });
 
-    const selectedRolePermissions = roleId
-      ? await this.prisma.rolePermissions.findMany({
-          where: { roleId },
-          select: {
-            permissionId: true,
-            scopeType: true,
-          },
-        })
-      : [];
-
-    const selectedKeys = new Set(
-      selectedRolePermissions.map((rp) => `${rp.permissionId}:${rp.scopeType}`),
+    return buildPermissionsData(permissions, (permission) =>
+      permission.rolePermissions.map((grant) => grant.scopeType),
     );
-
-    const grouped = permissions.reduce<Record<number, PermissionGroupDraft>>(
-      (acc, permission) => {
-        const group = (acc[permission.category] ??= {
-          category: permission.category,
-          selectedCount: 0,
-          resources: {},
-        });
-
-        const resource = (group.resources[permission.resource] ??= {
-          name: permission.permission_resources.arb_name,
-          actions: [],
-        });
-
-        const selectedScope = permission.allowedScopes.find((scope) =>
-          selectedKeys.has(`${permission.id}:${scope}`),
-        );
-        const isSelected = selectedScope !== undefined;
-
-        if (isSelected) {
-          group.selectedCount++;
-        }
-
-        resource.actions.push({
-          id: permission.id,
-          resource: permission.resource,
-          action: permission.action,
-          actionName: permission.permission_actions.arb_name,
-          scopes: permission.allowedScopes,
-          scopeOptions: permission.allowedScopes.map((scope) => ({
-            value: scope,
-            label: scopeLabels[scope],
-          })),
-          selected: isSelected,
-          selectedScope,
-        });
-
-        return acc;
-      },
-      {},
-    );
-
-    const permissionGroups: PermissionGroup[] = Object.values(grouped).map(
-      ({ resources, ...group }) => ({
-        ...group,
-        resources: Object.values(resources),
-      }),
-    );
-
-    const selectedPermissionCount = permissionGroups.reduce(
-      (total, group) => total + group.selectedCount,
-      0,
-    );
-
-    const permissionColumns: PermissionColumns = [[], []];
-
-    permissionGroups.forEach((group, index) => {
-      permissionColumns[index % 2].push(group);
-    });
-
-    return {
-      permissionColumns,
-      selectedPermissionCount,
-    };
   }
 
   async getRoleById(roleId: string, scope: ScopeType) {
