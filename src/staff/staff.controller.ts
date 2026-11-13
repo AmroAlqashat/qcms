@@ -48,7 +48,7 @@ import { ScopeType } from '@prisma/client';
 
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) { }
+  constructor(private readonly staffService: StaffService) {}
 
   @Get()
   @permission({
@@ -65,9 +65,9 @@ export class StaffController {
       this.staffService.showFilteredStaff(filterDto, actor.id, scope),
       scope === ScopeType.CENTER_WIDE
         ? this.staffService.showStaffFilterOptions(
-          filterDto.halaqa,
-          filterDto.role,
-        )
+            filterDto.halaqa,
+            filterDto.role,
+          )
         : Promise.resolve({ classes: [], templates: [] }),
     ]);
     return {

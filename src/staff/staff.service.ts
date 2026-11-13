@@ -44,6 +44,22 @@ import {
   permissionCatalogQuery,
 } from '../roles/helpers/permission-view';
 
+const scopeRank: Record<ScopeType, number> = {
+  [ScopeType.CENTER_WIDE]: 0,
+  [ScopeType.ASSIGNED_CLASS]: 1,
+  [ScopeType.OWN_ACCOUNT]: 2,
+};
+
+function canAssignScope(
+  grantedScopes: ReadonlySet<ScopeType> | undefined,
+  requestedScope: ScopeType,
+): boolean {
+  if (!grantedScopes) return false;
+  return [...grantedScopes].some(
+    (grantedScope) => scopeRank[grantedScope] <= scopeRank[requestedScope],
+  );
+}
+
 @Injectable()
 export class StaffService {
   constructor(
@@ -132,7 +148,20 @@ export class StaffService {
         isSuperAdmin: true,
         roleGrants: {
           where: { revokedAt: null, role: { isSuperAdminRole: false } },
-          select: { roleId: true },
+          select: {
+            roleId: true,
+            role: {
+              select: {
+                rolePermissions: {
+                  select: {
+                    permissionId: true,
+                    scopeType: true,
+                    permission: { select: { allowedScopes: true } },
+                  },
+                },
+              },
+            },
+          },
         },
         directPermissionGrants: {
           where: { revokedAt: null },
@@ -147,12 +176,32 @@ export class StaffService {
     if (!editor) throw new NotFoundException('الموظف غير موجود');
 
     const permissionScopes = new Map<string, Set<ScopeType>>();
+    const addPermissionScope = (
+      permissionId: string,
+      scopeType: ScopeType,
+      allowedScopes: ScopeType[],
+    ) => {
+      if (!allowedScopes.includes(scopeType)) return;
+      const scopes = permissionScopes.get(permissionId) ?? new Set<ScopeType>();
+      scopes.add(scopeType);
+      permissionScopes.set(permissionId, scopes);
+    };
+
     for (const grant of editor.directPermissionGrants) {
-      if (!grant.permission.allowedScopes.includes(grant.scopeType)) continue;
-      const scopes =
-        permissionScopes.get(grant.permissionId) ?? new Set<ScopeType>();
-      scopes.add(grant.scopeType);
-      permissionScopes.set(grant.permissionId, scopes);
+      addPermissionScope(
+        grant.permissionId,
+        grant.scopeType,
+        grant.permission.allowedScopes,
+      );
+    }
+    for (const assignment of editor.roleGrants) {
+      for (const grant of assignment.role.rolePermissions) {
+        addPermissionScope(
+          grant.permissionId,
+          grant.scopeType,
+          grant.permission.allowedScopes,
+        );
+      }
     }
     return {
       isSuperAdmin: editor.isSuperAdmin,
@@ -183,19 +232,26 @@ export class StaffService {
     });
 
     // One dropdown cannot represent an additional, unmanageable saved scope.
-    // Hide that action entirely and preserve it when saving.
+    // Hide that action entirely and preserve it when saving. An editor may
+    // delegate the same or a narrower scope than the one they hold.
     const available = access.isSuperAdmin
       ? permissions
       : permissions
           .filter((permission) =>
             permission.directPermissionGrants.every((grant) =>
-              access.permissionScopes.get(permission.id)?.has(grant.scopeType),
+              canAssignScope(
+                access.permissionScopes.get(permission.id),
+                grant.scopeType,
+              ),
             ),
           )
           .map((permission) => ({
             ...permission,
             allowedScopes: permission.allowedScopes.filter((allowedScope) =>
-              access.permissionScopes.get(permission.id)?.has(allowedScope),
+              canAssignScope(
+                access.permissionScopes.get(permission.id),
+                allowedScope,
+              ),
             ),
           }));
 
@@ -293,7 +349,7 @@ export class StaffService {
             }
             if (
               !access.isSuperAdmin &&
-              !access.permissionScopes.get(permissionId)?.has(scope)
+              !canAssignScope(access.permissionScopes.get(permissionId), scope)
             ) {
               throw new ForbiddenException(
                 'لا يمكنك إسناد صلاحية أو نطاق غير ممنوح لك مباشرة',
@@ -312,9 +368,10 @@ export class StaffService {
               .filter(
                 (grant) =>
                   !access.isSuperAdmin &&
-                  !access.permissionScopes
-                    .get(grant.permissionId)
-                    ?.has(grant.scopeType),
+                  !canAssignScope(
+                    access.permissionScopes.get(grant.permissionId),
+                    grant.scopeType,
+                  ),
               )
               .map((grant) => grant.permissionId),
           );
@@ -335,9 +392,10 @@ export class StaffService {
               (g) =>
                 !blockedPermissionIds.has(g.permissionId) &&
                 (access.isSuperAdmin ||
-                  access.permissionScopes
-                    .get(g.permissionId)
-                    ?.has(g.scopeType)) &&
+                  canAssignScope(
+                    access.permissionScopes.get(g.permissionId),
+                    g.scopeType,
+                  )) &&
                 !selectedKeys.has(`${g.permissionId}:${g.scopeType}`),
             )
             .map((g) => g.id);
