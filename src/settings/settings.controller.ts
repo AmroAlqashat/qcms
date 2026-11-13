@@ -42,7 +42,7 @@ export class SettingsController {
   }
 
   @Post()
-  @permission({ permission_action: 'edit', permission_resource: 'settings' })
+  @permission({ permission_action: 'update', permission_resource: 'settings' })
   @UseFilters(SettingsErrorFilter)
   async saveSettingsChanges(
     @Body() settingsDto: SettingsDto,

@@ -73,7 +73,7 @@ export class RolesController {
   }
 
   @Get('edit/:id')
-  @permission({ permission_action: 'edit', permission_resource: 'roles' })
+  @permission({ permission_action: 'update', permission_resource: 'roles' })
   @Render('roles/roles-editor')
   async showEditRolePage(
     @Param('id') roleId: string,
@@ -93,7 +93,7 @@ export class RolesController {
     };
   }
   @Post('edit/:id')
-  @permission({ permission_action: 'edit', permission_resource: 'roles' })
+  @permission({ permission_action: 'update', permission_resource: 'roles' })
   @Redirect('/roles', 303)
   @UseFilters(RolesErrorFilter)
   async editedRole(

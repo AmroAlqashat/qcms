@@ -51,7 +51,10 @@ export class StaffController {
   constructor(private readonly staffService: StaffService) { }
 
   @Get()
-  @permission({ permission_action: 'read', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'read',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-page')
   async showStaffPage(
     @Query() filterDto: FilteredStaffDto,
@@ -79,7 +82,10 @@ export class StaffController {
   }
 
   @Get('invitations')
-  @permission({ permission_action: 'read', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'read',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/pending-invitations-page')
   async showStaffInvitationPage(@CurrentPermissionScope() scope: ScopeType) {
     const invitations = await this.staffService.showPendingStaff(scope);
@@ -93,7 +99,10 @@ export class StaffController {
     };
   }
   @Post('invitations/cancel/:id')
-  @permission({ permission_action: 'delete', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'delete',
+    permission_resource: 'staff_members',
+  })
   async cancelPendingInvitation(
     @Param('id') staffId: string,
     @CurrentPermissionScope() scope: ScopeType,
@@ -106,7 +115,7 @@ export class StaffController {
   @Get('edit/permissions/:id')
   @permission({
     permission_action: 'read',
-    permission_resource: 'direct_grants',
+    permission_resource: 'direct_permission_grants',
   })
   @Render('partials/staff/permissions-dialog')
   async showPermissionsDialog(
@@ -131,8 +140,8 @@ export class StaffController {
 
   @Post('edit/permissions/:id')
   @permission({
-    permission_action: 'grant',
-    permission_resource: 'direct_grants',
+    permission_action: 'create',
+    permission_resource: 'direct_permission_grants',
   })
   // The global ValidationPipe transforms and validates the submitted DTO
   // before this handler passes the target staff ID and acting user's ID onward.
@@ -167,7 +176,10 @@ export class StaffController {
   }
 
   @Get('edit/:id')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-edit-profile-page')
   async showEditStaffForm(
     @Param('id') staffId: string,
@@ -195,7 +207,10 @@ export class StaffController {
   }
 
   @Post('edit/:id')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(EditStaffErrorFilter)
   async editStaff(
     @Param('id') id: string,
@@ -223,7 +238,10 @@ export class StaffController {
   }
 
   @Get('invite')
-  @permission({ permission_action: 'invite', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'create',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-invitation-dialog')
   showInviteForm() {
     return staffShell({
@@ -232,7 +250,10 @@ export class StaffController {
     });
   }
   @Post('invite')
-  @permission({ permission_action: 'invite', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'create',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(InviteStaffErrorFilter)
   async inviteStaff(
     @Body() inviteStaffDto: InviteStaffDto,
@@ -266,7 +287,10 @@ export class StaffController {
   }
 
   @Post('generate-new-password/:id')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   async generatePassword(
     @Param('id') id: string,
     @CurrentUser() actor: { id: string },
@@ -333,7 +357,10 @@ export class StaffController {
   }
 
   @Get('reset-my-password')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   async getChangePasswordPage(
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
@@ -352,7 +379,10 @@ export class StaffController {
   }
 
   @Get('change-email')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   async getChangeEmailDialog(
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
@@ -372,7 +402,10 @@ export class StaffController {
   }
 
   @Post('change-email/send-otp')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async requestEmailChange(
     @CurrentUser() actor: { id: string },
@@ -397,7 +430,10 @@ export class StaffController {
   }
 
   @Post('change-email/resend-otp')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async resendEmailChange(
     @CurrentUser() actor: { id: string },
@@ -413,7 +449,10 @@ export class StaffController {
   }
 
   @Post('change-email')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async changeEmail(
     @CurrentUser() actor: { id: string },
@@ -501,7 +540,10 @@ export class StaffController {
   }
 
   @Get(':id')
-  @permission({ permission_action: 'read', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'read',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-profile-page')
   async showStaffProfile(
     @Param('id') id: string,
@@ -554,7 +596,10 @@ export class StaffController {
   }
 
   @Get('deactivate/:id')
-  @permission({ permission_action: 'deactivate', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-deactivate-page')
   async showDeactivateStaffDialog(
     @Param('id') staffId: string,
@@ -567,7 +612,10 @@ export class StaffController {
     };
   }
   @Post('deactivate/:id')
-  @permission({ permission_action: 'deactivate', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-page')
   async deactivateStaff(
     @Param('id') staffId: string,
@@ -593,7 +641,10 @@ export class StaffController {
   }
 
   @Get('delete/:id')
-  @permission({ permission_action: 'delete', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'delete',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-delete-page')
   async showDeleteStaffDialog(
     @Param('id') staffId: string,
@@ -606,7 +657,10 @@ export class StaffController {
     };
   }
   @Post('delete/:id')
-  @permission({ permission_action: 'delete', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'delete',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-page')
   async deleteStaff(
     @Param('id') staffId: string,
@@ -633,7 +687,10 @@ export class StaffController {
   }
 
   @Get('activate/:id')
-  @permission({ permission_action: 'reactivate', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-activate-page')
   showactivateStaffDialog(
     @Param('id') staffId: string,
@@ -645,7 +702,10 @@ export class StaffController {
     };
   }
   @Post('activate/:id')
-  @permission({ permission_action: 'reactivate', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-page')
   async activateStaff(
     @Param('id') staffId: string,
@@ -672,7 +732,10 @@ export class StaffController {
   }
 
   @Post('reset-my-password/send-otp')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async sendChangePasswordOtp(
     @CurrentUser() actor: { id: string },
@@ -686,7 +749,10 @@ export class StaffController {
   }
 
   @Post('reset-my-password')
-  @permission({ permission_action: 'edit', permission_resource: 'staff' })
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async changeMyPassword(
     @Body() dto: ChangeMyPasswordDto,

@@ -1017,12 +1017,12 @@ export class StaffService {
         });
 
         const editAction = await tx.permission_actions.findUnique({
-          where: { eng_name: 'edit' },
+          where: { eng_name: 'update' },
           select: { id: true },
         });
 
         const employeeResource = await tx.permission_resources.findUnique({
-          where: { eng_name: 'staff' },
+          where: { eng_name: 'staff_members' },
           select: { id: true },
         });
 
