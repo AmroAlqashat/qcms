@@ -40,7 +40,7 @@ export class NotFoundFilter implements ExceptionFilter {
 
     response.status(404).json({
       statusCode: 404,
-      message: 'Resource not found',
+      message: 'تعذر العثور على المورد المطلوب',
     });
   }
 }

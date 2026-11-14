@@ -32,7 +32,7 @@ async function main(prisma: PrismaClient) {
   const email = process.env.SEED_ACTOR_EMAIL?.trim().toLowerCase();
   if (!email)
     throw new Error(
-      'Set SEED_ACTOR_EMAIL to an active, non-deleted staff account email.',
+      'اضبط SEED_ACTOR_EMAIL على البريد الإلكتروني لحساب موظف نشط وغير محذوف.',
     );
 
   const count = await prisma.$transaction(
@@ -48,7 +48,7 @@ async function main(prisma: PrismaClient) {
       });
       if (!actor)
         throw new Error(
-          'No active account found for SEED_ACTOR_EMAIL. Check the configured email.',
+          'لم يتم العثور على حساب نشط للبريد المحدد في SEED_ACTOR_EMAIL. تحقق من البريد الإلكتروني.',
         );
       return seedSettings(tx, actor.id);
     },

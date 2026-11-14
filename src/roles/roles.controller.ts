@@ -17,7 +17,7 @@ import { EditRoleDto } from './dto/edit-role.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { RolesErrorFilter } from './helpers/roles-error.filter';
 import { permission } from '../authorization/decorators/permissions-access.decorator';
-import { CurrentPermissionScope } from '../authorization/decorators/current-permission-scope.decorator';
+import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { ScopeType } from '@prisma/client';
 
 @Controller('roles')
@@ -27,14 +27,18 @@ export class RolesController {
   @Get()
   @permission({ permission_action: 'read', permission_resource: 'roles' })
   @Render('roles/roles-list')
-  async ShowListRolesPage(@CurrentPermissionScope() scope: ScopeType) {
-    const roles = await this.rolesService.listRoles(scope);
+  async ShowListRolesPage(
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    const roles = await this.rolesService.listRoles(
+      actorEndpointPermissionScope,
+    );
 
     return {
       activeNav: 'roles',
       roles,
       permissions: {
-        canManageRoles: scope === ScopeType.CENTER_WIDE,
+        canManageRoles: actorEndpointPermissionScope === ScopeType.CENTER_WIDE,
       },
     };
   }
@@ -42,10 +46,12 @@ export class RolesController {
   @Get('create')
   @permission({ permission_action: 'create', permission_resource: 'roles' })
   @Render('roles/roles-editor')
-  async showCreateRolePage(@CurrentPermissionScope() scope: ScopeType) {
+  async showCreateRolePage(
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
     const permissionsData = await this.rolesService.getPermissionsWithCategory(
       undefined,
-      scope,
+      actorEndpointPermissionScope,
     );
 
     return {
@@ -59,11 +65,15 @@ export class RolesController {
   async newRole(
     @Body() createRoleDto: CreateNewRoleDto,
     @CurrentUser() user: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    await this.rolesService.createRole(createRoleDto, user.id, scope);
+    await this.rolesService.createRole(
+      createRoleDto,
+      user.id,
+      actorEndpointPermissionScope,
+    );
     if (request.get('HX-Request') === 'true') {
       response.setHeader('HX-Redirect', '/roles');
       response.status(204).send();
@@ -77,12 +87,18 @@ export class RolesController {
   @Render('roles/roles-editor')
   async showEditRolePage(
     @Param('id') roleId: string,
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
     const [role, permissionsData, accountCount] = await Promise.all([
-      this.rolesService.getRoleById(roleId, scope),
-      this.rolesService.getPermissionsWithCategory(roleId, scope),
-      this.rolesService.getRoleAccountCount(roleId, scope),
+      this.rolesService.getRoleById(roleId, actorEndpointPermissionScope),
+      this.rolesService.getPermissionsWithCategory(
+        roleId,
+        actorEndpointPermissionScope,
+      ),
+      this.rolesService.getRoleAccountCount(
+        roleId,
+        actorEndpointPermissionScope,
+      ),
     ]);
 
     return {
@@ -100,9 +116,14 @@ export class RolesController {
     @Body() editRoleDto: EditRoleDto,
     @Param('id') roleId: string,
     @CurrentUser() user: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    await this.rolesService.editRole(editRoleDto, roleId, user.id, scope);
+    await this.rolesService.editRole(
+      editRoleDto,
+      roleId,
+      user.id,
+      actorEndpointPermissionScope,
+    );
   }
 
   @Get('delete/:id')
@@ -110,9 +131,12 @@ export class RolesController {
   @Render('roles/roles-delete-dialog')
   async showDeleteRoleDialog(
     @Param('id') roleId: string,
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    const role = await this.rolesService.getRoleById(roleId, scope);
+    const role = await this.rolesService.getRoleById(
+      roleId,
+      actorEndpointPermissionScope,
+    );
 
     return {
       role,
@@ -127,9 +151,13 @@ export class RolesController {
     @Res() response: Response,
     @Param('id') roleId: string,
     @CurrentUser() user: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    await this.rolesService.deleteRole(roleId, user.id, scope);
+    await this.rolesService.deleteRole(
+      roleId,
+      user.id,
+      actorEndpointPermissionScope,
+    );
     if (request.get('HX-Request') === 'true') {
       response.setHeader('HX-Redirect', '/roles');
       response.status(204).send();

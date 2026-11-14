@@ -7,7 +7,7 @@ export class MailService {
 
   async sendOtp(email: string, code: string) {
     if (!process.env.EMAIL_SENDER_ADDRESS)
-      throw Error('EMAIL_SENDER_ADDRESS is requried in env');
+      throw Error('متغير البيئة EMAIL_SENDER_ADDRESS مطلوب');
     const subject = 'رمز التحقق الخاص بك | QCMS';
     const text = [
       'تأكيد هويتك',
@@ -77,7 +77,9 @@ export class MailService {
       console.log(`Email successfully sent to ${to}`);
     } catch (error) {
       console.error('SMTP Email Error: ', error);
-      throw new InternalServerErrorException('Failed to send email.');
+      throw new InternalServerErrorException(
+        'تعذر إرسال البريد الإلكتروني. حاول مرة أخرى لاحقًا.',
+      );
     }
   }
 }

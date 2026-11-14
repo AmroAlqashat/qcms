@@ -1,4 +1,3 @@
-import { error } from 'console';
 import {
   jobTitleLabels,
   jobTitleOptions,
@@ -8,6 +7,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
@@ -87,28 +87,36 @@ export class StaffService {
   private assertStaffScope(
     actorId: string,
     staffId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
   ): void {
-    if (scope === ScopeType.CENTER_WIDE) return;
-    if (scope === ScopeType.OWN_ACCOUNT && actorId === staffId) return;
+    if (actorEndpointPermissionScope === ScopeType.CENTER_WIDE) return;
+    if (
+      actorEndpointPermissionScope === ScopeType.OWN_ACCOUNT &&
+      actorId === staffId
+    )
+      return;
 
-    throw new ForbiddenException('You may not access this staff member');
+    throw new ForbiddenException(
+      'ليس لديك صلاحية للوصول إلى بيانات هذا الموظف',
+    );
   }
 
-  assertCenterWideScope(scope: ScopeType): void {
-    if (scope !== ScopeType.CENTER_WIDE) {
+  assertActorEndpointCenterWideScope(
+    actorEndpointPermissionScope: ScopeType,
+  ): void {
+    if (actorEndpointPermissionScope !== ScopeType.CENTER_WIDE) {
       throw new ForbiddenException(
-        'This operation requires center-wide staff permission',
+        'يتطلب هذا الإجراء صلاحية إدارة الموظفين على مستوى المركز',
       );
     }
   }
 
   async getRoleOptionsForStaff(
     editedStaffId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
     editorId: string,
   ) {
-    this.assertCenterWideScope(scope);
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: editorId },
       select: { isSuperAdmin: true },
@@ -212,10 +220,10 @@ export class StaffService {
 
   async getPermissionOptionsForStaff(
     editedStaffId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
     editorId: string,
   ) {
-    this.assertCenterWideScope(scope);
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const access = await this.getAssignmentAccess(editorId);
     const permissions = await this.prisma.permissions.findMany({
       ...permissionCatalogQuery,
@@ -264,9 +272,9 @@ export class StaffService {
     staffId: string,
     editPermissionsDto: EditPermissionsDto,
     actorId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
   ) {
-    this.assertCenterWideScope(scope);
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     // The form replaces only the assignments this editor can manage.
     // Empty selections preserve every assignment outside that authority.
     const { roleIds = [], permissions = [] } = editPermissionsDto;
@@ -482,9 +490,9 @@ export class StaffService {
     staffId: string,
     editStaffDto: EditStaffDto,
     actorId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
   ) {
-    this.assertStaffScope(actorId, staffId, scope);
+    this.assertStaffScope(actorId, staffId, actorEndpointPermissionScope);
     try {
       return await this.prisma.$transaction(async (tx) => {
         const staff = await tx.staffMembers.update({
@@ -526,8 +534,11 @@ export class StaffService {
     }
   }
 
-  async cancelPendingInvitation(staffId: string, scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async cancelPendingInvitation(
+    staffId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     try {
       await this.prisma.$transaction(
         async (tx) => {
@@ -580,7 +591,7 @@ export class StaffService {
   async showFilteredStaff(
     filterDto: FilteredStaffDto,
     actorId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
   ) {
     const {
       searchField,
@@ -594,12 +605,10 @@ export class StaffService {
     const skip = (page! - 1) * limit!;
 
     const where: Prisma.StaffMembersWhereInput = { isDeleted };
-    if (scope === ScopeType.OWN_ACCOUNT) {
+    if (actorEndpointPermissionScope === ScopeType.OWN_ACCOUNT) {
       where.id = actorId;
-    } else if (scope !== ScopeType.CENTER_WIDE) {
-      throw new ForbiddenException(
-        'This scope cannot be used to list staff members',
-      );
+    } else if (actorEndpointPermissionScope !== ScopeType.CENTER_WIDE) {
+      throw new ForbiddenException('نطاق صلاحيتك لا يسمح بعرض قائمة الموظفين');
     } else {
       await this.validateRelations(halaqa, role);
     }
@@ -637,8 +646,12 @@ export class StaffService {
     }));
   }
 
-  async showStaffEditPage(staffId: string, actorId: string, scope: ScopeType) {
-    this.assertStaffScope(actorId, staffId, scope);
+  async showStaffEditPage(
+    staffId: string,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertStaffScope(actorId, staffId, actorEndpointPermissionScope);
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId, isDeleted: false },
       select: {
@@ -698,7 +711,9 @@ export class StaffService {
         select: { id: true },
       });
       if (!classExists)
-        throw new BadRequestException(`Class ID "${halaqaId}" does not exist.`);
+        throw new BadRequestException(
+          `الحلقة ذات المعرّف "${halaqaId}" غير موجودة.`,
+        );
     }
 
     if (roleId) {
@@ -707,12 +722,18 @@ export class StaffService {
         select: { id: true },
       });
       if (!roleExists)
-        throw new BadRequestException(`Role ID "${roleId}" does not exist.`);
+        throw new BadRequestException(
+          `قالب الصلاحيات ذو المعرّف "${roleId}" غير موجود.`,
+        );
     }
   }
 
-  async showStaffProfile(actorId: string, staffId: string, scope: ScopeType) {
-    this.assertStaffScope(actorId, staffId, scope);
+  async showStaffProfile(
+    actorId: string,
+    staffId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertStaffScope(actorId, staffId, actorEndpointPermissionScope);
 
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId },
@@ -764,8 +785,8 @@ export class StaffService {
     };
   }
 
-  async showPendingStaff(scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async showPendingStaff(actorEndpointPermissionScope: ScopeType) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
 
     const staff = await this.prisma.staffMembers.findMany({
       where: { status: 'PENDING', mustChangePassword: true, isDeleted: false },
@@ -781,8 +802,12 @@ export class StaffService {
     return staff;
   }
 
-  async deactivateStaff(staffId: string, actorId: string, scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async deactivateStaff(
+    staffId: string,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     await this.assertStaffManageable(staffId);
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId, isDeleted: false },
@@ -794,9 +819,11 @@ export class StaffService {
       },
     });
     //validations
-    if (!staff) throw new NotFoundException("can't find this employee");
+    if (!staff) throw new NotFoundException('الموظف غير موجود');
     if (staff.status !== 'ACTIVE')
-      throw new ConflictException("staff member can't be deactivated");
+      throw new ConflictException(
+        'لا يمكن إلغاء تفعيل الموظف في حالته الحالية',
+      );
     await this.validateStaffNotAloneInClassesAndActivities(
       staffId,
       staff.classAssignments,
@@ -827,15 +854,19 @@ export class StaffService {
         error.code === 'P2002'
       )
         throw new ConflictException({
-          message: 'a conflict has occured',
-          errors: { email: 'a conflict has occured' },
+          message: 'تعذر إكمال العملية بسبب تعارض في البيانات',
+          errors: { email: 'تعذر إكمال العملية بسبب تعارض في البيانات' },
         });
       throw error;
     }
   }
 
-  async activateStaff(staffId: string, actorId: string, scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async activateStaff(
+    staffId: string,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const staff = await this.prisma.staffMembers.findUnique({
       where: { id: staffId, isDeleted: false },
       select: {
@@ -844,9 +875,9 @@ export class StaffService {
       },
     });
     //validations
-    if (!staff) throw new NotFoundException("can't find this employee");
+    if (!staff) throw new NotFoundException('الموظف غير موجود');
     if (staff.status !== 'INACTIVE')
-      throw new ConflictException("staff member can't be activated");
+      throw new ConflictException('لا يمكن تفعيل الموظف في حالته الحالية');
     //changes
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -868,15 +899,19 @@ export class StaffService {
         error.code === 'P2002'
       )
         throw new ConflictException({
-          message: 'a conflict has occured',
-          errors: { email: 'a conflict has occured' },
+          message: 'تعذر إكمال العملية بسبب تعارض في البيانات',
+          errors: { email: 'تعذر إكمال العملية بسبب تعارض في البيانات' },
         });
       throw error;
     }
   }
 
-  async deleteStaff(staffId: string, actorId: string, scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async deleteStaff(
+    staffId: string,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     try {
       return await this.prisma.$transaction(
         async (tx) => {
@@ -953,8 +988,12 @@ export class StaffService {
     }
   }
 
-  async generatePassword(staffId: string, actorId: string, scope: ScopeType) {
-    this.assertStaffScope(actorId, staffId, scope);
+  async generatePassword(
+    staffId: string,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertStaffScope(actorId, staffId, actorEndpointPermissionScope);
     if (staffId === actorId) {
       throw new ForbiddenException('استخدم صفحة تغيير كلمة المرور الخاصة بك');
     }
@@ -994,9 +1033,9 @@ export class StaffService {
   async inviteStaff(
     inviteStaffDto: InviteStaffDto,
     actorId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
   ) {
-    this.assertCenterWideScope(scope);
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const { email, fullName, jobTitle } = inviteStaffDto;
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -1085,7 +1124,9 @@ export class StaffService {
         });
 
         if (!readAction || !employeeResource || !editAction)
-          throw new UnauthorizedException('an error has occured');
+          throw new UnauthorizedException(
+            'تعذر إكمال العملية بسبب عدم اكتمال إعداد صلاحيات النظام',
+          );
 
         const viewOwnAccountPerm = await tx.permissions.findUnique({
           where: {
@@ -1105,7 +1146,9 @@ export class StaffService {
         });
 
         if (!viewOwnAccountPerm || !editOwnAccountPerm)
-          throw new error('view own account permission not found ?!!');
+          throw new InternalServerErrorException(
+            'تعذر إكمال الدعوة بسبب عدم اكتمال إعداد صلاحيات الحساب',
+          );
 
         const confirmPermAssignment =
           await tx.directPermissionGrants.createManyAndReturn({
@@ -1125,7 +1168,10 @@ export class StaffService {
             ],
           });
 
-        if (confirmPermAssignment.length !== 2) throw new error('');
+        if (confirmPermAssignment.length !== 2)
+          throw new InternalServerErrorException(
+            'تعذر إسناد صلاحيات الحساب للموظف المدعو',
+          );
 
         return { staff, temporaryPassword };
       });
@@ -1198,15 +1244,15 @@ export class StaffService {
     if (soleStaffHalaqas.length || soleStaffActivities.length) {
       const assignments = [
         ...(soleStaffHalaqas.length
-          ? [`halaqa(s): ${soleStaffHalaqas.join(', ')}`]
+          ? [`الحلقات: ${soleStaffHalaqas.join('، ')}`]
           : []),
         ...(soleStaffActivities.length
-          ? [`activity/activities: ${soleStaffActivities.join(', ')}`]
+          ? [`الأنشطة: ${soleStaffActivities.join('، ')}`]
           : []),
       ];
 
       throw new ForbiddenException(
-        `Cannot remove the only assigned staff member from ${assignments.join('; ')}.`,
+        `لا يمكن إزالة الموظف الوحيد المعيّن في ${assignments.join('؛ ')}.`,
       );
     }
   }

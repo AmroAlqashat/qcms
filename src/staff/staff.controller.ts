@@ -43,7 +43,7 @@ import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
 import { ForgotPasswordEmailDto } from './dto/forgot-password-email.dto';
 import { Public } from '../auth/decorators/route-access.decorator';
 import { permission } from '../authorization/decorators/permissions-access.decorator';
-import { CurrentPermissionScope } from '../authorization/decorators/current-permission-scope.decorator';
+import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { ScopeType } from '@prisma/client';
 
 @Controller('staff')
@@ -59,11 +59,15 @@ export class StaffController {
   async showStaffPage(
     @Query() filterDto: FilteredStaffDto,
     @CurrentUser() actor: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
     const [staffList, filterOptions] = await Promise.all([
-      this.staffService.showFilteredStaff(filterDto, actor.id, scope),
-      scope === ScopeType.CENTER_WIDE
+      this.staffService.showFilteredStaff(
+        filterDto,
+        actor.id,
+        actorEndpointPermissionScope,
+      ),
+      actorEndpointPermissionScope === ScopeType.CENTER_WIDE
         ? this.staffService.showStaffFilterOptions(
             filterDto.halaqa,
             filterDto.role,
@@ -75,7 +79,7 @@ export class StaffController {
       filters: filterDto,
       filterOptions,
       permissions: {
-        canInvite: scope === ScopeType.CENTER_WIDE,
+        canInvite: actorEndpointPermissionScope === ScopeType.CENTER_WIDE,
       },
       activeNav: 'staff',
     };
@@ -87,8 +91,12 @@ export class StaffController {
     permission_resource: 'staff_members',
   })
   @Render('staff/pending-invitations-page')
-  async showStaffInvitationPage(@CurrentPermissionScope() scope: ScopeType) {
-    const invitations = await this.staffService.showPendingStaff(scope);
+  async showStaffInvitationPage(
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    const invitations = await this.staffService.showPendingStaff(
+      actorEndpointPermissionScope,
+    );
 
     return {
       invitations: invitations.map((invite) => ({
@@ -105,9 +113,12 @@ export class StaffController {
   })
   async cancelPendingInvitation(
     @Param('id') staffId: string,
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    await this.staffService.cancelPendingInvitation(staffId, scope);
+    await this.staffService.cancelPendingInvitation(
+      staffId,
+      actorEndpointPermissionScope,
+    );
 
     return { success: true };
   }
@@ -120,15 +131,23 @@ export class StaffController {
   @Render('partials/staff/permissions-dialog')
   async showPermissionsDialog(
     @Param('id') staffId: string,
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @CurrentUser() user: { id: string },
   ) {
     await this.staffService.assertStaffManageable(staffId);
     // GET: load the available choices and the staff member's active selections.
     // The partial uses selected/selectedScope to reopen the saved state.
     const [roles, permissions] = await Promise.all([
-      this.staffService.getRoleOptionsForStaff(staffId, scope, user.id),
-      this.staffService.getPermissionOptionsForStaff(staffId, scope, user.id),
+      this.staffService.getRoleOptionsForStaff(
+        staffId,
+        actorEndpointPermissionScope,
+        user.id,
+      ),
+      this.staffService.getPermissionOptionsForStaff(
+        staffId,
+        actorEndpointPermissionScope,
+        user.id,
+      ),
     ]);
 
     return {
@@ -149,7 +168,7 @@ export class StaffController {
     @Param('id') staffId: string,
     @Body() editPermissionsDto: EditPermissionsDto,
     @CurrentUser() user: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
@@ -157,7 +176,7 @@ export class StaffController {
       staffId,
       editPermissionsDto,
       user.id,
-      scope,
+      actorEndpointPermissionScope,
     );
 
     // Respond only after the transaction succeeds. HX-Redirect navigates the
@@ -184,12 +203,12 @@ export class StaffController {
   async showEditStaffForm(
     @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
     const staff = await this.staffService.showStaffEditPage(
       staffId,
       actor.id,
-      scope,
+      actorEndpointPermissionScope,
     );
 
     return {
@@ -200,7 +219,8 @@ export class StaffController {
         dateOfBirthValue: staff.dateOfBirth?.toISOString().slice(0, 10) ?? '',
         permissions: {
           canChangeStatus:
-            scope === ScopeType.CENTER_WIDE && !staff.isSuperAdmin,
+            actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
+            !staff.isSuperAdmin,
         },
       },
     };
@@ -218,9 +238,14 @@ export class StaffController {
     @Req() request: Request,
     @Res() response: Response,
     @CurrentUser() actor: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    await this.staffService.editStaff(id, editStaffDto, actor.id, scope);
+    await this.staffService.editStaff(
+      id,
+      editStaffDto,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
 
     const location = `/staff/${encodeURIComponent(id)}`;
 
@@ -260,14 +285,14 @@ export class StaffController {
     @Req() request: Request,
     @Res() response: Response,
     @CurrentUser() actor: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
     response.setHeader('Cache-Control', 'no-store');
 
     const result = await this.staffService.inviteStaff(
       inviteStaffDto,
       actor.id,
-      scope,
+      actorEndpointPermissionScope,
     );
 
     if (!wantsHtml(request)) {
@@ -296,15 +321,19 @@ export class StaffController {
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
     @Res() response: Response,
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
     response.setHeader('Cache-Control', 'no-store');
     const temporaryPassword = await this.staffService.generatePassword(
       id,
       actor.id,
-      scope,
+      actorEndpointPermissionScope,
     );
-    const staff = await this.staffService.showStaffProfile(actor.id, id, scope);
+    const staff = await this.staffService.showStaffProfile(
+      actor.id,
+      id,
+      actorEndpointPermissionScope,
+    );
     const profile = {
       staff: {
         ...staff,
@@ -324,20 +353,20 @@ export class StaffController {
       permissions: {
         canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
         canGeneratePassword:
-          scope === ScopeType.CENTER_WIDE &&
+          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
           actor.id !== staff.id &&
           !staff.isDeleted,
         canEditStaff: !staff.isDeleted,
         canManagePermissions:
-          scope === ScopeType.CENTER_WIDE &&
+          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
         canChangeStatus:
-          scope === ScopeType.CENTER_WIDE &&
+          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
         canDelete:
-          scope === ScopeType.CENTER_WIDE &&
+          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
       },
@@ -548,9 +577,13 @@ export class StaffController {
   async showStaffProfile(
     @Param('id') id: string,
     @CurrentUser() actor: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    const staff = await this.staffService.showStaffProfile(actor.id, id, scope);
+    const staff = await this.staffService.showStaffProfile(
+      actor.id,
+      id,
+      actorEndpointPermissionScope,
+    );
 
     return {
       staff: {
@@ -571,22 +604,23 @@ export class StaffController {
       permissions: {
         canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
         canGeneratePassword:
-          scope === ScopeType.CENTER_WIDE &&
+          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
           actor.id !== staff.id &&
           !staff.isDeleted,
         canEditStaff:
           !staff.isDeleted &&
-          (scope === ScopeType.CENTER_WIDE || actor.id === staff.id),
+          (actorEndpointPermissionScope === ScopeType.CENTER_WIDE ||
+            actor.id === staff.id),
         canManagePermissions:
-          scope === ScopeType.CENTER_WIDE &&
+          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
         canChangeStatus:
-          scope === ScopeType.CENTER_WIDE &&
+          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
         canDelete:
-          scope === ScopeType.CENTER_WIDE &&
+          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
       },
@@ -603,9 +637,11 @@ export class StaffController {
   @Render('staff/staff-deactivate-page')
   async showDeactivateStaffDialog(
     @Param('id') staffId: string,
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    this.staffService.assertCenterWideScope(scope);
+    this.staffService.assertActorEndpointCenterWideScope(
+      actorEndpointPermissionScope,
+    );
     await this.staffService.assertStaffManageable(staffId);
     return {
       staff: { id: staffId },
@@ -620,11 +656,15 @@ export class StaffController {
   async deactivateStaff(
     @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    await this.staffService.deactivateStaff(staffId, actor.id, scope);
+    await this.staffService.deactivateStaff(
+      staffId,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
     const location = '/staff';
 
     if (!wantsHtml(request)) {
@@ -648,9 +688,11 @@ export class StaffController {
   @Render('staff/staff-delete-page')
   async showDeleteStaffDialog(
     @Param('id') staffId: string,
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    this.staffService.assertCenterWideScope(scope);
+    this.staffService.assertActorEndpointCenterWideScope(
+      actorEndpointPermissionScope,
+    );
     await this.staffService.assertStaffManageable(staffId);
     return {
       staff: { id: staffId },
@@ -665,11 +707,15 @@ export class StaffController {
   async deleteStaff(
     @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    await this.staffService.deleteStaff(staffId, actor.id, scope);
+    await this.staffService.deleteStaff(
+      staffId,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
     const location = '/staff';
 
     if (!wantsHtml(request)) {
@@ -694,9 +740,11 @@ export class StaffController {
   @Render('staff/staff-activate-page')
   showactivateStaffDialog(
     @Param('id') staffId: string,
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    this.staffService.assertCenterWideScope(scope);
+    this.staffService.assertActorEndpointCenterWideScope(
+      actorEndpointPermissionScope,
+    );
     return {
       staff: { id: staffId },
     };
@@ -710,11 +758,15 @@ export class StaffController {
   async activateStaff(
     @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    await this.staffService.activateStaff(staffId, actor.id, scope);
+    await this.staffService.activateStaff(
+      staffId,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
     const location = '/staff';
 
     if (!wantsHtml(request)) {

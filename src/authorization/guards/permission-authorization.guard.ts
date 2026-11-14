@@ -15,7 +15,7 @@ import { AuthorizationService } from '../authorization.service';
 
 type AuthenticatedRequest = Request & {
   user?: { id: string; isSuperAdmin: boolean };
-  permissionScope?: ScopeType;
+  actorEndpointPermissionScope?: ScopeType;
 };
 
 @Injectable()
@@ -38,10 +38,8 @@ export class PermissionGuard implements CanActivate {
     const staffId = request.user?.id;
     if (!staffId) throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
 
-    request.permissionScope = await this.authorization.getAllowedScope(
-      staffId,
-      requiredPermission,
-    );
+    request.actorEndpointPermissionScope =
+      await this.authorization.getAllowedScope(staffId, requiredPermission);
     return true;
   }
 }

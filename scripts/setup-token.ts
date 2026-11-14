@@ -7,7 +7,7 @@ import { SetupService } from '../src/setup/setup.service';
 async function main() {
   if (!process.stdin.isTTY || !process.stdout.isTTY)
     throw new Error(
-      'Run interactively; do not send setup tokens to deployment logs.',
+      'شغّل الأمر بشكل تفاعلي، ولا ترسل رموز الإعداد إلى سجلات النشر.',
     );
   const app = await NestFactory.createApplicationContext(SetupModule, {
     logger: false,

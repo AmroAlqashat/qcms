@@ -43,21 +43,21 @@ export class EditStaffErrorFilter implements ExceptionFilter {
         : undefined;
     const staffId = req.params.id;
     if (typeof staffId !== 'string') {
-      throw new Error('Edit staff error filter requires a single staff ID');
+      throw new Error('يتطلب عرض خطأ تعديل الموظف معرّف موظف واحدًا');
     }
 
     const request = req as Request & {
       user?: { id: string };
-      permissionScope?: ScopeType;
+      actorEndpointPermissionScope?: ScopeType;
     };
-    if (!request.user?.id || !request.permissionScope) {
-      throw new UnauthorizedException();
+    if (!request.user?.id || !request.actorEndpointPermissionScope) {
+      throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
     }
 
     const staff = await this.staffService.showStaffEditPage(
       staffId,
       request.user.id,
-      request.permissionScope,
+      request.actorEndpointPermissionScope,
     );
     const form = req.body as Partial<EditStaffDto>;
 
@@ -81,7 +81,7 @@ export class EditStaffErrorFilter implements ExceptionFilter {
               '',
             permissions: {
               canChangeStatus:
-                request.permissionScope === 'CENTER_WIDE' &&
+                request.actorEndpointPermissionScope === 'CENTER_WIDE' &&
                 !staff.isSuperAdmin,
             },
           },

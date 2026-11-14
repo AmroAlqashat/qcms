@@ -24,10 +24,12 @@ export class RolesService {
     private readonly audit: AuditService,
   ) {}
 
-  assertCenterWideScope(scope: ScopeType): void {
-    if (scope !== ScopeType.CENTER_WIDE) {
+  assertActorEndpointCenterWideScope(
+    actorEndpointPermissionScope: ScopeType,
+  ): void {
+    if (actorEndpointPermissionScope !== ScopeType.CENTER_WIDE) {
       throw new ForbiddenException(
-        'This operation requires center-wide role permission',
+        'يتطلب هذا الإجراء صلاحية إدارة القوالب على مستوى المركز',
       );
     }
   }
@@ -45,8 +47,11 @@ export class RolesService {
       throw new ForbiddenException('لا يمكن تعديل أو حذف قالب مدير النظام');
   }
 
-  async getRoleAccountCount(roleId: string, scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async getRoleAccountCount(
+    roleId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const accountCount = await this.prisma.roles.findFirst({
       where: { id: roleId },
       select: {
@@ -65,8 +70,12 @@ export class RolesService {
     return accountCount._count.staffGrants;
   }
 
-  async deleteRole(roleId: string, actorId: string, scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async deleteRole(
+    roleId: string,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     //validate if user may delete this role
 
     try {
@@ -116,8 +125,8 @@ export class RolesService {
     return usedRoles;
   }
 
-  async listRoles(scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async listRoles(actorEndpointPermissionScope: ScopeType) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const roles = await this.prisma.roles.findMany({
       where: { isSuperAdminRole: false },
       orderBy: { createdAt: 'asc' },
@@ -140,9 +149,10 @@ export class RolesService {
 
   async getPermissionsWithCategory(
     roleId?: string,
-    scope?: ScopeType,
+    actorEndpointPermissionScope?: ScopeType,
   ): Promise<PermissionsData> {
-    if (scope) this.assertCenterWideScope(scope);
+    if (actorEndpointPermissionScope)
+      this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const permissions = await this.prisma.permissions.findMany({
       ...permissionCatalogQuery,
       select: {
@@ -160,8 +170,8 @@ export class RolesService {
     );
   }
 
-  async getRoleById(roleId: string, scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async getRoleById(roleId: string, actorEndpointPermissionScope: ScopeType) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     await this.assertRoleManageable(roleId);
     const role = await this.prisma.roles.findUnique({
       where: { id: roleId },
@@ -177,9 +187,9 @@ export class RolesService {
   async createRole(
     createNewRoleDto: CreateNewRoleDto,
     actorId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
   ) {
-    this.assertCenterWideScope(scope);
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const { name, description, permissions } = createNewRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 
@@ -225,9 +235,9 @@ export class RolesService {
     editRoleDto: EditRoleDto,
     roleId: string,
     actorId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
   ) {
-    this.assertCenterWideScope(scope);
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const { name, description, permissions } = editRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 

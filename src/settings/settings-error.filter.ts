@@ -10,7 +10,9 @@ import type { ScopeType } from '@prisma/client';
 import { wantsHtml } from '../common/wants-html';
 import { SettingsService } from './settings.service';
 
-type PermissionScopedRequest = Request & { permissionScope?: ScopeType };
+type ActorEndpointPermissionScopedRequest = Request & {
+  actorEndpointPermissionScope?: ScopeType;
+};
 
 @Catch(UnprocessableEntityException)
 export class SettingsErrorFilter implements ExceptionFilter {
@@ -18,19 +20,23 @@ export class SettingsErrorFilter implements ExceptionFilter {
 
   async catch(exception: UnprocessableEntityException, host: ArgumentsHost) {
     const http = host.switchToHttp();
-    const request = http.getRequest<PermissionScopedRequest>();
+    const request = http.getRequest<ActorEndpointPermissionScopedRequest>();
     const response = http.getResponse<Response>();
     if (!wantsHtml(request)) {
       response.status(422).json(exception.getResponse());
       return;
     }
 
-    const scope = request.permissionScope;
-    if (!scope) {
-      throw new ForbiddenException('No permission scope was resolved');
+    const actorEndpointPermissionScope = request.actorEndpointPermissionScope;
+    if (!actorEndpointPermissionScope) {
+      throw new ForbiddenException(
+        'تعذر تحديد نطاق صلاحية المستخدم لهذا الطلب',
+      );
     }
 
-    const stored = await this.settingsService.getSettings(scope);
+    const stored = await this.settingsService.getSettings(
+      actorEndpointPermissionScope,
+    );
     const initialSettings = JSON.stringify(
       Object.fromEntries(
         Object.entries(stored).map(([key, setting]) => [key, setting.value]),

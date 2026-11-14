@@ -10,10 +10,12 @@ export class SettingsService {
   private readonly ttlMs = 60_000;
   private readonly defaultTimeOut = 30;
 
-  private assertCenterWideScope(scope: ScopeType): void {
-    if (scope !== ScopeType.CENTER_WIDE) {
+  private assertActorEndpointCenterWideScope(
+    actorEndpointPermissionScope: ScopeType,
+  ): void {
+    if (actorEndpointPermissionScope !== ScopeType.CENTER_WIDE) {
       throw new ForbiddenException(
-        'This operation requires center-wide settings permission',
+        'يتطلب هذا الإجراء صلاحية إدارة الإعدادات على مستوى المركز',
       );
     }
   }
@@ -41,8 +43,8 @@ export class SettingsService {
     return value;
   }
 
-  async getSettings(scope: ScopeType) {
-    this.assertCenterWideScope(scope);
+  async getSettings(actorEndpointPermissionScope: ScopeType) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const settings = await this.prisma.settings.findMany({
       distinct: ['key'],
       orderBy: [{ setAt: 'desc' }, { id: 'desc' }],
@@ -63,9 +65,9 @@ export class SettingsService {
   async saveChanges(
     settingsDto: SettingsDto,
     actorId: string,
-    scope: ScopeType,
+    actorEndpointPermissionScope: ScopeType,
   ) {
-    this.assertCenterWideScope(scope);
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     // Fetch current settings.
     const dbSettings = await this.prisma.settings.findMany({
       distinct: ['key'],

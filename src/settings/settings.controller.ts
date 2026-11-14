@@ -14,7 +14,7 @@ import { SettingsService } from './settings.service';
 import { SettingsDto } from './dto/settings.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { permission } from '../authorization/decorators/permissions-access.decorator';
-import { CurrentPermissionScope } from '../authorization/decorators/current-permission-scope.decorator';
+import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { ScopeType } from '@prisma/client';
 
 @Controller('settings')
@@ -24,8 +24,12 @@ export class SettingsController {
   @Get()
   @permission({ permission_action: 'read', permission_resource: 'settings' })
   @Render('settings/settings-page')
-  async showSettingsPage(@CurrentPermissionScope() scope: ScopeType) {
-    const settings = await this.settingsService.getSettings(scope);
+  async showSettingsPage(
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    const settings = await this.settingsService.getSettings(
+      actorEndpointPermissionScope,
+    );
 
     return {
       settings,
@@ -47,17 +51,19 @@ export class SettingsController {
   async saveSettingsChanges(
     @Body() settingsDto: SettingsDto,
     @CurrentUser() user: { id: string },
-    @CurrentPermissionScope() scope: ScopeType,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
     const result = await this.settingsService.saveChanges(
       settingsDto,
       user.id,
-      scope,
+      actorEndpointPermissionScope,
     );
     if (request.get('HX-Request') === 'true') {
-      const settings = await this.settingsService.getSettings(scope);
+      const settings = await this.settingsService.getSettings(
+        actorEndpointPermissionScope,
+      );
       response.setHeader('X-QCMS-Fragment', 'true');
       response.render('settings/settings-page', {
         layout: false,

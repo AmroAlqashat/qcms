@@ -172,7 +172,7 @@ const scopeByCode: Record<string, ScopeType> = {
 function getScopeType(code: string): ScopeType {
   const scopeType = scopeByCode[code];
   if (!scopeType) {
-    throw new Error(`Unsupported permission scope code: ${code}`);
+    throw new Error(`رمز نطاق الصلاحية غير مدعوم: ${code}`);
   }
   return scopeType;
 }
@@ -184,7 +184,7 @@ export async function seedPermissions(tx: Prisma.TransactionClient) {
   for (const item of permissionCatalog) {
     if (!resources.has(item.resource)) {
       const engName = resourceKeys[item.resource];
-      if (!engName) throw new Error('Missing permission resource key');
+      if (!engName) throw new Error('مفتاح مورد الصلاحية مفقود');
       const resource = await tx.permission_resources.upsert({
         where: { eng_name: engName },
         update: { arb_name: item.resource },
@@ -195,7 +195,7 @@ export async function seedPermissions(tx: Prisma.TransactionClient) {
     }
     if (!actions.has(item.action)) {
       const engName = actionKeys[item.action];
-      if (!engName) throw new Error('Missing permission action key');
+      if (!engName) throw new Error('مفتاح إجراء الصلاحية مفقود');
       const action = await tx.permission_actions.upsert({
         where: { eng_name: engName },
         update: { arb_name: item.action },

@@ -40,7 +40,9 @@ export async function saveSeedActorEmail(
 ): Promise<void> {
   const normalizedEmail = email.trim().toLowerCase();
   if (!isEmail(normalizedEmail) || /[\r\n]/.test(normalizedEmail)) {
-    throw new Error('Invalid seed actor email.');
+    throw new Error(
+      'البريد الإلكتروني للمستخدم المسؤول عن إدخال البيانات الأولية غير صالح.',
+    );
   }
   const contents = await readFile(envPath, 'utf8');
   const newline = contents.includes('\r\n') ? '\r\n' : '\n';
@@ -63,8 +65,9 @@ export async function saveSeedActorEmail(
 
 async function main(): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY)
-    throw new Error('Run this command in an interactive terminal.');
-  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required.');
+    throw new Error('شغّل هذا الأمر في طرفية تفاعلية.');
+  if (!process.env.DATABASE_URL)
+    throw new Error('متغير البيئة DATABASE_URL مطلوب.');
   console.log(
     'Recover a missing superadmin in the database configured by DATABASE_URL.',
   );
@@ -73,7 +76,7 @@ async function main(): Promise<void> {
   const fullName = await ask('Full name: ');
   const password = await ask('Password (8–128 characters, hidden): ', true);
   const confirmation = await ask('Confirm password (hidden): ', true);
-  if (password !== confirmation) throw new Error('Passwords do not match.');
+  if (password !== confirmation) throw new Error('كلمتا المرور غير متطابقتين.');
   const app = await NestFactory.createApplicationContext(SetupModule, {
     logger: false,
     abortOnError: false,

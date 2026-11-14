@@ -13,7 +13,9 @@ import { RolesService } from '../roles.service';
 import type { PermissionGroup } from '../helpers/roles.types';
 import type { ScopeType } from '@prisma/client';
 
-type PermissionScopedRequest = Request & { permissionScope?: ScopeType };
+type ActorEndpointPermissionScopedRequest = Request & {
+  actorEndpointPermissionScope?: ScopeType;
+};
 
 type SubmittedPermission = {
   resource: string;
@@ -27,13 +29,15 @@ export class RolesErrorFilter implements ExceptionFilter {
 
   async catch(exception: HttpException, host: ArgumentsHost) {
     const context = host.switchToHttp();
-    const request = context.getRequest<PermissionScopedRequest>();
+    const request = context.getRequest<ActorEndpointPermissionScopedRequest>();
     const response = context.getResponse<Response>();
     const status = exception.getStatus();
     const body = exception.getResponse();
-    const scope = request.permissionScope;
-    if (!scope) {
-      throw new ForbiddenException('No permission scope was resolved');
+    const actorEndpointPermissionScope = request.actorEndpointPermissionScope;
+    if (!actorEndpointPermissionScope) {
+      throw new ForbiddenException(
+        'تعذر تحديد نطاق صلاحية المستخدم لهذا الطلب',
+      );
     }
 
     if (!wantsHtml(request)) {
@@ -57,7 +61,7 @@ export class RolesErrorFilter implements ExceptionFilter {
         : {};
 
     if (request.path.startsWith('/roles/delete/')) {
-      const role = await this.loadRole(roleId, scope);
+      const role = await this.loadRole(roleId, actorEndpointPermissionScope);
 
       if (!role) {
         this.redirectToList(request, response);
@@ -76,7 +80,7 @@ export class RolesErrorFilter implements ExceptionFilter {
       return;
     }
 
-    const editor = await this.loadEditor(roleId, scope);
+    const editor = await this.loadEditor(roleId, actorEndpointPermissionScope);
     if (!editor) {
       this.redirectToList(request, response);
       return;
@@ -111,22 +115,34 @@ export class RolesErrorFilter implements ExceptionFilter {
       });
   }
 
-  private async loadRole(roleId: string | undefined, scope: ScopeType) {
+  private async loadRole(
+    roleId: string | undefined,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
     if (!roleId) {
       return null;
     }
 
     try {
-      return await this.rolesService.getRoleById(roleId, scope);
+      return await this.rolesService.getRoleById(
+        roleId,
+        actorEndpointPermissionScope,
+      );
     } catch {
       return null;
     }
   }
 
-  private async loadEditor(roleId: string | undefined, scope: ScopeType) {
+  private async loadEditor(
+    roleId: string | undefined,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
     try {
       const role = roleId
-        ? await this.rolesService.getRoleById(roleId, scope)
+        ? await this.rolesService.getRoleById(
+            roleId,
+            actorEndpointPermissionScope,
+          )
         : undefined;
 
       if (roleId && !role) {
@@ -134,7 +150,10 @@ export class RolesErrorFilter implements ExceptionFilter {
       }
 
       const permissionsData =
-        await this.rolesService.getPermissionsWithCategory(roleId, scope);
+        await this.rolesService.getPermissionsWithCategory(
+          roleId,
+          actorEndpointPermissionScope,
+        );
 
       return { role, permissionsData };
     } catch {
