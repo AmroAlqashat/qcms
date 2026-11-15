@@ -1,3 +1,4 @@
+import type { StaffMembers } from '@prisma/client';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import {
   ConfirmEmailChangeDto,
@@ -45,10 +46,14 @@ import { Public } from '../auth/decorators/route-access.decorator';
 import { permission } from '../authorization/decorators/permissions-access.decorator';
 import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { ScopeType } from '@prisma/client';
+import { AuthorizationService } from '../authorization/authorization.service';
 
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) {}
+  constructor(
+    private readonly staffService: StaffService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   @Get()
   @permission({
@@ -79,7 +84,18 @@ export class StaffController {
       filters: filterDto,
       filterOptions,
       permissions: {
-        canInvite: actorEndpointPermissionScope === ScopeType.CENTER_WIDE,
+        canInvite: await this.authorizationService.hasPermission(
+          actor.id,
+          'staff_members',
+          'create',
+          ScopeType.CENTER_WIDE,
+        ),
+        canViewInvitations: await this.authorizationService.hasPermission(
+          actor.id,
+          'staff_invitations',
+          'read',
+          ScopeType.CENTER_WIDE,
+        ),
       },
       activeNav: 'staff',
     };
@@ -88,20 +104,27 @@ export class StaffController {
   @Get('invitations')
   @permission({
     permission_action: 'read',
-    permission_resource: 'staff_members',
+    permission_resource: 'staff_invitations',
   })
   @Render('staff/pending-invitations-page')
   async showStaffInvitationPage(
     @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+    @CurrentUser() user: { id: string },
   ) {
     const invitations = await this.staffService.showPendingStaff(
       actorEndpointPermissionScope,
     );
 
+    const canCancel: boolean = await this.authorizationService.hasPermission(
+      user.id,
+      'staff_invitations',
+      'delete',
+      ScopeType.CENTER_WIDE,
+    );
     return {
       invitations: invitations.map((invite) => ({
         ...invite,
-        canCancel: true,
+        canCancel,
       })),
       activeNav: 'staff',
     };
@@ -109,7 +132,7 @@ export class StaffController {
   @Post('invitations/cancel/:id')
   @permission({
     permission_action: 'delete',
-    permission_resource: 'staff_members',
+    permission_resource: 'staff_invitations',
   })
   async cancelPendingInvitation(
     @Param('id') staffId: string,
@@ -154,12 +177,18 @@ export class StaffController {
       roles,
       ...permissions,
       staffId,
+      canSavePermissions: await this.authorizationService.hasPermission(
+        user.id,
+        'direct_permission_grants',
+        'update',
+        ScopeType.CENTER_WIDE,
+      ),
     };
   }
 
   @Post('edit/permissions/:id')
   @permission({
-    permission_action: 'create',
+    permission_action: 'update',
     permission_resource: 'direct_permission_grants',
   })
   // The global ValidationPipe transforms and validates the submitted DTO
@@ -352,21 +381,23 @@ export class StaffController {
       },
       permissions: {
         canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
-        canGeneratePassword:
-          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
-          actor.id !== staff.id &&
-          !staff.isDeleted,
-        canEditStaff: !staff.isDeleted,
+        ...(await this.getProfileUpdatePermissions(actor.id, staff)),
         canManagePermissions:
-          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
-          !staff.isDeleted &&
-          !staff.isSuperAdmin,
-        canChangeStatus:
-          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
+          (await this.authorizationService.hasPermission(
+            actor.id,
+            'direct_permission_grants',
+            'read',
+            ScopeType.CENTER_WIDE,
+          )) &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
         canDelete:
-          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
+          (await this.authorizationService.hasPermission(
+            actor.id,
+            'staff_members',
+            'delete',
+            ScopeType.CENTER_WIDE,
+          )) &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
       },
@@ -602,25 +633,24 @@ export class StaffController {
         directGrantsLabel: 'تُتاح في إصدار لاحق',
       },
       permissions: {
+        ...(await this.getProfileUpdatePermissions(actor.id, staff)),
         canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
-        canGeneratePassword:
-          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
-          actor.id !== staff.id &&
-          !staff.isDeleted,
-        canEditStaff:
-          !staff.isDeleted &&
-          (actorEndpointPermissionScope === ScopeType.CENTER_WIDE ||
-            actor.id === staff.id),
         canManagePermissions:
-          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
-          !staff.isDeleted &&
-          !staff.isSuperAdmin,
-        canChangeStatus:
-          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
+          (await this.authorizationService.hasPermission(
+            actor.id,
+            'direct_permission_grants',
+            'read',
+            ScopeType.CENTER_WIDE,
+          )) &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
         canDelete:
-          actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
+          (await this.authorizationService.hasPermission(
+            actor.id,
+            'staff_members',
+            'delete',
+            ScopeType.CENTER_WIDE,
+          )) &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
       },
@@ -846,5 +876,43 @@ export class StaffController {
       return response.setHeader('HX-Redirect', location).status(204).end();
     if (!wantsHtml(request)) return response.json({ success: true });
     return response.redirect(303, location);
+  }
+
+  private async getProfileUpdatePermissions(
+    actorId: string,
+    staff: Pick<StaffMembers, 'id' | 'status' | 'isDeleted' | 'isSuperAdmin'>,
+  ) {
+    const canUpdateCenterWide = await this.authorizationService.hasPermission(
+      actorId,
+      'staff_members',
+      'update',
+      ScopeType.CENTER_WIDE,
+    );
+    const canUpdateOwnAccount =
+      !canUpdateCenterWide &&
+      actorId === staff.id &&
+      (await this.authorizationService.hasPermission(
+        actorId,
+        'staff_members',
+        'update',
+        ScopeType.OWN_ACCOUNT,
+      ));
+
+    return {
+      canEditStaff:
+        !staff.isDeleted &&
+        staff.status !== 'PENDING' &&
+        (canUpdateCenterWide || canUpdateOwnAccount),
+      canGeneratePassword:
+        canUpdateCenterWide &&
+        actorId !== staff.id &&
+        !staff.isDeleted &&
+        !staff.isSuperAdmin,
+      canChangeStatus:
+        canUpdateCenterWide &&
+        !staff.isDeleted &&
+        !staff.isSuperAdmin &&
+        (staff.status === 'ACTIVE' || staff.status === 'INACTIVE'),
+    };
   }
 }

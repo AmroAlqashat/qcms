@@ -15,7 +15,7 @@ const scopePriority: ScopeType[] = [
 
 @Injectable()
 export class AuthorizationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // Read current assignment authority again inside the save transaction; never
   // trust the choices shown by an earlier GET request.
@@ -188,5 +188,76 @@ export class AuthorizationService {
     }
 
     return grants;
+  }
+
+  async hasPermission(staffId: string, resource: string, action: string, scope: ScopeType) {
+    const [staffPermissions, staffDirectGransts] = await Promise.all([
+      this.prisma.roleStaffAssignments.findMany({
+        where: { staffId, revokedAt: null },
+        select: {
+          role: {
+            select: {
+              rolePermissions: {
+                select: {
+                  scopeType: true,
+                  permission: {
+                    select: {
+                      permission_resources: {
+                        select: {
+                          eng_name: true,
+                        },
+                      },
+                      permission_actions: {
+                        select: {
+                          eng_name: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.directPermissionGrants.findMany({
+        where: { staffId, revokedAt: null },
+        select: {
+          scopeType: true,
+          permission: {
+            select: {
+              permission_resources: {
+                select: {
+                  eng_name: true,
+                },
+              },
+              permission_actions: {
+                select: {
+                  eng_name: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    let hasPermission: boolean = staffPermissions.some((assignment) => {
+      return assignment.role.rolePermissions.some((perm) =>
+        perm.permission.permission_resources.eng_name === resource &&
+        perm.permission.permission_actions.eng_name === action &&
+        perm.scopeType === scope
+      );
+    });
+
+    if (!hasPermission) {
+      hasPermission = staffDirectGransts.some((grant) =>
+        grant.permission.permission_resources.eng_name === resource &&
+        grant.permission.permission_actions.eng_name === action &&
+        grant.scopeType === scope
+      );
+    }
+
+    return hasPermission;
   }
 }

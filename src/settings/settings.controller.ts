@@ -16,16 +16,21 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { permission } from '../authorization/decorators/permissions-access.decorator';
 import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { ScopeType } from '@prisma/client';
+import { AuthorizationService } from '../authorization/authorization.service';
 
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly authorizationService: AuthorizationService,
+  ) { }
 
   @Get()
   @permission({ permission_action: 'read', permission_resource: 'settings' })
   @Render('settings/settings-page')
   async showSettingsPage(
     @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+    @CurrentUser() user: { id: string },
   ) {
     const settings = await this.settingsService.getSettings(
       actorEndpointPermissionScope,
@@ -41,6 +46,9 @@ export class SettingsController {
           ]),
         ),
       ),
+      permissions: {
+        canSaveSettings: await this.authorizationService.hasPermission(user.id, 'settings', 'update', ScopeType.CENTER_WIDE)
+      },
       activeNav: 'settings',
     };
   }
@@ -77,6 +85,9 @@ export class SettingsController {
             ]),
           ),
         ),
+        permissions: {
+          canSaveSettings: await this.authorizationService.hasPermission(user.id, 'settings', 'update', ScopeType.CENTER_WIDE)
+        },
         activeNav: 'settings',
         feedback: result.count ? 'تم حفظ التغييرات.' : 'لا توجد تغييرات للحفظ.',
       });

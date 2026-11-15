@@ -1,3 +1,4 @@
+import { AuthorizationService } from '../../authorization/authorization.service';
 import {
   ArgumentsHost,
   Catch,
@@ -26,7 +27,10 @@ type SubmittedPermission = {
 
 @Catch(ConflictException, UnprocessableEntityException)
 export class RolesErrorFilter implements ExceptionFilter {
-  constructor(private readonly rolesService: RolesService) {}
+  constructor(
+    private readonly rolesService: RolesService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   async catch(exception: HttpException, host: ArgumentsHost) {
     const context = host.switchToHttp();
@@ -118,6 +122,14 @@ export class RolesErrorFilter implements ExceptionFilter {
               : role?.description,
         },
         ...permissionsData,
+        canDeleteRole:
+          !!roleId &&
+          (await this.authorizationService.hasPermission(
+            request.user.id,
+            'roles',
+            'delete',
+            'CENTER_WIDE',
+          )),
         errors: details.errors,
         error: details.errors ? undefined : exception.message,
       });

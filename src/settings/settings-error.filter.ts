@@ -6,17 +6,22 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import type { ScopeType } from '@prisma/client';
+import { ScopeType } from '@prisma/client';
 import { wantsHtml } from '../common/wants-html';
 import { SettingsService } from './settings.service';
+import { AuthorizationService } from '../authorization/authorization.service';
 
 type ActorEndpointPermissionScopedRequest = Request & {
   actorEndpointPermissionScope?: ScopeType;
+  user?: { id: string };
 };
 
 @Catch(UnprocessableEntityException)
 export class SettingsErrorFilter implements ExceptionFilter {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   async catch(exception: UnprocessableEntityException, host: ArgumentsHost) {
     const http = host.switchToHttp();
@@ -32,6 +37,10 @@ export class SettingsErrorFilter implements ExceptionFilter {
       throw new ForbiddenException(
         'تعذر تحديد نطاق صلاحية المستخدم لهذا الطلب',
       );
+    }
+
+    if (!request.user?.id) {
+      throw new ForbiddenException('تعذر تحديد المستخدم لهذا الطلب');
     }
 
     const stored = await this.settingsService.getSettings(
@@ -75,6 +84,14 @@ export class SettingsErrorFilter implements ExceptionFilter {
       activeNav: 'settings',
       settings,
       initialSettings,
+      permissions: {
+        canSaveSettings: await this.authorizationService.hasPermission(
+          request.user.id,
+          'settings',
+          'update',
+          ScopeType.CENTER_WIDE,
+        ),
+      },
       errors,
       error: 'لم تُحفظ التغييرات. راجع الحقول الموضّحة أدناه.',
     });

@@ -28,6 +28,7 @@ export const resourceKeys: Record<string, string> = {
   'قائمة المتأخرات': 'arrears',
   'التقارير المالية': 'financial_reports',
   الموظفون: 'staff_members',
+  'دعوات الموظفين': 'staff_invitations',
   الصلاحيات: 'permissions',
   'تعيينات الموظفين': 'staff_assignments',
   'صلاحيات الأدوار': 'role_permissions',

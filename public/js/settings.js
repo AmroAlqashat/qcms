@@ -12,6 +12,7 @@
       { signal: lifecycle.signal },
     );
     const form = root.querySelector('form');
+    const canSave = form.dataset.canSaveSettings === 'true';
     const currency = form.elements.currency;
     const registration = form.elements.registrationOpen;
     const feedback = root.querySelector('[data-settings-feedback]');
@@ -110,11 +111,17 @@
       form.elements.centerName.setCustomValidity(
         form.elements.centerName.value.trim() ? '' : 'أدخل اسم المركز.',
       );
-      dirty = fields.some((field) => field.value !== initial.get(field.name));
-      save.disabled = reset.disabled = !dirty;
-      root.querySelector('[data-settings-dirty]').textContent = dirty
-        ? 'لديك تغييرات غير محفوظة.'
-        : 'لا توجد تغييرات غير محفوظة.';
+      dirty =
+        canSave &&
+        fields.some((field) => field.value !== initial.get(field.name));
+      if (save) save.disabled = !dirty;
+      if (reset) reset.disabled = !dirty;
+      const dirtyMessage = root.querySelector('[data-settings-dirty]');
+      if (dirtyMessage) {
+        dirtyMessage.textContent = dirty
+          ? 'لديك تغييرات غير محفوظة.'
+          : 'لا توجد تغييرات غير محفوظة.';
+      }
       previews();
     };
     form.addEventListener('input', () => {
@@ -140,9 +147,16 @@
     // Native validation runs before submit. Allow the backend or HTMX to handle it.
     // Suppress the navigation warning only when a normal submission proceeds.
     form.addEventListener('submit', (event) => {
+      if (!canSave) {
+        event.preventDefault();
+        return;
+      }
       queueMicrotask(() => {
         submitting = !event.defaultPrevented;
       });
+    });
+    form.addEventListener('htmx:configRequest', (event) => {
+      if (!canSave) event.preventDefault();
     });
     window.addEventListener(
       'beforeunload',

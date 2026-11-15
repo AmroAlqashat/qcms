@@ -19,16 +19,21 @@ import { RolesErrorFilter } from './helpers/roles-error.filter';
 import { permission } from '../authorization/decorators/permissions-access.decorator';
 import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { ScopeType } from '@prisma/client';
+import { AuthorizationService } from '../authorization/authorization.service';
 
 @Controller('roles')
 export class RolesController {
-  constructor(private readonly rolesService: RolesService) {}
+  constructor(
+    private readonly rolesService: RolesService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   @Get()
   @permission({ permission_action: 'read', permission_resource: 'roles' })
   @Render('roles/roles-list')
-  async ShowListRolesPage(
+  async showListRolesPage(
     @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+    @CurrentUser() user: { id: string },
   ) {
     const roles = await this.rolesService.listRoles(
       actorEndpointPermissionScope,
@@ -38,7 +43,18 @@ export class RolesController {
       activeNav: 'roles',
       roles,
       permissions: {
-        canManageRoles: actorEndpointPermissionScope === ScopeType.CENTER_WIDE,
+        canCreateRole: await this.authorizationService.hasPermission(
+          user.id,
+          'roles',
+          'create',
+          ScopeType.CENTER_WIDE,
+        ),
+        canEditRole: await this.authorizationService.hasPermission(
+          user.id,
+          'roles',
+          'update',
+          ScopeType.CENTER_WIDE,
+        ),
       },
     };
   }
@@ -110,6 +126,12 @@ export class RolesController {
       ...permissionsData,
       activeNav: 'roles',
       accountCount,
+      canDeleteRole: await this.authorizationService.hasPermission(
+        user.id,
+        'roles',
+        'delete',
+        ScopeType.CENTER_WIDE,
+      ),
     };
   }
   @Post('edit/:id')

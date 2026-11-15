@@ -54,7 +54,7 @@ export class StaffService {
     private readonly rolesService: RolesService,
     private readonly otpService: OtpService,
     private readonly authorizationService: AuthorizationService,
-  ) {}
+  ) { }
 
   async assertStaffManageable(
     staffId: string,
@@ -70,6 +70,7 @@ export class StaffService {
         'لا يمكن تغيير حالة مدير النظام أو حذفه أو تعديل صلاحياته',
       );
   }
+
 
   private assertStaffScope(
     actorId: string,
@@ -122,8 +123,8 @@ export class StaffService {
     const staffAssignedRoles = staff.isSuperAdmin
       ? roles
       : roles.filter((role) =>
-          actorUsedRoles.some((assignment) => assignment.roleId === role.id),
-        );
+        actorUsedRoles.some((assignment) => assignment.roleId === role.id),
+      );
 
     return staffAssignedRoles.map((role) => ({
       ...role,
@@ -159,23 +160,23 @@ export class StaffService {
     const available = access.isSuperAdmin
       ? permissions
       : permissions
-          .filter((permission) =>
-            permission.directPermissionGrants.every((grant) =>
-              canAssignScope(
-                access.permissionScopes.get(permission.id),
-                grant.scopeType,
-              ),
+        .filter((permission) =>
+          permission.directPermissionGrants.every((grant) =>
+            canAssignScope(
+              access.permissionScopes.get(permission.id),
+              grant.scopeType,
             ),
-          )
-          .map((permission) => ({
-            ...permission,
-            allowedScopes: permission.allowedScopes.filter((allowedScope) =>
-              canAssignScope(
-                access.permissionScopes.get(permission.id),
-                allowedScope,
-              ),
+          ),
+        )
+        .map((permission) => ({
+          ...permission,
+          allowedScopes: permission.allowedScopes.filter((allowedScope) =>
+            canAssignScope(
+              access.permissionScopes.get(permission.id),
+              allowedScope,
             ),
-          }));
+          ),
+        }));
 
     return buildPermissionsData(available, (permission) =>
       permission.directPermissionGrants.map((grant) => grant.scopeType),

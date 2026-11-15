@@ -114,12 +114,23 @@
       }
     });
 
+    document.addEventListener('submit', (event) => {
+      if (event.target.matches('[data-can-save-permissions="false"]')) {
+        event.preventDefault();
+      }
+    });
+
     // Assemble the permissions payload immediately before HTMX sends the form,
     // so it reflects the latest checkbox and dropdown values.
     document.addEventListener('htmx:configRequest', (event) => {
       const form = event.detail.elt.closest('[data-permission-editor]');
 
       if (!form) {
+        return;
+      }
+
+      if (form.dataset.canSavePermissions === 'false') {
+        event.preventDefault();
         return;
       }
 

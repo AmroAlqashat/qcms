@@ -25,7 +25,7 @@ export class RolesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly authorizationService: AuthorizationService,
-  ) {}
+  ) { }
 
   assertActorEndpointCenterWideScope(
     actorEndpointPermissionScope: ScopeType,
@@ -164,10 +164,10 @@ export class RolesService {
       where: access.isSuperAdmin
         ? {}
         : {
-            id: {
-              in: [...access.permissionScopes.keys()],
-            },
+          id: {
+            in: [...access.permissionScopes.keys()],
           },
+        },
       ...permissionCatalogQuery,
       select: {
         ...permissionCatalogQuery.select,
@@ -182,24 +182,24 @@ export class RolesService {
     const availablePermissions = access.isSuperAdmin
       ? permissions
       : permissions
-          // Keep actions with an unmanageable saved scope out of the single-scope editor.
-          .filter((permission) =>
-            permission.rolePermissions.every((grant) =>
-              canAssignScope(
-                access.permissionScopes.get(permission.id),
-                grant.scopeType,
-              ),
+        // Keep actions with an unmanageable saved scope out of the single-scope editor.
+        .filter((permission) =>
+          permission.rolePermissions.every((grant) =>
+            canAssignScope(
+              access.permissionScopes.get(permission.id),
+              grant.scopeType,
             ),
-          )
-          .map((permission) => ({
-            ...permission,
-            allowedScopes: permission.allowedScopes.filter((requestedScope) =>
-              canAssignScope(
-                access.permissionScopes.get(permission.id),
-                requestedScope,
-              ),
+          ),
+        )
+        .map((permission) => ({
+          ...permission,
+          allowedScopes: permission.allowedScopes.filter((requestedScope) =>
+            canAssignScope(
+              access.permissionScopes.get(permission.id),
+              requestedScope,
             ),
-          }));
+          ),
+        }));
 
     return buildPermissionsData(availablePermissions, (permission) =>
       permission.rolePermissions.map((grant) => grant.scopeType),

@@ -17,9 +17,16 @@ type PermissionResourceDefinition = {
   category: string;
   scopes: string;
   scopeOverrides?: Partial<Record<CrudActionKey, string>>;
+  actions?: readonly CrudActionKey[];
 };
 
 const permissionResources: readonly PermissionResourceDefinition[] = [
+  {
+    resource: 'دعوات الموظفين',
+    category: 'الموظفون والصلاحيات',
+    scopes: 'C',
+    actions: ['read', 'delete'],
+  },
   {
     resource: 'الموظفون',
     category: 'الموظفون والصلاحيات',
@@ -154,13 +161,15 @@ const permissionResources: readonly PermissionResourceDefinition[] = [
 ];
 
 const permissionCatalog = permissionResources.flatMap(
-  ({ resource, category, scopes, scopeOverrides }) =>
-    crudActions.map(({ action, key }) => ({
-      resource,
-      action,
-      category,
-      scopes: scopeOverrides?.[key] ?? scopes,
-    })),
+  ({ resource, category, scopes, scopeOverrides, actions }) =>
+    crudActions
+      .filter(({ key }) => !actions || actions.includes(key))
+      .map(({ action, key }) => ({
+        resource,
+        action,
+        category,
+        scopes: scopeOverrides?.[key] ?? scopes,
+      })),
 );
 
 const scopeByCode: Record<string, ScopeType> = {
@@ -208,11 +217,30 @@ export async function seedPermissions(tx: Prisma.TransactionClient) {
     const resource = resources.get(item.resource)!;
     const action = actions.get(item.action)!;
     const allowedScopes = [...item.scopes].map(getScopeType);
-    await tx.permissions.upsert({
+    const permission = await tx.permissions.upsert({
       where: { resource_action: { resource, action } },
       update: { category: item.category, allowedScopes },
       create: { resource, action, category: item.category, allowedScopes },
     });
+
+    // Existing superadmin roles also need this newly introduced permission.
+    // Normal roles receive it only through explicit assignment by an admin.
+    if (resourceKeys[item.resource] === 'staff_invitations') {
+      const superadminRoles = await tx.roles.findMany({
+        where: { isSuperAdminRole: true },
+        select: { id: true },
+      });
+      if (superadminRoles.length) {
+        await tx.rolePermissions.createMany({
+          data: superadminRoles.map((role) => ({
+            roleId: role.id,
+            permissionId: permission.id,
+            scopeType: ScopeType.CENTER_WIDE,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
   }
 
   return permissionCatalog.length;
