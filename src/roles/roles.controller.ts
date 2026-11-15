@@ -48,8 +48,10 @@ export class RolesController {
   @Render('roles/roles-editor')
   async showCreateRolePage(
     @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+    @CurrentUser() user: { id: string },
   ) {
     const permissionsData = await this.rolesService.getPermissionsWithCategory(
+      user.id,
       undefined,
       actorEndpointPermissionScope,
     );
@@ -86,12 +88,14 @@ export class RolesController {
   @permission({ permission_action: 'update', permission_resource: 'roles' })
   @Render('roles/roles-editor')
   async showEditRolePage(
+    @CurrentUser() user: { id: string },
     @Param('id') roleId: string,
     @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
     const [role, permissionsData, accountCount] = await Promise.all([
       this.rolesService.getRoleById(roleId, actorEndpointPermissionScope),
       this.rolesService.getPermissionsWithCategory(
+        user.id,
         roleId,
         actorEndpointPermissionScope,
       ),

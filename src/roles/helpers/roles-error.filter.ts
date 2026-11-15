@@ -15,6 +15,7 @@ import type { ScopeType } from '@prisma/client';
 
 type ActorEndpointPermissionScopedRequest = Request & {
   actorEndpointPermissionScope?: ScopeType;
+  user?: { id: string };
 };
 
 type SubmittedPermission = {
@@ -80,7 +81,14 @@ export class RolesErrorFilter implements ExceptionFilter {
       return;
     }
 
-    const editor = await this.loadEditor(roleId, actorEndpointPermissionScope);
+    if (!request.user?.id) {
+      throw new ForbiddenException('تعذر تحديد المستخدم لهذا الطلب');
+    }
+    const editor = await this.loadEditor(
+      request.user.id,
+      roleId,
+      actorEndpointPermissionScope,
+    );
     if (!editor) {
       this.redirectToList(request, response);
       return;
@@ -134,6 +142,7 @@ export class RolesErrorFilter implements ExceptionFilter {
   }
 
   private async loadEditor(
+    actorId: string,
     roleId: string | undefined,
     actorEndpointPermissionScope: ScopeType,
   ) {
@@ -151,6 +160,7 @@ export class RolesErrorFilter implements ExceptionFilter {
 
       const permissionsData =
         await this.rolesService.getPermissionsWithCategory(
+          actorId,
           roleId,
           actorEndpointPermissionScope,
         );

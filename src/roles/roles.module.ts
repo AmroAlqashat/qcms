@@ -1,3 +1,4 @@
+import { AuthorizationModule } from '../authorization/authorization.module';
 import { Module } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { RolesController } from './roles.controller';
@@ -6,7 +7,7 @@ import { AuditModule } from '../audit/audit.module';
 import { RolesErrorFilter } from './helpers/roles-error.filter';
 
 @Module({
-  imports: [PrismaModule, AuditModule],
+  imports: [AuthorizationModule, PrismaModule, AuditModule],
   controllers: [RolesController],
   providers: [RolesService, RolesErrorFilter],
   exports: [RolesService],

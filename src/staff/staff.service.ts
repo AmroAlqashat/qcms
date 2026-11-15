@@ -1,3 +1,5 @@
+import { canAssignScope } from '../authorization/helpers/can-assign-scope';
+import { AuthorizationService } from '../authorization/authorization.service';
 import {
   jobTitleLabels,
   jobTitleOptions,
@@ -44,22 +46,6 @@ import {
   permissionCatalogQuery,
 } from '../roles/helpers/permission-view';
 
-const scopeRank: Record<ScopeType, number> = {
-  [ScopeType.CENTER_WIDE]: 0,
-  [ScopeType.ASSIGNED_CLASS]: 1,
-  [ScopeType.OWN_ACCOUNT]: 2,
-};
-
-function canAssignScope(
-  grantedScopes: ReadonlySet<ScopeType> | undefined,
-  requestedScope: ScopeType,
-): boolean {
-  if (!grantedScopes) return false;
-  return [...grantedScopes].some(
-    (grantedScope) => scopeRank[grantedScope] <= scopeRank[requestedScope],
-  );
-}
-
 @Injectable()
 export class StaffService {
   constructor(
@@ -67,6 +53,7 @@ export class StaffService {
     private readonly audit: AuditService,
     private readonly rolesService: RolesService,
     private readonly otpService: OtpService,
+    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async assertStaffManageable(
@@ -144,87 +131,14 @@ export class StaffService {
     }));
   }
 
-  // Read current assignment authority again inside the save transaction; never
-  // trust the choices shown by an earlier GET request.
-  private async getAssignmentAccess(
-    editorId: string,
-    db: Prisma.TransactionClient = this.prisma,
-  ) {
-    const editor = await db.staffMembers.findUnique({
-      where: { id: editorId, isDeleted: false },
-      select: {
-        isSuperAdmin: true,
-        roleGrants: {
-          where: { revokedAt: null, role: { isSuperAdminRole: false } },
-          select: {
-            roleId: true,
-            role: {
-              select: {
-                rolePermissions: {
-                  select: {
-                    permissionId: true,
-                    scopeType: true,
-                    permission: { select: { allowedScopes: true } },
-                  },
-                },
-              },
-            },
-          },
-        },
-        directPermissionGrants: {
-          where: { revokedAt: null },
-          select: {
-            permissionId: true,
-            scopeType: true,
-            permission: { select: { allowedScopes: true } },
-          },
-        },
-      },
-    });
-    if (!editor) throw new NotFoundException('الموظف غير موجود');
-
-    const permissionScopes = new Map<string, Set<ScopeType>>();
-    const addPermissionScope = (
-      permissionId: string,
-      scopeType: ScopeType,
-      allowedScopes: ScopeType[],
-    ) => {
-      if (!allowedScopes.includes(scopeType)) return;
-      const scopes = permissionScopes.get(permissionId) ?? new Set<ScopeType>();
-      scopes.add(scopeType);
-      permissionScopes.set(permissionId, scopes);
-    };
-
-    for (const grant of editor.directPermissionGrants) {
-      addPermissionScope(
-        grant.permissionId,
-        grant.scopeType,
-        grant.permission.allowedScopes,
-      );
-    }
-    for (const assignment of editor.roleGrants) {
-      for (const grant of assignment.role.rolePermissions) {
-        addPermissionScope(
-          grant.permissionId,
-          grant.scopeType,
-          grant.permission.allowedScopes,
-        );
-      }
-    }
-    return {
-      isSuperAdmin: editor.isSuperAdmin,
-      roleIds: editor.roleGrants.map((grant) => grant.roleId),
-      permissionScopes,
-    };
-  }
-
   async getPermissionOptionsForStaff(
     editedStaffId: string,
     actorEndpointPermissionScope: ScopeType,
     editorId: string,
   ) {
     this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
-    const access = await this.getAssignmentAccess(editorId);
+    const access =
+      await this.authorizationService.getAssignmentAccess(editorId);
     const permissions = await this.prisma.permissions.findMany({
       ...permissionCatalogQuery,
       where: access.isSuperAdmin
@@ -285,7 +199,10 @@ export class StaffService {
       await this.prisma.$transaction(
         async (tx) => {
           await this.assertStaffManageable(staffId, tx);
-          const access = await this.getAssignmentAccess(actorId, tx);
+          const access = await this.authorizationService.getAssignmentAccess(
+            actorId,
+            tx,
+          );
           const protectedRole = await tx.roles.findFirst({
             where: { id: { in: roleIds }, isSuperAdminRole: true },
           });

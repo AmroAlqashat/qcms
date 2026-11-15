@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { ScopeType } from '@prisma/client';
+import type { Prisma, ScopeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { PermissionAccess } from './decorators/permissions-access.decorator';
 
@@ -16,6 +16,80 @@ const scopePriority: ScopeType[] = [
 @Injectable()
 export class AuthorizationService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // Read current assignment authority again inside the save transaction; never
+  // trust the choices shown by an earlier GET request.
+  async getAssignmentAccess(
+    editorId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ) {
+    const editor = await db.staffMembers.findUnique({
+      where: { id: editorId, isDeleted: false },
+      select: {
+        isSuperAdmin: true,
+        roleGrants: {
+          where: { revokedAt: null, role: { isSuperAdminRole: false } },
+          select: {
+            roleId: true,
+            role: {
+              select: {
+                rolePermissions: {
+                  select: {
+                    permissionId: true,
+                    scopeType: true,
+                    permission: { select: { allowedScopes: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        directPermissionGrants: {
+          where: { revokedAt: null },
+          select: {
+            permissionId: true,
+            scopeType: true,
+            permission: { select: { allowedScopes: true } },
+          },
+        },
+      },
+    });
+    if (!editor) throw new NotFoundException('الموظف غير موجود');
+
+    const permissionScopes = new Map<string, Set<ScopeType>>();
+    const addPermissionScope = (
+      permissionId: string,
+      scopeType: ScopeType,
+      allowedScopes: ScopeType[],
+    ) => {
+      if (!allowedScopes.includes(scopeType)) return;
+      const scopes = permissionScopes.get(permissionId) ?? new Set<ScopeType>();
+      scopes.add(scopeType);
+      permissionScopes.set(permissionId, scopes);
+    };
+
+    for (const grant of editor.directPermissionGrants) {
+      addPermissionScope(
+        grant.permissionId,
+        grant.scopeType,
+        grant.permission.allowedScopes,
+      );
+    }
+    for (const assignment of editor.roleGrants) {
+      for (const grant of assignment.role.rolePermissions) {
+        addPermissionScope(
+          grant.permissionId,
+          grant.scopeType,
+          grant.permission.allowedScopes,
+        );
+      }
+    }
+    return {
+      isSuperAdmin: editor.isSuperAdmin,
+      roleIds: editor.roleGrants.map((grant) => grant.roleId),
+      permissionScopes,
+    };
+  }
 
   async getAllowedScope(
     staffId: string,
