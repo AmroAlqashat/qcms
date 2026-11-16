@@ -380,7 +380,6 @@ export class StaffController {
         directGrantsLabel: 'تُتاح في إصدار لاحق',
       },
       permissions: {
-        canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
         ...(await this.getProfileUpdatePermissions(actor.id, staff)),
         canManagePermissions:
           (await this.authorizationService.hasPermission(
@@ -634,7 +633,6 @@ export class StaffController {
       },
       permissions: {
         ...(await this.getProfileUpdatePermissions(actor.id, staff)),
-        canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
         canManagePermissions:
           (await this.authorizationService.hasPermission(
             actor.id,
@@ -898,7 +896,15 @@ export class StaffController {
         ScopeType.OWN_ACCOUNT,
       ));
 
+    const canUpdateOwnProfile =
+      actorId === staff.id &&
+      !staff.isDeleted &&
+      staff.status === 'ACTIVE' &&
+      (canUpdateCenterWide || canUpdateOwnAccount);
+
     return {
+      canChangeOwnEmail: canUpdateOwnProfile,
+      canChangeOwnPassword: canUpdateOwnProfile,
       canEditStaff:
         !staff.isDeleted &&
         staff.status !== 'PENDING' &&
