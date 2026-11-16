@@ -522,14 +522,14 @@ export class StaffService {
     } = filterDto;
     const skip = (page! - 1) * limit!;
 
-    const where: Prisma.StaffMembersWhereInput = { isDeleted };
-    if (actorEndpointPermissionScope === ScopeType.OWN_ACCOUNT) {
-      where.id = actorId;
-    } else if (actorEndpointPermissionScope !== ScopeType.CENTER_WIDE) {
+    const where: Prisma.StaffMembersWhereInput = {
+      isDeleted,
+      id: { not: actorId },
+    };
+    if (actorEndpointPermissionScope !== ScopeType.CENTER_WIDE) {
       throw new ForbiddenException('نطاق صلاحيتك لا يسمح بعرض قائمة الموظفين');
-    } else {
-      await this.validateRelations(halaqa, role);
     }
+    await this.validateRelations(halaqa, role);
 
     //define search parameters
     if (searchField) {

@@ -33,6 +33,18 @@
         <span class="mr-auto rounded-full bg-[#c58a28] px-2 text-xs text-white">{{notificationCount}}</span>
       {{/if}}
     </a>
+    {{#if currentUser.id}}
+      <a href="/staff/{{currentUser.id}}"
+        aria-label="الملف الشخصي: {{currentUser.fullName}}"
+        class="my-2 flex min-h-11 items-center gap-3 rounded-xl bg-white/10 px-3 py-3 text-white transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+        <span aria-hidden="true"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#2b827a] text-sm font-bold text-white">{{currentUser.initials}}</span>
+        <span class="min-w-0">
+          <span class="block truncate font-semibold" title="{{currentUser.fullName}}">{{currentUser.fullName}}</span>
+          <span class="block text-xs text-[#b5cdca]">الملف الشخصي</span>
+        </span>
+      </a>
+    {{/if}}
     <form action="/auth/logout" method="post">
       {{> ui/csrf}}
       <button type="submit"
