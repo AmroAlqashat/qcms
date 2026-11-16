@@ -13,6 +13,7 @@ import {
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpException,
   HttpStatus,
@@ -340,6 +341,37 @@ export class StaffController {
     );
   }
 
+  @Get('generate-new-password/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
+  async showGeneratePasswordConfirmation(
+    @Param('id') id: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.staffService.assertActorEndpointCenterWideScope(
+      actorEndpointPermissionScope,
+    );
+    const staff = await this.staffService.showStaffProfile(
+      actor.id,
+      id,
+      actorEndpointPermissionScope,
+    );
+    const permissions = await this.getProfileUpdatePermissions(actor.id, staff);
+    if (!permissions.canGeneratePassword) {
+      throw new ForbiddenException('لا يمكنك إنشاء كلمة مرور لهذا الحساب');
+    }
+    response.setHeader('Cache-Control', 'no-store');
+    return response.render('partials/staff/confirm-generate-password-dialog', {
+      staff: { id: staff.id, fullName: staff.fullName },
+      layout: request.get('HX-Request') === 'true' ? false : 'main',
+    });
+  }
+
   @Post('generate-new-password/:id')
   @permission({
     permission_action: 'update',
@@ -377,7 +409,7 @@ export class StaffController {
         classes: staff.classAssignments.map(({ halaqa }) => halaqa),
         activities: staff.activityAssignments.map(({ activity }) => activity),
         templates: staff.roleGrants.map(({ role }) => role),
-        directGrantsLabel: 'تُتاح في إصدار لاحق',
+        directGrants: staff.directGrants,
       },
       permissions: {
         ...(await this.getProfileUpdatePermissions(actor.id, staff)),
@@ -400,7 +432,7 @@ export class StaffController {
           !staff.isDeleted &&
           !staff.isSuperAdmin,
       },
-      effectivePermissionCount: 0,
+      effectivePermissionCount: staff.effectivePermissionCount,
       activeNav: 'staff',
     };
 
@@ -629,7 +661,7 @@ export class StaffController {
         classes: staff.classAssignments.map(({ halaqa }) => halaqa),
         activities: staff.activityAssignments.map(({ activity }) => activity),
         templates: staff.roleGrants.map(({ role }) => role),
-        directGrantsLabel: 'تُتاح في إصدار لاحق',
+        directGrants: staff.directGrants,
       },
       permissions: {
         ...(await this.getProfileUpdatePermissions(actor.id, staff)),
@@ -652,7 +684,7 @@ export class StaffController {
           !staff.isDeleted &&
           !staff.isSuperAdmin,
       },
-      effectivePermissionCount: 0,
+      effectivePermissionCount: staff.effectivePermissionCount,
       activeNav: 'staff',
     };
   }

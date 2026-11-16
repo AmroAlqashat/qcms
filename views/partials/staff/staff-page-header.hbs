@@ -11,9 +11,11 @@
   {{/if}}
 </header>
 <nav aria-label="أقسام الموظفين" class="mb-5 flex flex-wrap gap-2 text-sm">
+  {{#if navigationPermissions.canViewStaff}}
   <a href="/staff" hx-get="/staff" hx-target="#main-content" hx-swap="innerHTML" hx-push-url="true"
     class="rounded-xl px-4 py-2.5 {{#unless pendingTab}}bg-white font-bold shadow-sm{{else}}text-slate-600{{/unless}}"
     {{#unless pendingTab}}aria-current="page" {{/unless}}>الحسابات</a>
+  {{/if}}
   {{#if permissions.canViewInvitations}}
   <a href="/staff/invitations" hx-get="/staff/invitations" hx-target="#main-content" hx-swap="innerHTML"
     hx-push-url="true"

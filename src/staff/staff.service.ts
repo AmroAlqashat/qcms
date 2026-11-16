@@ -1,4 +1,5 @@
 import { canAssignScope } from '../authorization/helpers/can-assign-scope';
+import { scopeLabels } from '../common/scope-labels-map';
 import { AuthorizationService } from '../authorization/authorization.service';
 import {
   jobTitleLabels,
@@ -686,7 +687,31 @@ export class StaffService {
           where: { revokedAt: null },
           select: {
             role: {
-              select: { id: true, name: true },
+              select: {
+                id: true,
+                name: true,
+                rolePermissions: {
+                  select: {
+                    permissionId: true,
+                    scopeType: true,
+                    permission: { select: { allowedScopes: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        directPermissionGrants: {
+          where: { revokedAt: null },
+          select: {
+            permissionId: true,
+            scopeType: true,
+            permission: {
+              select: {
+                allowedScopes: true,
+                permission_resources: { select: { arb_name: true } },
+                permission_actions: { select: { arb_name: true } },
+              },
             },
           },
         },
@@ -697,9 +722,29 @@ export class StaffService {
       throw new NotFoundException('الموظف غير موجود');
     }
 
+    const directGrants = staff.directPermissionGrants.filter((grant) =>
+      grant.permission.allowedScopes.includes(grant.scopeType),
+    );
+    // Count each valid permission/scope pair once, even across multiple sources.
+    const effectivePermissions = new Set<string>();
+    const grants = [
+      ...directGrants,
+      ...staff.roleGrants.flatMap(({ role }) => role.rolePermissions),
+    ];
+    for (const grant of grants) {
+      if (grant.permission.allowedScopes.includes(grant.scopeType)) {
+        effectivePermissions.add(`${grant.permissionId}:${grant.scopeType}`);
+      }
+    }
+
     return {
       ...staff,
       jobTitleLabel: staff.jobTitle ? jobTitleLabels[staff.jobTitle] : '',
+      directGrants: directGrants.map((grant) => ({
+        name: `${grant.permission.permission_resources.arb_name} — ${grant.permission.permission_actions.arb_name}`,
+        scopeLabel: scopeLabels[grant.scopeType],
+      })),
+      effectivePermissionCount: effectivePermissions.size,
     };
   }
 
