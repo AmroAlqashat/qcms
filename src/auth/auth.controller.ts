@@ -13,7 +13,11 @@ import {
   UseFilters,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { Public, Onboarding } from './decorators/route-access.decorator';
+import {
+  Public,
+  Onboarding,
+  AuthenticatedOnly,
+} from './decorators/route-access.decorator';
 import { AuthService } from './auth.service';
 import { ChangeOnboardingPasswordDto } from './dto/change-onboarding-password.dto';
 import { CompleteOnboardingProfileDto } from './dto/complete-onboarding-profile.dto';
@@ -301,6 +305,7 @@ export class AuthController {
     return res.redirect(303, redirectPath);
   }
 
+  @AuthenticatedOnly()
   @Post('logout')
   async logout(@Req() req: Request, @Res() res: Response) {
     res.setHeader('Cache-Control', 'no-store');
