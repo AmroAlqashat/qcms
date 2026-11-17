@@ -1,0 +1,61 @@
+<section aria-labelledby="term-title" class="space-y-6">
+  <a href="/terms" class="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-[#287a73]">{{> ui/icon name="arrow" class="h-4 w-4"}}جميع الفصول</a>
+  <header class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-t-4 border-[#edbc5a] bg-[#195954] p-6 text-white sm:p-8">
+      <div class="flex flex-wrap items-start justify-between gap-5">
+        <div class="flex min-w-0 items-center gap-4">
+          <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-[#edbc5a]" aria-hidden="true">{{> ui/icon name="calendar" class="h-7 w-7"}}</span>
+          <div class="min-w-0"><p class="mb-2 text-xs font-bold text-[#c0e3dc]">الفصول والحلقات</p><h1 id="term-title" class="text-2xl font-extrabold sm:text-3xl">الفصل <bdi>{{term.termId}}</bdi></h1></div>
+        </div>
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold"><span class="h-2 w-2 rounded-full bg-[#edbc5a]" aria-hidden="true"></span>فصل نشط</span>
+      </div>
+      <p class="mt-5 max-w-2xl text-sm leading-7 text-[#d7ebe6]">{{#if term.isContinuous}}فصل مستمر دون تاريخ بداية أو نهاية. يجمع الحلقات والتعيينات المرتبطة به.{{else}}نظرة عامة على بيانات الفصل والحلقات المرتبطة به خلال الفترة المحددة.{{/if}}</p>
+    </div>
+    <dl class="grid gap-5 p-5 sm:grid-cols-3 sm:p-6">
+      <div><dt class="text-xs text-slate-500">معرّف الفصل</dt><dd class="mt-2 text-lg font-extrabold tabular-nums"><bdi>{{term.termId}}</bdi></dd></div>
+      <div><dt class="text-xs text-slate-500">نوع الفصل</dt><dd class="mt-2 text-lg font-bold">{{term.typeLabel}}</dd></div>
+      <div><dt class="text-xs text-slate-500">الحلقات المرتبطة</dt><dd class="mt-2 text-lg font-extrabold text-[#287a73]"><span class="tabular-nums">{{term._count.halaqas}}</span> <span class="text-sm font-normal">حلقة</span></dd></div>
+    </dl>
+  </header>
+  <div class="grid items-start gap-6 xl:grid-cols-3">
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-2" aria-labelledby="term-halaqas-title">
+      <header class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5 sm:p-6">
+        <div><h2 id="term-halaqas-title" class="text-lg font-extrabold">حلقات الفصل</h2><p class="mt-1 text-xs leading-6 text-slate-500">التسجيلات والتعيينات الحالية في كل حلقة.</p></div>
+        <span class="rounded-lg bg-[#f0faf9] px-3 py-1 text-sm font-bold text-[#287a73]">{{term._count.halaqas}} حلقة</span>
+      </header>
+      {{#if permissions.canViewHalaqas}}
+        {{#if term.halaqas.length}}
+          <ul class="divide-y divide-slate-100">
+            {{#each term.halaqas}}
+              <li class="p-5 sm:p-6">
+                <div class="flex items-center gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f0faf9] text-[#287a73]" aria-hidden="true">{{> ui/icon name="users" class="h-5 w-5"}}</span><h3 class="min-w-0 break-words font-bold">{{name}}</h3></div>
+                <dl class="mt-4 grid grid-cols-2 gap-3">
+                  <div class="rounded-xl bg-slate-50 px-4 py-3"><dt class="text-xs leading-6 text-slate-500">الطلاب المسجّلون حاليًا</dt><dd class="mt-1 text-xl font-extrabold tabular-nums">{{_count.enrollments}}</dd></div>
+                  <div class="rounded-xl bg-slate-50 px-4 py-3"><dt class="text-xs leading-6 text-slate-500">الموظفون المعيّنون</dt><dd class="mt-1 text-xl font-extrabold tabular-nums">{{_count.staffAssignments}}</dd></div>
+                </dl>
+              </li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <div class="px-6 py-12 text-center"><span class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f0faf9] text-[#287a73]" aria-hidden="true">{{> ui/icon name="users" class="h-7 w-7"}}</span><h3 class="font-bold">لا توجد حلقات بعد</h3><p class="mx-auto mt-2 max-w-sm text-sm leading-7 text-slate-500">ستظهر حلقات هذا الفصل هنا بعد إضافتها، مع أعداد الطلاب والموظفين المعيّنين.</p></div>
+        {{/if}}
+      {{else}}
+        <div class="px-6 py-10 text-center"><span class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400" aria-hidden="true">{{> ui/icon name="check-shield"}}</span><h3 class="font-bold">تفاصيل الحلقات غير متاحة</h3><p class="mt-2 text-sm leading-7 text-slate-500">ليس لديك صلاحية عرض حلقات هذا الفصل.</p></div>
+      {{/if}}
+    </section>
+    <aside class="space-y-4" aria-label="معلومات الفصل">
+      <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <h2 class="mb-5 flex items-center gap-2 font-extrabold">{{> ui/icon name="calendar" class="h-5 w-5 text-[#287a73]"}}الفترة الزمنية</h2>
+        {{#if term.isContinuous}}
+          <div class="rounded-xl bg-[#f0faf9] p-4"><p class="font-bold text-[#287a73]">فصل مستمر</p><p class="mt-2 text-sm leading-7 text-slate-600">لا يرتبط هذا الفصل بتاريخ بداية أو نهاية.</p></div>
+        {{else}}
+          <dl class="space-y-5">
+            <div class="border-r-2 border-[#a8dfdc] pr-4"><dt class="text-xs text-slate-500">تاريخ البداية</dt><dd class="mt-2 text-sm font-bold">{{term.startDateLabel}}</dd></div>
+            <div class="border-r-2 border-[#edbc5a] pr-4"><dt class="text-xs text-slate-500">تاريخ النهاية</dt><dd class="mt-2 text-sm font-bold">{{term.endDateLabel}}</dd></div>
+          </dl>
+        {{/if}}
+      </section>
+      <div class="rounded-2xl border border-[#a8dfdc] bg-[#f0faf9] p-5"><p class="text-sm font-bold text-[#287a73]">الأرشفة يدوية</p><p class="mt-2 text-xs leading-7 text-slate-600">يبقى الفصل نشطًا حتى تتم أرشفته يدويًا، حتى بعد انتهاء فترته الزمنية.</p></div>
+    </aside>
+  </div>
+</section>
