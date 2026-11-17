@@ -4,22 +4,28 @@
     {{> ui/icon name="home"}}لوحة التحكم
   </a>
   <p class="px-3 pb-1 pt-5 text-xs text-[#81aaa4]">الإدارة</p>
+  {{#if navigationPermissions.canViewStaff}}
   <a href="/staff" {{#if (eq activeNav "staff")}}aria-current="page"{{/if}}
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "staff")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
     {{> ui/icon name="users"}}الموظفون
   </a>
+  {{/if}}
+  {{#if navigationPermissions.canViewRoles}}
   <a href="/roles" {{#if (eq activeNav "roles")}}aria-current="page"{{/if}}
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "roles")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
     {{> ui/icon name="layers"}}قوالب الصلاحيات
   </a>
+  {{/if}}
   <a href="/audit"
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
     {{> ui/icon name="archive"}}سجل التدقيق
   </a>
+  {{#if navigationPermissions.canViewSettings}}
   <a href="/settings" {{#if (eq activeNav "settings")}}aria-current="page"{{/if}}
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "settings")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
     {{> ui/icon name="settings"}}إعدادات المركز
   </a>
+  {{/if}}
   <p class="px-3 pb-1 pt-5 text-xs text-[#81aaa4]">حسابي</p>
   <a href="/account/permissions"
     class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">
@@ -33,6 +39,18 @@
         <span class="mr-auto rounded-full bg-[#c58a28] px-2 text-xs text-white">{{notificationCount}}</span>
       {{/if}}
     </a>
+    {{#if currentUser.id}}
+      <a href="/staff/{{currentUser.id}}"
+        aria-label="الملف الشخصي: {{currentUser.fullName}}"
+        class="my-2 flex min-h-11 items-center gap-3 rounded-xl bg-white/10 px-3 py-3 text-white transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+        <span aria-hidden="true"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#2b827a] text-sm font-bold text-white">{{currentUser.initials}}</span>
+        <span class="min-w-0">
+          <span class="block truncate font-semibold" title="{{currentUser.fullName}}">{{currentUser.fullName}}</span>
+          <span class="block text-xs text-[#b5cdca]">الملف الشخصي</span>
+        </span>
+      </a>
+    {{/if}}
     <form action="/auth/logout" method="post">
       {{> ui/csrf}}
       <button type="submit"

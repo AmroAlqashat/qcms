@@ -9,7 +9,8 @@ export const CurrentUser = createParamDecorator(
     const request = ctx.switchToHttp().getRequest<{ user?: { id: string } }>();
 
     // Only the global session guard establishes the authenticated identity.
-    if (!request.user?.id) throw new UnauthorizedException();
+    if (!request.user?.id)
+      throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
     return request.user;
   },
 );

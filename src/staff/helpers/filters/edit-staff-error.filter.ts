@@ -5,9 +5,11 @@ import {
   ConflictException,
   ExceptionFilter,
   HttpException,
+  UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import type { ScopeType } from '@prisma/client';
 import { wantsHtml } from '../../../common/wants-html';
 import { EditStaffDto } from '../../dto/edit-staff.dto';
 import { StaffService } from '../../staff.service';
@@ -41,10 +43,22 @@ export class EditStaffErrorFilter implements ExceptionFilter {
         : undefined;
     const staffId = req.params.id;
     if (typeof staffId !== 'string') {
-      throw new Error('Edit staff error filter requires a single staff ID');
+      throw new Error('يتطلب عرض خطأ تعديل الموظف معرّف موظف واحدًا');
     }
 
-    const staff = await this.staffService.showStaffEditPage(staffId);
+    const request = req as Request & {
+      user?: { id: string };
+      actorEndpointPermissionScope?: ScopeType;
+    };
+    if (!request.user?.id || !request.actorEndpointPermissionScope) {
+      throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
+    }
+
+    const staff = await this.staffService.showStaffEditPage(
+      staffId,
+      request.user.id,
+      request.actorEndpointPermissionScope,
+    );
     const form = req.body as Partial<EditStaffDto>;
 
     res
@@ -66,7 +80,9 @@ export class EditStaffErrorFilter implements ExceptionFilter {
               staff.dateOfBirth?.toISOString().slice(0, 10) ??
               '',
             permissions: {
-              canChangeStatus: true,
+              canChangeStatus:
+                request.actorEndpointPermissionScope === 'CENTER_WIDE' &&
+                !staff.isSuperAdmin,
             },
           },
           errors,

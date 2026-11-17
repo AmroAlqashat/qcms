@@ -1,5 +1,23 @@
 @import 'tailwindcss';
 
+[data-permission-group] > summary {
+  cursor: pointer;
+}
+
+[data-permission-group] .disclosure-chevron {
+  transition: transform 220ms ease;
+}
+
+[data-permission-group][open]:not([data-closing]) .disclosure-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-permission-group] .disclosure-chevron {
+    transition: none;
+  }
+}
+
 /* Tell v4 where to scan for class names. With NestJS + hbs there are no
    conventional locations, so be explicit. */
 @source "../../views/**/*.hbs";

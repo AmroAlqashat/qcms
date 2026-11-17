@@ -1,7 +1,9 @@
 import { SetupModule } from './setup/setup.module';
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { SessionAuthGuard } from './auth/guards/session-auth.guard';
+import { PermissionGuard } from './authorization/guards/permission-authorization.guard';
+import { AuthorizationModule } from './authorization/authorization.module';
 import { CsrfGuard } from './common/guards/csrf.guard';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -14,6 +16,7 @@ import { AuthModule } from './auth/auth.module';
 import { SettingsModule } from './settings/settings.module';
 import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { NavigationPermissionsInterceptor } from './common/interceptors/navigation-permissions.interceptor';
 
 @Module({
   imports: [
@@ -26,6 +29,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
     RolesModule,
     StaffModule,
     AuthModule,
+    AuthorizationModule,
     SettingsModule,
     MailModule,
     MailerModule.forRoot({
@@ -48,6 +52,9 @@ import { MailerModule } from '@nestjs-modules/mailer';
     AppService,
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: SessionAuthGuard },
+    // Keep authorization after authentication while reusing the module provider.
+    { provide: APP_GUARD, useExisting: PermissionGuard },
+    { provide: APP_INTERCEPTOR, useClass: NavigationPermissionsInterceptor }
   ],
 })
-export class AppModule {}
+export class AppModule { }

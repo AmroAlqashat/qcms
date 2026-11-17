@@ -11,10 +11,8 @@ datasource db {
 model StaffMembers {
   id                     String                     @id @default(uuid())
   email                  String                     @unique
-  sessionVersion         Int                        @default(0)
   passwordHash           String?
   fullName               String?
-  jobTitle               JobTitle?
   status                 StaffStatus                @default(INACTIVE)
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
@@ -22,8 +20,10 @@ model StaffMembers {
   mustChangePassword     Boolean
   nationalId             String?                    @db.VarChar(30)
   phone                  String?                    @db.VarChar(20)
-  isSuperAdmin           Boolean                    @default(false)
   isDeleted              Boolean                    @default(false)
+  isSuperAdmin           Boolean                    @default(false)
+  jobTitle               JobTitle?
+  sessionVersion         Int                        @default(0)
   auditEvents            AuditEvents[]
   directPermissionGrants DirectPermissionGrants[]
   OTP                    OTPs[]
@@ -31,20 +31,21 @@ model StaffMembers {
   activityAssignments    StaffActivityAssignments[]
   classAssignments       StaffClassAssignments[]
 
-  @@index([id])
+  @@index([isDeleted, createdAt])
 }
 
 model Permissions {
   id                     String                   @id @default(uuid())
-  resource               String
-  action                 String
   category               String
   allowedScopes          ScopeType[]
+  resource               Int
+  action                 Int
   directPermissionGrants DirectPermissionGrants[]
   rolePermissions        RolePermissions[]
+  permission_actions     permission_actions       @relation(fields: [action], references: [id], onDelete: Cascade, map: "action_permission_frk")
+  permission_resources   permission_resources     @relation(fields: [resource], references: [id], onDelete: Cascade, map: "resource_permission_frk")
 
-  @@unique([resource, action])
-  @@index([id])
+  @@unique([resource, action], map: "resource_action_unique_key")
 }
 
 model DirectPermissionGrants {
@@ -62,15 +63,13 @@ model DirectPermissionGrants {
 }
 
 model Roles {
-  isSuperAdminRole Boolean                @default(false)
   id               String                 @id @default(uuid())
   name             String                 @unique
   description      String?
   createdAt        DateTime               @default(now())
+  isSuperAdminRole Boolean                @default(false)
   rolePermissions  RolePermissions[]
   staffGrants      RoleStaffAssignments[]
-
-  @@index([id])
 }
 
 model RolePermissions {
@@ -82,7 +81,6 @@ model RolePermissions {
   role         Roles       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId, scopeType])
-  @@index([id])
 }
 
 model RoleStaffAssignments {
@@ -96,6 +94,7 @@ model RoleStaffAssignments {
   staff       StaffMembers @relation(fields: [staffId], references: [id])
 
   @@unique([staffId, roleId])
+  @@index([roleId, revokedAt])
 }
 
 model StaffClassAssignments {
@@ -108,6 +107,7 @@ model StaffClassAssignments {
   staff      StaffMembers @relation(fields: [staffId], references: [id])
 
   @@index([staffId, endedAt])
+  @@index([halaqaId, endedAt])
 }
 
 model StaffActivityAssignments {
@@ -120,6 +120,7 @@ model StaffActivityAssignments {
   staff      StaffMembers @relation(fields: [staffId], references: [id])
 
   @@index([staffId, endedAt])
+  @@index([activityId, endedAt])
 }
 
 model AuditEvents {
@@ -154,9 +155,9 @@ model Halaqas {
   meetingDays      Json
   activities       Activities[]
   enrollments      Enrollments[]
-  term             Terms                   @relation(fields: [termId], references: [id])
   transfersFrom    HalaqaTransfers[]       @relation("TransferFrom")
   transfersTo      HalaqaTransfers[]       @relation("TransferTo")
+  term             Terms                   @relation(fields: [termId], references: [id])
   staffAssignments StaffClassAssignments[]
 }
 
@@ -268,28 +269,21 @@ model Settings {
   setById String
   setAt   DateTime @default(now())
 
-  @@index([key, setAt])
+  @@index([key, setAt, id])
 }
 
 model OTPs {
   id          String       @id @default(uuid())
   staffId     String
-  purpose     OtpPurpose
-  targetEmail String?
   codeHash    String       @db.VarChar(64)
   expiresAt   DateTime
   sentAt      DateTime     @default(now())
   attempts    Int          @default(0)
+  purpose     OtpPurpose
+  targetEmail String?
   Staff       StaffMembers @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@unique([staffId, purpose])
-}
-
-enum OtpPurpose {
-  ONBOARDING
-  PASSWORD_CHANGE
-  PASSWORD_RESET
-  EMAIL_CHANGE
 }
 
 model sessions {
@@ -298,6 +292,35 @@ model sessions {
   expire DateTime @db.Timestamp(6)
 
   @@index([expire], map: "IDX_session_expire")
+}
+
+model SystemSetups {
+  id             Int       @id @default(1)
+  tokenHash      String?
+  tokenExpiresAt DateTime?
+  failedAttempts Int       @default(0)
+  completedAt    DateTime?
+}
+
+model permission_actions {
+  id          Int           @id @default(autoincrement())
+  eng_name    String        @unique(map: "action_eng_name_unique")
+  arb_name    String
+  permissions Permissions[]
+}
+
+model permission_resources {
+  id          Int           @id @default(autoincrement())
+  eng_name    String        @unique(map: "resource_eng_name_unique")
+  arb_name    String
+  permissions Permissions[]
+}
+
+enum OtpPurpose {
+  ONBOARDING
+  PASSWORD_CHANGE
+  PASSWORD_RESET
+  EMAIL_CHANGE
 }
 
 enum StaffStatus {
@@ -309,7 +332,6 @@ enum StaffStatus {
 enum ScopeType {
   CENTER_WIDE
   ASSIGNED_CLASS
-  ASSIGNED_ACTIVITY
   OWN_ACCOUNT
 }
 
@@ -325,8 +347,6 @@ enum RegistrationStatus {
 }
 
 enum AuditAction {
-  SYSTEM_SETUP_COMPLETED
-  SUPERADMIN_RECOVERED
   STAFF_ONBOARDING_COMPLETED
   STAFF_INVITED
   STAFF_ACTIVATED
@@ -338,6 +358,8 @@ enum AuditAction {
   ROLE_CREATED
   ROLE_UPDATED
   ROLE_DELETED
+  SYSTEM_SETUP_COMPLETED
+  SUPERADMIN_RECOVERED
 }
 
 enum AuditTarget {
@@ -352,12 +374,4 @@ enum JobTitle {
   TEACHER
   FINANCE
   MISC
-}
-
-model SystemSetups {
-  id             Int       @id @default(1)
-  tokenHash      String?
-  tokenExpiresAt DateTime?
-  failedAttempts Int       @default(0)
-  completedAt    DateTime?
 }

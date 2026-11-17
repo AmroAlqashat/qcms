@@ -1,3 +1,4 @@
+import { AuthorizationService } from '../authorization/authorization.service';
 import {
   ConflictException,
   ForbiddenException,
@@ -5,26 +6,36 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { AuditAction, AuditTarget, Prisma } from '@prisma/client';
-import { scopeLabels } from '../common/scope-labels-map';
+import { AuditAction, AuditTarget, Prisma, ScopeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateNewRoleDto } from './dto/create-new-role.dto';
 import { EditRoleDto } from './dto/edit-role.dto';
 import { RolePermissionDto } from './dto/role-permission.dto';
-import type {
-  PermissionColumns,
-  PermissionGroup,
-  PermissionGroupDraft,
-  PermissionsData,
-} from './helpers/roles.types';
+import type { PermissionsData } from './helpers/roles.types';
+import {
+  buildPermissionsData,
+  permissionCatalogQuery,
+} from './helpers/permission-view';
+import { canAssignScope } from '../authorization/helpers/can-assign-scope';
 
 @Injectable()
 export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-  ) {}
+    private readonly authorizationService: AuthorizationService,
+  ) { }
+
+  assertActorEndpointCenterWideScope(
+    actorEndpointPermissionScope: ScopeType,
+  ): void {
+    if (actorEndpointPermissionScope !== ScopeType.CENTER_WIDE) {
+      throw new ForbiddenException(
+        'يتطلب هذا الإجراء صلاحية إدارة القوالب على مستوى المركز',
+      );
+    }
+  }
 
   async assertRoleManageable(
     roleId: string,
@@ -39,7 +50,11 @@ export class RolesService {
       throw new ForbiddenException('لا يمكن تعديل أو حذف قالب مدير النظام');
   }
 
-  async getRoleAccountCount(roleId: string) {
+  async getRoleAccountCount(
+    roleId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const accountCount = await this.prisma.roles.findFirst({
       where: { id: roleId },
       select: {
@@ -58,7 +73,12 @@ export class RolesService {
     return accountCount._count.staffGrants;
   }
 
-  async deleteRole(roleId: string, actorId: string) {
+  async deleteRole(
+    roleId: string,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     //validate if user may delete this role
 
     try {
@@ -108,7 +128,8 @@ export class RolesService {
     return usedRoles;
   }
 
-  async listRoles() {
+  async listRoles(actorEndpointPermissionScope: ScopeType) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const roles = await this.prisma.roles.findMany({
       where: { isSuperAdminRole: false },
       orderBy: { createdAt: 'asc' },
@@ -129,97 +150,64 @@ export class RolesService {
     return roles;
   }
 
-  async getPermissionsWithCategory(roleId?: string): Promise<PermissionsData> {
+  async getPermissionsWithCategory(
+    actorId: string,
+    roleId?: string,
+    actorEndpointPermissionScope?: ScopeType,
+  ): Promise<PermissionsData> {
+    if (actorEndpointPermissionScope)
+      this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
+
+    const access = await this.authorizationService.getAssignmentAccess(actorId);
+
     const permissions = await this.prisma.permissions.findMany({
-      orderBy: [{ category: 'asc' }, { resource: 'asc' }, { action: 'asc' }],
-      select: {
-        id: true,
-        category: true,
-        resource: true,
-        action: true,
-        allowedScopes: true,
-      },
-    });
-
-    const selectedRolePermissions = roleId
-      ? await this.prisma.rolePermissions.findMany({
-          where: { roleId },
-          select: {
-            permissionId: true,
-            scopeType: true,
+      where: access.isSuperAdmin
+        ? {}
+        : {
+          id: {
+            in: [...access.permissionScopes.keys()],
           },
-        })
-      : [];
-
-    const selectedKeys = new Set(
-      selectedRolePermissions.map((rp) => `${rp.permissionId}:${rp.scopeType}`),
-    );
-
-    const grouped = permissions.reduce<Record<string, PermissionGroupDraft>>(
-      (acc, permission) => {
-        const group = (acc[permission.category] ??= {
-          category: permission.category,
-          selectedCount: 0,
-          resources: {},
-        });
-
-        const resource = (group.resources[permission.resource] ??= {
-          name: permission.resource,
-          actions: [],
-        });
-
-        const selectedScope = permission.allowedScopes.find((scope) =>
-          selectedKeys.has(`${permission.id}:${scope}`),
-        );
-        const isSelected = selectedScope !== undefined;
-
-        if (isSelected) {
-          group.selectedCount++;
-        }
-
-        resource.actions.push({
-          id: permission.id,
-          resource: permission.resource,
-          action: permission.action,
-          scopes: permission.allowedScopes,
-          scopeOptions: permission.allowedScopes.map((scope) => ({
-            value: scope,
-            label: scopeLabels[scope],
-          })),
-          selected: isSelected,
-          selectedScope,
-        });
-
-        return acc;
+        },
+      ...permissionCatalogQuery,
+      select: {
+        ...permissionCatalogQuery.select,
+        rolePermissions: {
+          // A new role has no saved selections.
+          where: { roleId: roleId ?? '' },
+          select: { scopeType: true },
+        },
       },
-      {},
-    );
-
-    const permissionGroups: PermissionGroup[] = Object.values(grouped).map(
-      ({ resources, ...group }) => ({
-        ...group,
-        resources: Object.values(resources),
-      }),
-    );
-
-    const selectedPermissionCount = permissionGroups.reduce(
-      (total, group) => total + group.selectedCount,
-      0,
-    );
-
-    const permissionColumns: PermissionColumns = [[], []];
-
-    permissionGroups.forEach((group, index) => {
-      permissionColumns[index % 2].push(group);
     });
 
-    return {
-      permissionColumns,
-      selectedPermissionCount,
-    };
+    const availablePermissions = access.isSuperAdmin
+      ? permissions
+      : permissions
+        // Keep actions with an unmanageable saved scope out of the single-scope editor.
+        .filter((permission) =>
+          permission.rolePermissions.every((grant) =>
+            canAssignScope(
+              access.permissionScopes.get(permission.id),
+              grant.scopeType,
+            ),
+          ),
+        )
+        .map((permission) => ({
+          ...permission,
+          allowedScopes: permission.allowedScopes.filter((requestedScope) =>
+            canAssignScope(
+              access.permissionScopes.get(permission.id),
+              requestedScope,
+            ),
+          ),
+        }));
+
+    return buildPermissionsData(availablePermissions, (permission) =>
+      permission.rolePermissions.map((grant) => grant.scopeType),
+    );
   }
 
-  async getRoleById(roleId: string) {
+  async getRoleById(roleId: string, actorEndpointPermissionScope: ScopeType) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     await this.assertRoleManageable(roleId);
     const role = await this.prisma.roles.findUnique({
       where: { id: roleId },
@@ -232,35 +220,54 @@ export class RolesService {
     return role;
   }
 
-  async createRole(createNewRoleDto: CreateNewRoleDto, actorId: string) {
+  async createRole(
+    createNewRoleDto: CreateNewRoleDto,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
+
     const { name, description, permissions } = createNewRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
 
     await this.checkExistingRoleName(normalizedName);
     this.duplicatePermissionValidation(permissions);
-    const rows = await this.validateRoleValues(permissions);
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        const role = await tx.roles.create({
-          data: { name: normalizedName, description },
-        });
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const rows = await this.validateRoleValues(permissions, tx);
+          await this.assertCanAssignPermissions(actorId, rows, tx);
 
-        await tx.rolePermissions.createMany({
-          data: rows.map((row) => ({ ...row, roleId: role.id })),
-        });
+          const role = await tx.roles.create({
+            data: { name: normalizedName, description },
+          });
 
-        await this.audit.record(tx, {
-          actorId,
-          actionType: AuditAction.ROLE_CREATED,
-          targetType: AuditTarget.ROLE,
-          targetId: role.id,
-          isSuccess: true,
-        });
+          await tx.rolePermissions.createMany({
+            data: rows.map((row) => ({ ...row, roleId: role.id })),
+          });
 
-        return role;
-      });
+          await this.audit.record(tx, {
+            actorId,
+            actionType: AuditAction.ROLE_CREATED,
+            targetType: AuditTarget.ROLE,
+            targetId: role.id,
+            isSuccess: true,
+          });
+
+          return role;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
     } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
+        throw new ConflictException(
+          'تغيّرت الصلاحيات أثناء الحفظ. أعد المحاولة',
+        );
+      }
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
@@ -274,11 +281,15 @@ export class RolesService {
     }
   }
 
-  async editRole(editRoleDto: EditRoleDto, roleId: string, actorId: string) {
+  async editRole(
+    editRoleDto: EditRoleDto,
+    roleId: string,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const { name, description, permissions } = editRoleDto;
     const normalizedName: string = name.trim().toLowerCase();
-
-    //TODO: validate if user is allowed to edit this role and/or roles in general
 
     await this.checkExistingRoleName(normalizedName, roleId);
     this.duplicatePermissionValidation(permissions);
@@ -292,33 +303,74 @@ export class RolesService {
         errors: { name: 'هاذ القالب غير موجود' },
       });
 
-    const rows = await this.validateRoleValues(permissions);
-
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        await this.assertRoleManageable(roleId, tx);
-        const role = await tx.roles.update({
-          where: { id: roleId },
-          data: { name: normalizedName, description },
-        });
+      return await this.prisma.$transaction(
+        async (tx) => {
+          await this.assertRoleManageable(roleId, tx);
+          const rows = await this.validateRoleValues(permissions, tx);
+          const access = await this.assertCanAssignPermissions(
+            actorId,
+            rows,
+            tx,
+          );
+          const existing = await tx.rolePermissions.findMany({
+            where: { roleId },
+          });
+          const blockedPermissionIds = new Set(
+            existing
+              .filter(
+                (grant) =>
+                  !access.isSuperAdmin &&
+                  !canAssignScope(
+                    access.permissionScopes.get(grant.permissionId),
+                    grant.scopeType,
+                  ),
+              )
+              .map((grant) => grant.permissionId),
+          );
+          if (rows.some((row) => blockedPermissionIds.has(row.permissionId))) {
+            throw new ForbiddenException(
+              'لا يمكنك تعديل صلاحية لها نطاق خارج صلاحياتك',
+            );
+          }
+          const removableIds = existing
+            .filter((grant) => !blockedPermissionIds.has(grant.permissionId))
+            .map((grant) => grant.id);
+          const role = await tx.roles.update({
+            where: { id: roleId },
+            data: { name: normalizedName, description },
+          });
 
-        await tx.rolePermissions.deleteMany({ where: { roleId } });
+          // Replace only visible, manageable actions; retain hidden permissions and scopes.
+          await tx.rolePermissions.deleteMany({
+            where: { roleId, id: { in: removableIds } },
+          });
 
-        await tx.rolePermissions.createMany({
-          data: rows.map((row) => ({ ...row, roleId: role.id })),
-        });
+          await tx.rolePermissions.createMany({
+            data: rows.map((row) => ({ ...row, roleId: role.id })),
+          });
 
-        await this.audit.record(tx, {
-          actorId,
-          actionType: AuditAction.ROLE_UPDATED,
-          targetType: AuditTarget.ROLE,
-          targetId: role.id,
-          isSuccess: true,
-        });
+          await this.audit.record(tx, {
+            actorId,
+            actionType: AuditAction.ROLE_UPDATED,
+            targetType: AuditTarget.ROLE,
+            targetId: role.id,
+            isSuccess: true,
+          });
 
-        return role;
-      });
+          return role;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
     } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
+        throw new ConflictException(
+          'تغيّرت الصلاحيات أثناء الحفظ. أعد المحاولة',
+        );
+      }
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
@@ -330,6 +382,32 @@ export class RolesService {
       }
       throw error;
     }
+  }
+
+  private async assertCanAssignPermissions(
+    actorId: string,
+    rows: { permissionId: string; scopeType: ScopeType }[],
+    tx: Prisma.TransactionClient,
+  ) {
+    // Reload authority in the save transaction, rather than trusting the GET form.
+    const access = await this.authorizationService.getAssignmentAccess(
+      actorId,
+      tx,
+    );
+    if (!access.isSuperAdmin) {
+      for (const row of rows) {
+        // Missing permission IDs return undefined; the helper rejects those as
+        // well as scopes beyond the actor's authority. Superadmin bypasses this
+        // restriction, but catalog validation still applies.
+        const actorScopes = access.permissionScopes.get(row.permissionId);
+        if (!canAssignScope(actorScopes, row.scopeType)) {
+          throw new ForbiddenException(
+            'لا يمكنك إسناد صلاحية أو نطاق غير ممنوح لك',
+          );
+        }
+      }
+    }
+    return access;
   }
 
   private async checkExistingRoleName(
@@ -359,10 +437,13 @@ export class RolesService {
     }
   }
 
-  private async validateRoleValues(permissions: RolePermissionDto[]) {
+  private async validateRoleValues(
+    permissions: RolePermissionDto[],
+    db: Prisma.TransactionClient = this.prisma,
+  ) {
     if (permissions.length === 0) return [];
 
-    const catalog = await this.prisma.permissions.findMany({
+    const catalog = await db.permissions.findMany({
       where: {
         OR: permissions.map(({ resource, action }) => ({
           resource,
@@ -377,7 +458,7 @@ export class RolesService {
       },
     });
 
-    const key = (resource: string, action: string) =>
+    const key = (resource: number, action: number) =>
       JSON.stringify([resource, action]);
 
     const permissionsByKey = new Map(

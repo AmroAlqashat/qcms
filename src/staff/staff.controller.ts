@@ -1,3 +1,4 @@
+import type { StaffMembers } from '@prisma/client';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import {
   ConfirmEmailChangeDto,
@@ -12,6 +13,7 @@ import {
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpException,
   HttpStatus,
@@ -42,77 +44,161 @@ import { EditPermissionsDto } from './dto/edit-permissions.dto';
 import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
 import { ForgotPasswordEmailDto } from './dto/forgot-password-email.dto';
 import { Public } from '../auth/decorators/route-access.decorator';
+import { permission } from '../authorization/decorators/permissions-access.decorator';
+import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
+import { ScopeType } from '@prisma/client';
+import { AuthorizationService } from '../authorization/authorization.service';
 
 @Controller('staff')
 export class StaffController {
-  constructor(private readonly staffService: StaffService) {}
+  constructor(
+    private readonly staffService: StaffService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   @Get()
+  @permission({
+    permission_action: 'read',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-page')
-  async showStaffPage(@Query() filterDto: FilteredStaffDto) {
+  async showStaffPage(
+    @Query() filterDto: FilteredStaffDto,
+    @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
     const [staffList, filterOptions] = await Promise.all([
-      this.staffService.showFilteredStaff(filterDto),
-      this.staffService.showStaffFilterOptions(
-        filterDto.halaqa,
-        filterDto.role,
+      this.staffService.showFilteredStaff(
+        filterDto,
+        actor.id,
+        actorEndpointPermissionScope,
       ),
+      actorEndpointPermissionScope === ScopeType.CENTER_WIDE
+        ? this.staffService.showStaffFilterOptions(
+            filterDto.halaqa,
+            filterDto.role,
+          )
+        : Promise.resolve({ classes: [], templates: [] }),
     ]);
     return {
       staffList,
       filters: filterDto,
       filterOptions,
       permissions: {
-        canInvite: true,
+        canInvite: await this.authorizationService.hasPermission(
+          actor.id,
+          'staff_members',
+          'create',
+          ScopeType.CENTER_WIDE,
+        ),
+        canViewInvitations: await this.authorizationService.hasPermission(
+          actor.id,
+          'staff_invitations',
+          'read',
+          ScopeType.CENTER_WIDE,
+        ),
       },
       activeNav: 'staff',
     };
   }
 
   @Get('invitations')
+  @permission({
+    permission_action: 'read',
+    permission_resource: 'staff_invitations',
+  })
   @Render('staff/pending-invitations-page')
-  async showStaffInvitationPage() {
-    const invitations = await this.staffService.showPendingStaff();
+  async showStaffInvitationPage(
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+    @CurrentUser() user: { id: string },
+  ) {
+    const invitations = await this.staffService.showPendingStaff(
+      actorEndpointPermissionScope,
+    );
 
+    const canCancel: boolean = await this.authorizationService.hasPermission(
+      user.id,
+      'staff_invitations',
+      'delete',
+      ScopeType.CENTER_WIDE,
+    );
     return {
       invitations: invitations.map((invite) => ({
         ...invite,
-        canCancel: true,
+        canCancel,
       })),
       activeNav: 'staff',
     };
   }
   @Post('invitations/cancel/:id')
-  async cancelPendingInvitation(@Param('id') staffId: string) {
-    await this.staffService.cancelPendingInvitation(staffId);
+  @permission({
+    permission_action: 'delete',
+    permission_resource: 'staff_invitations',
+  })
+  async cancelPendingInvitation(
+    @Param('id') staffId: string,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    await this.staffService.cancelPendingInvitation(
+      staffId,
+      actorEndpointPermissionScope,
+    );
 
     return { success: true };
   }
 
   @Get('edit/permissions/:id')
+  @permission({
+    permission_action: 'read',
+    permission_resource: 'direct_permission_grants',
+  })
   @Render('partials/staff/permissions-dialog')
-  async showPermissionsDialog(@Param('id') staffId: string) {
+  async showPermissionsDialog(
+    @Param('id') staffId: string,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+    @CurrentUser() user: { id: string },
+  ) {
     await this.staffService.assertStaffManageable(staffId);
     // GET: load the available choices and the staff member's active selections.
     // The partial uses selected/selectedScope to reopen the saved state.
     const [roles, permissions] = await Promise.all([
-      this.staffService.getRoleOptionsForStaff(staffId),
-      this.staffService.getPermissionOptionsForStaff(staffId),
+      this.staffService.getRoleOptionsForStaff(
+        staffId,
+        actorEndpointPermissionScope,
+        user.id,
+      ),
+      this.staffService.getPermissionOptionsForStaff(
+        staffId,
+        actorEndpointPermissionScope,
+        user.id,
+      ),
     ]);
 
     return {
       roles,
       ...permissions,
       staffId,
+      canSavePermissions: await this.authorizationService.hasPermission(
+        user.id,
+        'direct_permission_grants',
+        'update',
+        ScopeType.CENTER_WIDE,
+      ),
     };
   }
 
   @Post('edit/permissions/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'direct_permission_grants',
+  })
   // The global ValidationPipe transforms and validates the submitted DTO
   // before this handler passes the target staff ID and acting user's ID onward.
   async editPermissions(
     @Param('id') staffId: string,
     @Body() editPermissionsDto: EditPermissionsDto,
     @CurrentUser() user: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
@@ -120,6 +206,7 @@ export class StaffController {
       staffId,
       editPermissionsDto,
       user.id,
+      actorEndpointPermissionScope,
     );
 
     // Respond only after the transaction succeeds. HX-Redirect navigates the
@@ -138,12 +225,21 @@ export class StaffController {
   }
 
   @Get('edit/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-edit-profile-page')
   async showEditStaffForm(
     @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    const staff = await this.staffService.showStaffEditPage(staffId);
+    const staff = await this.staffService.showStaffEditPage(
+      staffId,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
 
     return {
       staff: {
@@ -152,13 +248,19 @@ export class StaffController {
         initial: staff.fullName?.trim().charAt(0) ?? '',
         dateOfBirthValue: staff.dateOfBirth?.toISOString().slice(0, 10) ?? '',
         permissions: {
-          canChangeStatus: true,
+          canChangeStatus:
+            actorEndpointPermissionScope === ScopeType.CENTER_WIDE &&
+            !staff.isSuperAdmin,
         },
       },
     };
   }
 
   @Post('edit/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(EditStaffErrorFilter)
   async editStaff(
     @Param('id') id: string,
@@ -166,8 +268,14 @@ export class StaffController {
     @Req() request: Request,
     @Res() response: Response,
     @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    await this.staffService.editStaff(id, editStaffDto, actor.id);
+    await this.staffService.editStaff(
+      id,
+      editStaffDto,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
 
     const location = `/staff/${encodeURIComponent(id)}`;
 
@@ -185,6 +293,10 @@ export class StaffController {
   }
 
   @Get('invite')
+  @permission({
+    permission_action: 'create',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-invitation-dialog')
   showInviteForm() {
     return staffShell({
@@ -193,18 +305,24 @@ export class StaffController {
     });
   }
   @Post('invite')
+  @permission({
+    permission_action: 'create',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(InviteStaffErrorFilter)
   async inviteStaff(
     @Body() inviteStaffDto: InviteStaffDto,
     @Req() request: Request,
     @Res() response: Response,
     @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
     response.setHeader('Cache-Control', 'no-store');
 
     const result = await this.staffService.inviteStaff(
       inviteStaffDto,
       actor.id,
+      actorEndpointPermissionScope,
     );
 
     if (!wantsHtml(request)) {
@@ -223,19 +341,100 @@ export class StaffController {
     );
   }
 
+  @Get('generate-new-password/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
+  async showGeneratePasswordConfirmation(
+    @Param('id') id: string,
+    @CurrentUser() actor: { id: string },
+    @Req() request: Request,
+    @Res() response: Response,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.staffService.assertActorEndpointCenterWideScope(
+      actorEndpointPermissionScope,
+    );
+    const staff = await this.staffService.showStaffProfile(
+      actor.id,
+      id,
+      actorEndpointPermissionScope,
+    );
+    const permissions = await this.getProfileUpdatePermissions(actor.id, staff);
+    if (!permissions.canGeneratePassword) {
+      throw new ForbiddenException('لا يمكنك إنشاء كلمة مرور لهذا الحساب');
+    }
+    response.setHeader('Cache-Control', 'no-store');
+    return response.render('partials/staff/confirm-generate-password-dialog', {
+      staff: { id: staff.id, fullName: staff.fullName },
+      layout: request.get('HX-Request') === 'true' ? false : 'main',
+    });
+  }
+
   @Post('generate-new-password/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   async generatePassword(
     @Param('id') id: string,
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
     @Res() response: Response,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
     response.setHeader('Cache-Control', 'no-store');
     const temporaryPassword = await this.staffService.generatePassword(
       id,
       actor.id,
+      actorEndpointPermissionScope,
     );
-    const profile = await this.showStaffProfile(id, actor);
+    const staff = await this.staffService.showStaffProfile(
+      actor.id,
+      id,
+      actorEndpointPermissionScope,
+    );
+    const profile = {
+      staff: {
+        ...staff,
+        initial: staff.fullName?.trim().charAt(0) ?? '',
+        dateOfBirthLabel: formatStaffDate(staff.dateOfBirth),
+        nationalIdLabel: staff.nationalId,
+        phoneLabel: formatStaffPhone(staff.phone),
+        statusLabel: formatStaffStatus(staff.status, staff.isDeleted),
+        isActor: id === actor.id,
+      },
+      assignments: {
+        classes: staff.classAssignments.map(({ halaqa }) => halaqa),
+        activities: staff.activityAssignments.map(({ activity }) => activity),
+        templates: staff.roleGrants.map(({ role }) => role),
+        directGrants: staff.directGrants,
+      },
+      permissions: {
+        ...(await this.getProfileUpdatePermissions(actor.id, staff)),
+        canManagePermissions:
+          (await this.authorizationService.hasPermission(
+            actor.id,
+            'direct_permission_grants',
+            'read',
+            ScopeType.CENTER_WIDE,
+          )) &&
+          !staff.isDeleted &&
+          !staff.isSuperAdmin,
+        canDelete:
+          (await this.authorizationService.hasPermission(
+            actor.id,
+            'staff_members',
+            'delete',
+            ScopeType.CENTER_WIDE,
+          )) &&
+          !staff.isDeleted &&
+          !staff.isSuperAdmin,
+      },
+      effectivePermissionCount: staff.effectivePermissionCount,
+      activeNav: 'staff',
+    };
 
     response.render(
       'staff/admin-generates-password-page',
@@ -249,6 +448,10 @@ export class StaffController {
   }
 
   @Get('reset-my-password')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   async getChangePasswordPage(
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
@@ -267,6 +470,10 @@ export class StaffController {
   }
 
   @Get('change-email')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   async getChangeEmailDialog(
     @CurrentUser() actor: { id: string },
     @Req() request: Request,
@@ -286,6 +493,10 @@ export class StaffController {
   }
 
   @Post('change-email/send-otp')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async requestEmailChange(
     @CurrentUser() actor: { id: string },
@@ -310,6 +521,10 @@ export class StaffController {
   }
 
   @Post('change-email/resend-otp')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async resendEmailChange(
     @CurrentUser() actor: { id: string },
@@ -325,6 +540,10 @@ export class StaffController {
   }
 
   @Post('change-email')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async changeEmail(
     @CurrentUser() actor: { id: string },
@@ -412,12 +631,21 @@ export class StaffController {
   }
 
   @Get(':id')
+  @permission({
+    permission_action: 'read',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-profile-page')
   async showStaffProfile(
     @Param('id') id: string,
     @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
   ) {
-    const staff = await this.staffService.showStaffProfile(id);
+    const staff = await this.staffService.showStaffProfile(
+      actor.id,
+      id,
+      actorEndpointPermissionScope,
+    );
 
     return {
       staff: {
@@ -433,38 +661,70 @@ export class StaffController {
         classes: staff.classAssignments.map(({ halaqa }) => halaqa),
         activities: staff.activityAssignments.map(({ activity }) => activity),
         templates: staff.roleGrants.map(({ role }) => role),
-        directGrantsLabel: 'تُتاح في إصدار لاحق',
+        directGrants: staff.directGrants,
       },
       permissions: {
-        canChangeOwnPassword: actor.id === staff.id && !staff.isDeleted,
-        canGeneratePassword: actor.id !== staff.id && !staff.isDeleted,
-        canEditStaff: !staff.isDeleted,
-        canManagePermissions: !staff.isDeleted && !staff.isSuperAdmin,
-        canChangeStatus: !staff.isDeleted && !staff.isSuperAdmin,
-        canDelete: !staff.isDeleted && !staff.isSuperAdmin,
+        ...(await this.getProfileUpdatePermissions(actor.id, staff)),
+        canManagePermissions:
+          (await this.authorizationService.hasPermission(
+            actor.id,
+            'direct_permission_grants',
+            'read',
+            ScopeType.CENTER_WIDE,
+          )) &&
+          !staff.isDeleted &&
+          !staff.isSuperAdmin,
+        canDelete:
+          (await this.authorizationService.hasPermission(
+            actor.id,
+            'staff_members',
+            'delete',
+            ScopeType.CENTER_WIDE,
+          )) &&
+          !staff.isDeleted &&
+          !staff.isSuperAdmin,
       },
-      effectivePermissionCount: 0,
+      effectivePermissionCount: staff.effectivePermissionCount,
       activeNav: 'staff',
     };
   }
 
   @Get('deactivate/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-deactivate-page')
-  async showDeactivateStaffDialog(@Param('id') staffId: string) {
+  async showDeactivateStaffDialog(
+    @Param('id') staffId: string,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.staffService.assertActorEndpointCenterWideScope(
+      actorEndpointPermissionScope,
+    );
     await this.staffService.assertStaffManageable(staffId);
     return {
       staff: { id: staffId },
     };
   }
   @Post('deactivate/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-page')
   async deactivateStaff(
     @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    await this.staffService.deactivateStaff(staffId, actor.id);
+    await this.staffService.deactivateStaff(
+      staffId,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
     const location = '/staff';
 
     if (!wantsHtml(request)) {
@@ -481,22 +741,41 @@ export class StaffController {
   }
 
   @Get('delete/:id')
+  @permission({
+    permission_action: 'delete',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-delete-page')
-  async showDeleteStaffDialog(@Param('id') staffId: string) {
+  async showDeleteStaffDialog(
+    @Param('id') staffId: string,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.staffService.assertActorEndpointCenterWideScope(
+      actorEndpointPermissionScope,
+    );
     await this.staffService.assertStaffManageable(staffId);
     return {
       staff: { id: staffId },
     };
   }
   @Post('delete/:id')
+  @permission({
+    permission_action: 'delete',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-page')
   async deleteStaff(
     @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    await this.staffService.deleteStaff(staffId, actor.id);
+    await this.staffService.deleteStaff(
+      staffId,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
     const location = '/staff';
 
     if (!wantsHtml(request)) {
@@ -514,21 +793,40 @@ export class StaffController {
   }
 
   @Get('activate/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-activate-page')
-  showactivateStaffDialog(@Param('id') staffId: string) {
+  showactivateStaffDialog(
+    @Param('id') staffId: string,
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.staffService.assertActorEndpointCenterWideScope(
+      actorEndpointPermissionScope,
+    );
     return {
       staff: { id: staffId },
     };
   }
   @Post('activate/:id')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @Render('staff/staff-page')
   async activateStaff(
     @Param('id') staffId: string,
     @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
     @Req() request: Request,
     @Res() response: Response,
   ) {
-    await this.staffService.activateStaff(staffId, actor.id);
+    await this.staffService.activateStaff(
+      staffId,
+      actor.id,
+      actorEndpointPermissionScope,
+    );
     const location = '/staff';
 
     if (!wantsHtml(request)) {
@@ -546,6 +844,10 @@ export class StaffController {
   }
 
   @Post('reset-my-password/send-otp')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async sendChangePasswordOtp(
     @CurrentUser() actor: { id: string },
@@ -559,6 +861,10 @@ export class StaffController {
   }
 
   @Post('reset-my-password')
+  @permission({
+    permission_action: 'update',
+    permission_resource: 'staff_members',
+  })
   @UseFilters(AccountSecurityErrorFilter)
   async changeMyPassword(
     @Body() dto: ChangeMyPasswordDto,
@@ -600,5 +906,51 @@ export class StaffController {
       return response.setHeader('HX-Redirect', location).status(204).end();
     if (!wantsHtml(request)) return response.json({ success: true });
     return response.redirect(303, location);
+  }
+
+  private async getProfileUpdatePermissions(
+    actorId: string,
+    staff: Pick<StaffMembers, 'id' | 'status' | 'isDeleted' | 'isSuperAdmin'>,
+  ) {
+    const canUpdateCenterWide = await this.authorizationService.hasPermission(
+      actorId,
+      'staff_members',
+      'update',
+      ScopeType.CENTER_WIDE,
+    );
+    const canUpdateOwnAccount =
+      !canUpdateCenterWide &&
+      actorId === staff.id &&
+      (await this.authorizationService.hasPermission(
+        actorId,
+        'staff_members',
+        'update',
+        ScopeType.OWN_ACCOUNT,
+      ));
+
+    const canUpdateOwnProfile =
+      actorId === staff.id &&
+      !staff.isDeleted &&
+      staff.status === 'ACTIVE' &&
+      (canUpdateCenterWide || canUpdateOwnAccount);
+
+    return {
+      canChangeOwnEmail: canUpdateOwnProfile,
+      canChangeOwnPassword: canUpdateOwnProfile,
+      canEditStaff:
+        !staff.isDeleted &&
+        staff.status !== 'PENDING' &&
+        (canUpdateCenterWide || canUpdateOwnAccount),
+      canGeneratePassword:
+        canUpdateCenterWide &&
+        actorId !== staff.id &&
+        !staff.isDeleted &&
+        !staff.isSuperAdmin,
+      canChangeStatus:
+        canUpdateCenterWide &&
+        !staff.isDeleted &&
+        !staff.isSuperAdmin &&
+        (staff.status === 'ACTIVE' || staff.status === 'INACTIVE'),
+    };
   }
 }

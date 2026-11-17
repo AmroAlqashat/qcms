@@ -19,7 +19,7 @@ export class FilteredStaffDto {
   @Transform(({ value }: { value: unknown }) =>
     value === '' ? undefined : value,
   )
-  @IsEnum(StaffStatus, { message: 'invalid staff status' })
+  @IsEnum(StaffStatus, { message: 'حالة الموظف غير صالحة' })
   status?: StaffStatus;
 
   @IsOptional()

@@ -2,9 +2,9 @@ import type { ScopeType } from '@prisma/client';
 
 export type PermissionAction = {
   id: string;
-  resource: string;
-  action: string;
-  scopes: ScopeType[];
+  resource: number;
+  action: number;
+  actionName: string;
   scopeOptions: { value: ScopeType; label: string }[];
   selected: boolean;
   selectedScope?: string;
@@ -21,13 +21,7 @@ export type PermissionGroup = {
   resources: PermissionResource[];
 };
 
-export type PermissionGroupDraft = Omit<PermissionGroup, 'resources'> & {
-  resources: Record<string, PermissionResource>;
-};
-
-export type PermissionColumns = PermissionGroup[][];
-
 export type PermissionsData = {
-  permissionColumns: PermissionColumns;
+  permissionGroups: PermissionGroup[];
   selectedPermissionCount: number;
 };

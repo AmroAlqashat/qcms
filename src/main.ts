@@ -20,8 +20,8 @@ async function bootstrap() {
   const isProduction = process.env.NODE_ENV === 'production';
   const sessionSecret = process.env.SESSION_SECRET;
   const databaseUrl = process.env.DATABASE_URL;
-  if (!sessionSecret) throw new Error('SESSION_SECRET is required');
-  if (!databaseUrl) throw new Error('DATABASE_URL is required');
+  if (!sessionSecret) throw new Error('متغير البيئة SESSION_SECRET مطلوب');
+  if (!databaseUrl) throw new Error('متغير البيئة DATABASE_URL مطلوب');
 
   // Production traffic must reach the app only through one trusted load balancer.
   if (isProduction) app.set('trust proxy', 1);
@@ -97,7 +97,7 @@ async function bootstrap() {
       transform: true,
       exceptionFactory: (errors: ValidationError[]) =>
         new UnprocessableEntityException({
-          message: 'Validation failed',
+          message: 'تعذر التحقق من البيانات المدخلة',
           errors: Object.fromEntries(
             errors.map((e) => [
               e.property,

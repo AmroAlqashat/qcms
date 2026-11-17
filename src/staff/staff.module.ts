@@ -1,3 +1,4 @@
+import { AuthorizationModule } from '../authorization/authorization.module';
 import { Module } from '@nestjs/common';
 import { StaffService } from './staff.service';
 import { StaffController } from './staff.controller';
@@ -9,7 +10,7 @@ import { OtpService } from '../mail/otp.serivce';
 import { MailService } from '../mail/mail.service';
 
 @Module({
-  imports: [PrismaModule, AuditModule, RolesModule],
+  imports: [AuthorizationModule, PrismaModule, AuditModule, RolesModule],
   controllers: [StaffController],
   providers: [StaffService, EditStaffErrorFilter, OtpService, MailService],
 })

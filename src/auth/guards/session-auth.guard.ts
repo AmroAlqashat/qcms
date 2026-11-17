@@ -80,6 +80,16 @@ export class SessionAuthGuard implements CanActivate {
       return this.deny(request, response);
     }
     request.user = { id: staff.id, isSuperAdmin: staff.isSuperAdmin };
+    const nameParts = staff.fullName?.trim().split(/\s+/).filter(Boolean) ?? [];
+    response.locals.currentUser = {
+      id: staff.id,
+      fullName: staff.fullName?.trim() || 'حسابي',
+      initials:
+        nameParts
+          .slice(0, 2)
+          .map((part) => Array.from(part)[0])
+          .join(' ') || 'ح',
+    };
     return true;
   }
 
@@ -88,6 +98,7 @@ export class SessionAuthGuard implements CanActivate {
       where: { id },
       select: {
         id: true,
+        fullName: true,
         status: true,
         mustChangePassword: true,
         isDeleted: true,

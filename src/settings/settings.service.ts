@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ScopeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsDto } from './dto/settings.dto';
 
@@ -8,6 +9,16 @@ export class SettingsService {
   private cache = new Map<string, { value: number; expiresAt: number }>();
   private readonly ttlMs = 60_000;
   private readonly defaultTimeOut = 30;
+
+  private assertActorEndpointCenterWideScope(
+    actorEndpointPermissionScope: ScopeType,
+  ): void {
+    if (actorEndpointPermissionScope !== ScopeType.CENTER_WIDE) {
+      throw new ForbiddenException(
+        'يتطلب هذا الإجراء صلاحية إدارة الإعدادات على مستوى المركز',
+      );
+    }
+  }
 
   async getSessionTimeoutMinutes(): Promise<number> {
     const key = 'sessionInactivityTimeoutMinutes';
@@ -32,7 +43,8 @@ export class SettingsService {
     return value;
   }
 
-  async getSettings() {
+  async getSettings(actorEndpointPermissionScope: ScopeType) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     const settings = await this.prisma.settings.findMany({
       distinct: ['key'],
       orderBy: [{ setAt: 'desc' }, { id: 'desc' }],
@@ -50,7 +62,12 @@ export class SettingsService {
     return settingsObject;
   }
 
-  async saveChanges(settingsDto: SettingsDto, actorId: string) {
+  async saveChanges(
+    settingsDto: SettingsDto,
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
     // Fetch current settings.
     const dbSettings = await this.prisma.settings.findMany({
       distinct: ['key'],

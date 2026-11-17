@@ -24,11 +24,15 @@ export class SetupService {
     const email = details.email.trim().toLowerCase();
     const fullName = details.fullName.trim();
     if (!isEmail(email) || email.length > 254)
-      throw new BadRequestException('Enter a valid email.');
+      throw new BadRequestException('أدخل بريدًا إلكترونيًا صالحًا.');
     if (fullName.length < 2 || fullName.length > 100)
-      throw new BadRequestException('Full name must be 2–100 characters.');
+      throw new BadRequestException(
+        'يجب أن يكون الاسم الكامل بين حرفين و100 حرف.',
+      );
     if (details.password.length < 8 || details.password.length > 128)
-      throw new BadRequestException('Password must be 8–128 characters.');
+      throw new BadRequestException(
+        'يجب أن تكون كلمة المرور بين 8 و128 حرفًا.',
+      );
     const passwordHash = await argon2.hash(details.password, {
       type: argon2.argon2id,
     });
@@ -42,7 +46,7 @@ export class SetupService {
         await tx.$queryRaw`SELECT id FROM "SystemSetups" WHERE id = 1 FOR UPDATE`;
         if (await tx.staffMembers.count({ where: { isSuperAdmin: true } }))
           throw new ConflictException(
-            'A superadmin already exists. This command never replaces or resets an existing owner.',
+            'يوجد مدير نظام بالفعل. لا يستبدل هذا الأمر حسابه ولا يعيد تعيينه.',
           );
         if (
           await tx.staffMembers.findFirst({
@@ -51,7 +55,7 @@ export class SetupService {
           })
         )
           throw new ConflictException(
-            'This email already exists. No account was changed.',
+            'هذا البريد الإلكتروني مسجّل بالفعل. لم يتم تعديل أي حساب.',
           );
         await initializeSuperadmin(tx, { email, fullName, passwordHash }, true);
       },
@@ -94,7 +98,7 @@ export class SetupService {
       });
       if (state.completedAt || (await tx.staffMembers.count()))
         throw new Error(
-          'Setup is closed: this installation already has staff or completed setup. Use controlled recovery if needed.',
+          'الإعداد مغلق: يوجد موظفون في النظام أو اكتمل الإعداد مسبقًا. استخدم إجراء استعادة مدير النظام عند الحاجة.',
         );
       await tx.systemSetups.update({
         where: { id: 1 },

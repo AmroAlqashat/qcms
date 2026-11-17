@@ -47,8 +47,11 @@
       {{/if}}
 
       {{#if staff.isActor}}
+        {{#if permissions.canChangeOwnEmail}}
         <a href='/staff/change-email' hx-get='/staff/change-email' hx-target='#modal-root' hx-swap='innerHTML' aria-haspopup='dialog'
           class='inline-flex min-h-11 items-center justify-center rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73]'>تغيير البريد الإلكتروني</a>
+        {{/if}}
+        {{#if permissions.canChangeOwnPassword}}
         <a
           class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
           href='/staff/reset-my-password'
@@ -56,23 +59,19 @@
         >
           تغيير كلمة المرور
         </a>
+        {{/if}}
       {{else}}
         {{#if permissions.canGeneratePassword}}
-          <form
-            action='/staff/generate-new-password/{{ staff.id }}'
-            method='post'
-            hx-post='/staff/generate-new-password/{{ staff.id }}'
+          <a
+            href='/staff/generate-new-password/{{ staff.id }}'
+            hx-get='/staff/generate-new-password/{{ staff.id }}'
             hx-target='#modal-root'
             hx-swap='innerHTML'
-          >
-            {{> ui/csrf}}
-            <button
+            aria-haspopup='dialog'
               class='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-3 text-sm font-bold text-[#287a73] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
-              type='submit'
             >
               إنشاء كلمة مرور
-            </button>
-          </form>
+          </a>
         {{/if}}
       {{/if}}
       {{#if permissions.canManagePermissions}}
@@ -152,22 +151,16 @@
             emptyLabel="لا توجد قوالب مسندة"
             items=assignments.templates
           }}
-          <div class='rounded-2xl border border-slate-200 bg-slate-50 p-5'>
-            <span class='mb-4 inline-flex rounded-xl bg-[#e3f2ef] p-2.5 text-[#287a73]' aria-hidden='true'>{{> ui/icon name="check-shield"}}</span>
-            <h3 class='text-sm font-bold'>المنح المباشرة</h3>
-            <p class='mt-3 text-sm leading-7 text-slate-600'>
-              {{#if assignments.directGrantsLabel}}
-                {{ assignments.directGrantsLabel }}
-              {{else}}
-                لا توجد معلومات متاحة
-              {{/if}}
-            </p>
-          </div>
+          {{> staff/staff-assignment-card
+            heading="المنح المباشرة"
+            icon="check-shield"
+            emptyLabel="لا توجد منح مباشرة سارية"
+            items=assignments.directGrants
+          }}
         </div>
       </section>
-      <a
-        class='group flex min-h-16 items-center gap-4 rounded-2xl border border-[#a8dfdc] bg-[#edf7f4] p-5 transition hover:bg-[#e0f1eb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]'
-        href='/staff/permissions/{{ staff.id }}'
+      <section aria-label='ملخص الصلاحيات الفعلية'
+        class='flex min-h-16 items-center gap-4 rounded-2xl border border-[#a8dfdc] bg-[#edf7f4] p-5'
       >
         <span class='rounded-xl bg-[#f0faf9] p-2 text-[#287a73]'>
           {{> ui/icon
@@ -176,13 +169,9 @@
         </span>
         <div class='flex-1'>
           <h2 class='text-sm font-bold'>الصلاحيات الفعلية</h2>
-          <p class='text-xs leading-6 text-slate-600'>{{ effectivePermissionCount }} صلاحية سارية — مع مصدر كل منها</p>
+          <p class='text-xs leading-6 text-slate-600'>{{ effectivePermissionCount }} صلاحية ونطاق ساريان — من القوالب والمنح المباشرة دون تكرار</p>
         </div>
-        {{> ui/icon
-          name="chevron"
-          class="h-4 w-4 text-slate-400"
-        }}
-      </a>
+      </section>
     </div>
     <section class='overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm xl:col-span-2'>
       <div class='border-b border-slate-100 p-5 sm:p-6'><h2 class='text-lg font-extrabold'>البيانات الشخصية</h2><p class='mt-1 text-sm leading-7 text-slate-500'>معلومات الهوية والتواصل</p></div>

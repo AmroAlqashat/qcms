@@ -16,10 +16,10 @@
       </span>
       <div class='min-w-0 flex-1'>
         <h2 id='staff-permissions-dialog-title' class='text-lg font-extrabold leading-8'>
-          تعديل صلاحيات الموظف
+          {{#if canSavePermissions}}تعديل صلاحيات الموظف{{else}}صلاحيات الموظف{{/if}}
         </h2>
         <p id='staff-permissions-dialog-description' class='text-xs leading-6 text-slate-600'>
-          أسند قوالب جاهزة أو أضف صلاحيات مباشرة لهذا الموظف.
+          {{#if canSavePermissions}}أسند قوالب جاهزة أو أضف صلاحيات مباشرة لهذا الموظف.{{else}}يمكنك عرض الصلاحيات المتاحة لك، لكن ليس لديك صلاحية حفظ التغييرات.{{/if}}
         </p>
       </div>
       <button
@@ -35,7 +35,7 @@
     </header>
 
     {{!-- The shared permission script recognizes data-direct-grant-editor and
-         builds permissionId/scope objects for this staff form only. --}}
+    builds permissionId/scope objects for this staff form only. --}}
     <form
       class='space-y-5'
       action='/staff/edit/permissions/{{ staffId }}'
@@ -46,99 +46,99 @@
       method='post'
       data-permission-editor
       data-direct-grant-editor
+      data-can-save-permissions='{{#if canSavePermissions}}true{{else}}false{{/if}}'
     >
       {{> ui/csrf}}
-      <section
-        class='overflow-hidden rounded-2xl border border-slate-200'
-        aria-labelledby='staff-role-assignments-title'
-      >
-        <header class='border-b border-slate-100 bg-slate-50 p-4'>
-          <div class='flex flex-wrap items-center justify-between gap-2'>
-            <div>
-              <h3 id='staff-role-assignments-title' class='font-extrabold'>قوالب الصلاحيات</h3>
-              <p class='mt-1 text-xs leading-6 text-slate-600'>
-                فعّل القالب لإسناده أو ألغِ التحديد لإزالته من الموظف.
-              </p>
+      <fieldset class='space-y-5' aria-label='إسنادات الصلاحيات' {{#unless canSavePermissions}}disabled{{/unless}}>
+        <section
+          class='overflow-hidden rounded-2xl border border-slate-200'
+          aria-labelledby='staff-role-assignments-title'
+        >
+          <header class='border-b border-slate-100 bg-slate-50 p-4'>
+            <div class='flex flex-wrap items-center justify-between gap-2'>
+              <div>
+                <h3 id='staff-role-assignments-title' class='font-extrabold'>قوالب الصلاحيات</h3>
+                <p class='mt-1 text-xs leading-6 text-slate-600'>
+                  فعّل القالب لإسناده أو ألغِ التحديد لإزالته من الموظف.
+                </p>
+              </div>
+              <span class='rounded-full bg-white px-3 py-1 text-xs font-bold text-[#287a73]'>قوالب موجودة</span>
             </div>
-            <span class='rounded-full bg-white px-3 py-1 text-xs font-bold text-[#287a73]'>قوالب موجودة</span>
+          </header>
+          <div class='grid gap-3 p-4 sm:grid-cols-2'>
+            {{!-- Checked roleIds are the complete replacement selection. Unchecked
+            checkboxes are omitted; the DTO turns a missing field into []. --}}
+            {{#each roles}}
+              <label
+                class='flex min-h-20 cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-[#a8dfdc]'
+              >
+                <input
+                  class='mt-1 h-5 w-5 accent-[#2b827a]'
+                  type='checkbox'
+                  name='roleIds'
+                  value='{{ id }}'
+                  {{#if selected}}
+                    checked
+                  {{/if}}
+                />
+                <span class='min-w-0'>
+                  <span class='block text-sm font-extrabold'>{{ name }}</span>
+                  {{#if description}}
+                    <span class='mt-1 block text-xs leading-6 text-slate-600'>
+                      {{ description }}
+                    </span>
+                  {{/if}}
+                </span>
+              </label>
+            {{else}}
+              <p class='text-sm text-slate-600'>لا توجد قوالب صلاحيات متاحة.</p>
+            {{/each}}
           </div>
-        </header>
-        <div class='grid gap-3 p-4 sm:grid-cols-2'>
-          {{!-- Checked roleIds are the complete replacement selection. Unchecked
-               checkboxes are omitted; the DTO turns a missing field into []. --}}
-          {{#each roles}}
-            <label
-              class='flex min-h-20 cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-[#a8dfdc]'
-            >
-              <input
-                class='mt-1 h-5 w-5 accent-[#2b827a]'
-                type='checkbox'
-                name='roleIds'
-                value='{{ id }}'
-                {{#if selected}}
-                  checked
-                {{/if}}
-              />
-              <span class='min-w-0'>
-                <span class='block text-sm font-extrabold'>{{ name }}</span>
-                {{#if description}}
-                  <span class='mt-1 block text-xs leading-6 text-slate-600'>
-                    {{ description }}
-                  </span>
-                {{/if}}
-              </span>
-            </label>
-          {{else}}
-            <p class='text-sm text-slate-600'>لا توجد قوالب صلاحيات متاحة.</p>
-          {{/each}}
-        </div>
-      </section>
+        </section>
 
-      <section
-        class='overflow-hidden rounded-2xl border border-slate-200'
-        aria-labelledby='staff-direct-grants-title'
-      >
-        <header class='border-b border-slate-100 bg-slate-50 p-4'>
-          <div class='flex flex-wrap items-center justify-between gap-2'>
-            <div>
-              <h3 id='staff-direct-grants-title' class='font-extrabold'>منح مباشرة</h3>
-              <p class='mt-1 text-xs leading-6 text-slate-600'>
-                امنح صلاحية واحدة أو أكثر دون إنشاء قالب جديد.
-              </p>
+        <section
+          class='overflow-hidden rounded-2xl border border-slate-200'
+          aria-labelledby='staff-direct-grants-title'
+        >
+          <header class='border-b border-slate-100 bg-slate-50 p-4'>
+            <div class='flex flex-wrap items-center justify-between gap-2'>
+              <div>
+                <h3 id='staff-direct-grants-title' class='font-extrabold'>منح مباشرة</h3>
+                <p class='mt-1 text-xs leading-6 text-slate-600'>
+                  امنح صلاحية واحدة أو أكثر دون إنشاء قالب جديد.
+                </p>
+              </div>
+              <span class='rounded-full bg-[#f0faf9] px-3 py-1 text-xs font-bold text-[#287a73]' data-permission-total aria-live='polite'>{{ selectedPermissionCount }} محددة</span>
             </div>
-            <span class='rounded-full bg-[#f0faf9] px-3 py-1 text-xs font-bold text-[#287a73]' data-permission-total aria-live='polite'>{{ selectedPermissionCount }} محددة</span>
+          </header>
+          <div class='grid items-start gap-4 p-4 xl:grid-cols-2'>
+            {{#each permissionGroups}}
+              {{#> permissions/folder category=category selectedCount=selectedCount open=true}}
+                {{#each resources}}
+                  {{> permissions/resource directGrants=true}}
+                {{/each}}
+              {{/permissions/folder}}
+            {{else}}
+              <p class='text-sm text-slate-600'>لا توجد صلاحيات مباشرة متاحة للتعيين.</p>
+            {{/each}}
           </div>
-        </header>
-        <div class='grid items-start gap-4 p-4 xl:grid-cols-2'>
-          {{#each permissionColumns}}
-            <div class='space-y-4'>
-              {{#each this}}
-                {{#> permissions/folder category=category selectedCount=selectedCount open=true}}
-                  {{#each resources}}
-                    {{!-- Use permission IDs for native form values while keeping
-                         the same checkbox/scope UI used by role editors. --}}
-                    {{> permissions/resource directGrants=true}}
-                  {{/each}}
-                {{/permissions/folder}}
-              {{/each}}
-            </div>
-          {{else}}
-            <p class='text-sm text-slate-600'>لا توجد صلاحيات مباشرة متاحة للتعيين.</p>
-          {{/each}}
-        </div>
-      </section>
+        </section>
+
+      </fieldset>
 
       <div class='flex flex-wrap justify-start gap-2'>
+        {{#if canSavePermissions}}
         {{> ui/submit
           label="حفظ التغييرات"
           icon="check"
         }}
+        {{/if}}
         <button
           class='inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50'
           type='button'
           data-dialog-close
         >
-          إلغاء
+          {{#if canSavePermissions}}إلغاء{{else}}إغلاق{{/if}}
         </button>
       </div>
     </form>

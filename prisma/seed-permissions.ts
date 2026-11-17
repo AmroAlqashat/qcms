@@ -1,664 +1,246 @@
 import { config } from 'dotenv';
+import { actionKeys, resourceKeys } from './permission-catalog-labels';
 import { Prisma, PrismaClient, ScopeType } from '@prisma/client';
 
-// From the QCMS permission catalog. The compact scopes are expanded below:
-// C = CENTER_WIDE, H = ASSIGNED_CLASS, A = ASSIGNED_ACTIVITY, O = OWN_ACCOUNT.
-// Keep resource/action labels aligned with the names used by your authorization checks.
-const permissionCatalog = [
-  { resource: 'الطلاب', action: 'عرض', category: 'الطلاب', scopes: 'CHA' },
-  { resource: 'الطلاب', action: 'تعديل', category: 'الطلاب', scopes: 'CHA' },
+// C = CENTER_WIDE, H = ASSIGNED_CLASS, O = OWN_ACCOUNT.
+const crudActions = [
+  { action: 'إنشاء', key: 'create' },
+  { action: 'عرض', key: 'read' },
+  { action: 'تحديث', key: 'update' },
+  { action: 'حذف', key: 'delete' },
+] as const;
+
+type CrudActionKey = (typeof crudActions)[number]['key'];
+
+type PermissionResourceDefinition = {
+  resource: string;
+  category: string;
+  scopes: string;
+  scopeOverrides?: Partial<Record<CrudActionKey, string>>;
+  actions?: readonly CrudActionKey[];
+};
+
+const permissionResources: readonly PermissionResourceDefinition[] = [
   {
-    resource: 'الطلاب',
-    action: 'تسكين في حلقة',
-    category: 'الطلاب',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الطلاب',
-    action: 'سحب من المركز',
-    category: 'الطلاب',
+    resource: 'دعوات الموظفين',
+    category: 'الموظفون والصلاحيات',
     scopes: 'C',
-  },
-  {
-    resource: 'الحالات الخاصة',
-    action: 'عرض',
-    category: 'الطلاب',
-    scopes: 'CHA',
-  },
-  {
-    resource: 'الحالات الخاصة',
-    action: 'إضافة',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'الحالات الخاصة',
-    action: 'تعديل',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'بيانات أولياء الأمور',
-    action: 'عرض',
-    category: 'الطلاب',
-    scopes: 'CH',
-  },
-  {
-    resource: 'بيانات أولياء الأمور',
-    action: 'إضافة ولي أمر',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'بيانات أولياء الأمور',
-    action: 'تعديل',
-    category: 'الطلاب',
-    scopes: 'CH',
-  },
-  {
-    resource: 'بيانات أولياء الأمور',
-    action: 'ربط ولي أمر موجود',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'بيانات أولياء الأمور',
-    action: 'فك ربط ولي الأمر',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'التكرارات المحتملة',
-    action: 'عرض',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'التكرارات المحتملة',
-    action: 'معالجة',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  { resource: 'رابط التسجيل', action: 'عرض', category: 'الطلاب', scopes: 'C' },
-  { resource: 'رابط التسجيل', action: 'فتح', category: 'الطلاب', scopes: 'C' },
-  {
-    resource: 'رابط التسجيل',
-    action: 'إغلاق',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'رابط التسجيل',
-    action: 'تعديل نص التنبيه',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'تسجيلات الفصول',
-    action: 'عرض',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'تسجيلات الفصول',
-    action: 'قبول',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  {
-    resource: 'تسجيلات الفصول',
-    action: 'رفض',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  { resource: 'طلبات العضوية', action: 'عرض', category: 'الطلاب', scopes: 'C' },
-  {
-    resource: 'طلبات العضوية',
-    action: 'قبول',
-    category: 'الطلاب',
-    scopes: 'C',
-  },
-  { resource: 'طلبات العضوية', action: 'رفض', category: 'الطلاب', scopes: 'C' },
-  {
-    resource: 'الفصول الدراسية',
-    action: 'عرض',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'الفصول الدراسية',
-    action: 'إنشاء',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'الفصول الدراسية',
-    action: 'تعديل',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'الفصول الدراسية',
-    action: 'أرشفة',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'عرض',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'إنشاء',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'تعديل',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'تعيين معلم',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'إضافة طالب',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'إخراج طالب',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'نقل طالب',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'ترحيل القائمة',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الحلقات',
-    action: 'تصدير التقرير اليومي',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الأنشطة',
-    action: 'عرض',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CA',
-  },
-  {
-    resource: 'الأنشطة',
-    action: 'إنشاء',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'الأنشطة',
-    action: 'تعديل',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CA',
-  },
-  {
-    resource: 'الأنشطة',
-    action: 'تعيين معلم',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'الأنشطة',
-    action: 'تسجيل طالب أو حلقة',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CA',
-  },
-  {
-    resource: 'الأنشطة',
-    action: 'إلغاء تسجيل مشارك',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CA',
-  },
-  {
-    resource: 'الأنشطة',
-    action: 'أرشفة',
-    category: 'الحلقات والأنشطة',
-    scopes: 'C',
-  },
-  {
-    resource: 'التقويم',
-    action: 'عرض',
-    category: 'الحلقات والأنشطة',
-    scopes: 'CHA',
-  },
-  {
-    resource: 'تفويض الوصول',
-    action: 'إنشاء',
-    category: 'الحلقات والأنشطة',
-    scopes: 'H',
-  },
-  {
-    resource: 'تفويض الوصول',
-    action: 'سحب',
-    category: 'الحلقات والأنشطة',
-    scopes: 'H',
-  },
-  {
-    resource: 'طلبات التفويض',
-    action: 'عرض',
-    category: 'الحلقات والأنشطة',
-    scopes: 'H',
-  },
-  {
-    resource: 'طلبات التفويض',
-    action: 'اعتماد',
-    category: 'الحلقات والأنشطة',
-    scopes: 'H',
-  },
-  {
-    resource: 'طلبات التفويض',
-    action: 'رفض',
-    category: 'الحلقات والأنشطة',
-    scopes: 'H',
-  },
-  { resource: 'الحضور', action: 'عرض', category: 'الحضور', scopes: 'CHA' },
-  { resource: 'الحضور', action: 'تسجيل', category: 'الحضور', scopes: 'CHA' },
-  { resource: 'الحضور', action: 'تعديل', category: 'الحضور', scopes: 'CHA' },
-  { resource: 'الحفظ', action: 'عرض', category: 'التسميع', scopes: 'CH' },
-  { resource: 'الحفظ', action: 'تسجيل', category: 'التسميع', scopes: 'CH' },
-  {
-    resource: 'الحفظ',
-    action: 'تعليم كمراجَع',
-    category: 'التسميع',
-    scopes: 'CH',
-  },
-  { resource: 'خطة الحفظ', action: 'عرض', category: 'التسميع', scopes: 'CH' },
-  { resource: 'خطة الحفظ', action: 'إنشاء', category: 'التسميع', scopes: 'CH' },
-  { resource: 'خطة الحفظ', action: 'تعديل', category: 'التسميع', scopes: 'CH' },
-  {
-    resource: 'جلسات التسميع',
-    action: 'عرض',
-    category: 'التسميع',
-    scopes: 'CH',
-  },
-  {
-    resource: 'جلسات التسميع',
-    action: 'بدء جلسة',
-    category: 'التسميع',
-    scopes: 'CH',
-  },
-  {
-    resource: 'جلسات التسميع',
-    action: 'تقييم صفحة',
-    category: 'التسميع',
-    scopes: 'CH',
-  },
-  {
-    resource: 'جلسات التسميع',
-    action: 'إعادة',
-    category: 'التسميع',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الاختبارات',
-    action: 'عرض',
-    category: 'اختبارات الأجزاء',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الاختبارات',
-    action: 'جدولة',
-    category: 'اختبارات الأجزاء',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الاختبارات',
-    action: 'إعادة جدولة',
-    category: 'اختبارات الأجزاء',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الاختبارات',
-    action: 'إلغاء',
-    category: 'اختبارات الأجزاء',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الاختبارات',
-    action: 'تعيين مختبِر',
-    category: 'اختبارات الأجزاء',
-    scopes: 'C',
-  },
-  {
-    resource: 'الاختبارات',
-    action: 'إجراء',
-    category: 'اختبارات الأجزاء',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الاختبارات',
-    action: 'تسجيل النتيجة',
-    category: 'اختبارات الأجزاء',
-    scopes: 'CH',
-  },
-  {
-    resource: 'الشهادات',
-    action: 'عرض',
-    category: 'اختبارات الأجزاء',
-    scopes: 'C',
-  },
-  {
-    resource: 'الشهادات',
-    action: 'إصدار',
-    category: 'اختبارات الأجزاء',
-    scopes: 'C',
-  },
-  {
-    resource: 'النقاط',
-    action: 'عرض',
-    category: 'اختبارات الأجزاء',
-    scopes: 'CH',
-  },
-  { resource: 'المدفوعات', action: 'عرض', category: 'المالية', scopes: 'C' },
-  { resource: 'المدفوعات', action: 'تسجيل', category: 'المالية', scopes: 'C' },
-  { resource: 'المدفوعات', action: 'عكس', category: 'المالية', scopes: 'C' },
-  { resource: 'المصروفات', action: 'عرض', category: 'المالية', scopes: 'C' },
-  { resource: 'المصروفات', action: 'تسجيل', category: 'المالية', scopes: 'C' },
-  { resource: 'المصروفات', action: 'عكس', category: 'المالية', scopes: 'C' },
-  { resource: 'الرسوم', action: 'عرض', category: 'المالية', scopes: 'C' },
-  { resource: 'الرسوم', action: 'إضافة', category: 'المالية', scopes: 'C' },
-  { resource: 'الرسوم', action: 'إسقاط', category: 'المالية', scopes: 'C' },
-  { resource: 'الرسوم', action: 'عكس', category: 'المالية', scopes: 'C' },
-  {
-    resource: 'الخصومات والإعفاءات',
-    action: 'عرض',
-    category: 'المالية',
-    scopes: 'C',
-  },
-  {
-    resource: 'الخصومات والإعفاءات',
-    action: 'إضافة',
-    category: 'المالية',
-    scopes: 'C',
-  },
-  {
-    resource: 'الخصومات والإعفاءات',
-    action: 'اعتماد',
-    category: 'المالية',
-    scopes: 'C',
-  },
-  {
-    resource: 'الخصومات والإعفاءات',
-    action: 'مراجعة',
-    category: 'المالية',
-    scopes: 'C',
-  },
-  { resource: 'الأرصدة', action: 'عرض', category: 'المالية', scopes: 'C' },
-  {
-    resource: 'قائمة المتأخرات',
-    action: 'عرض',
-    category: 'المالية',
-    scopes: 'C',
-  },
-  {
-    resource: 'التقارير المالية',
-    action: 'عرض',
-    category: 'المالية',
-    scopes: 'C',
-  },
-  {
-    resource: 'التقارير المالية',
-    action: 'تصدير',
-    category: 'المالية',
-    scopes: 'C',
+    actions: ['read', 'delete'],
   },
   {
     resource: 'الموظفون',
-    action: 'عرض',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'CO',
-  },
-  {
-    resource: 'الموظفون',
-    action: 'دعوة',
     category: 'الموظفون والصلاحيات',
     scopes: 'C',
+    scopeOverrides: { read: 'CO', update: 'CO' },
   },
   {
-    resource: 'الموظفون',
-    action: 'تعديل',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'CO',
-  },
-  {
-    resource: 'الموظفون',
-    action: 'إيقاف',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'الموظفون',
-    action: 'إعادة تفعيل',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'الموظفون',
-    action: 'حذف',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'تعيينات الموظفين',
-    action: 'عرض',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'قوالب الصلاحيات',
-    action: 'عرض',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'قوالب الصلاحيات',
-    action: 'إنشاء',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'قوالب الصلاحيات',
-    action: 'تعديل',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'قوالب الصلاحيات',
-    action: 'حذف',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'قوالب الصلاحيات',
-    action: 'إسناد لموظف',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'C',
-  },
-  {
-    resource: 'قوالب الصلاحيات',
-    action: 'إلغاء الإسناد',
+    resource: 'الصلاحيات',
     category: 'الموظفون والصلاحيات',
     scopes: 'C',
   },
   {
     resource: 'المنح المباشرة',
-    action: 'عرض',
     category: 'الموظفون والصلاحيات',
     scopes: 'C',
   },
   {
-    resource: 'المنح المباشرة',
-    action: 'منح',
+    resource: 'قوالب الصلاحيات',
     category: 'الموظفون والصلاحيات',
     scopes: 'C',
   },
   {
-    resource: 'المنح المباشرة',
-    action: 'سحب',
+    resource: 'صلاحيات الأدوار',
     category: 'الموظفون والصلاحيات',
     scopes: 'C',
   },
   {
-    resource: 'الصلاحيات الفعلية',
-    action: 'عرض',
-    category: 'الموظفون والصلاحيات',
-    scopes: 'CO',
-  },
-  {
-    resource: 'سجل تغييرات الصلاحيات',
-    action: 'عرض',
+    resource: 'إسنادات الأدوار للموظفين',
     category: 'الموظفون والصلاحيات',
     scopes: 'C',
   },
   {
-    resource: 'استيراد البيانات',
-    action: 'عرض',
-    category: 'استيراد البيانات',
+    resource: 'تعيينات الفصول للموظفين',
+    category: 'الموظفون والصلاحيات',
     scopes: 'C',
   },
   {
-    resource: 'استيراد البيانات',
-    action: 'رفع ملف',
-    category: 'استيراد البيانات',
-    scopes: 'C',
-  },
-  {
-    resource: 'استيراد البيانات',
-    action: 'تنزيل تقرير الأخطاء',
-    category: 'استيراد البيانات',
-    scopes: 'C',
-  },
-  { resource: 'التقارير', action: 'عرض', category: 'التقارير', scopes: 'CHA' },
-  {
-    resource: 'التقارير',
-    action: 'تصدير',
-    category: 'التقارير',
-    scopes: 'CHA',
-  },
-  {
-    resource: 'التقرير اليومي للمركز',
-    action: 'عرض',
-    category: 'التقارير',
-    scopes: 'C',
-  },
-  {
-    resource: 'التقرير اليومي للمركز',
-    action: 'تصدير',
-    category: 'التقارير',
-    scopes: 'C',
-  },
-  {
-    resource: 'التقرير اليومي للمركز',
-    action: 'تعديل الصياغة',
-    category: 'التقارير',
+    resource: 'تعيينات الأنشطة للموظفين',
+    category: 'الموظفون والصلاحيات',
     scopes: 'C',
   },
   {
     resource: 'سجل التدقيق',
-    action: 'عرض',
     category: 'السجل والأرشيف',
     scopes: 'C',
   },
   {
-    resource: 'الأرشيف',
-    action: 'عرض',
-    category: 'السجل والأرشيف',
+    resource: 'الفصول الدراسية',
+    category: 'الحلقات والأنشطة',
+    scopes: 'C',
+  },
+  {
+    resource: 'الحلقات',
+    category: 'الحلقات والأنشطة',
     scopes: 'CH',
   },
   {
-    resource: 'النسخ الاحتياطية',
-    action: 'عرض',
-    category: 'السجل والأرشيف',
+    resource: 'الأنشطة',
+    category: 'الحلقات والأنشطة',
     scopes: 'C',
   },
   {
-    resource: 'النسخ الاحتياطية',
-    action: 'استعادة',
-    category: 'السجل والأرشيف',
+    resource: 'تسجيلات الطلاب',
+    category: 'الطلاب',
+    scopes: 'CH',
+  },
+  {
+    resource: 'نقل الطلاب بين الحلقات',
+    category: 'الطلاب',
+    scopes: 'CH',
+  },
+  {
+    resource: 'مشاركو الأنشطة',
+    category: 'الحلقات والأنشطة',
+    scopes: 'CH',
+  },
+  {
+    resource: 'الطلاب',
+    category: 'الطلاب',
+    scopes: 'CH',
+  },
+  {
+    resource: 'أولياء الأمور',
+    category: 'الطلاب',
+    scopes: 'CH',
+  },
+  {
+    resource: 'روابط الطلاب بأولياء الأمور',
+    category: 'الطلاب',
+    scopes: 'CH',
+  },
+  {
+    resource: 'تسجيلات الفصول',
+    category: 'الطلاب',
     scopes: 'C',
   },
   {
-    resource: 'عمليات الاحتفاظ',
-    action: 'عرض',
-    category: 'السجل والأرشيف',
+    resource: 'الحالات الخاصة',
+    category: 'الطلاب',
     scopes: 'C',
   },
-  { resource: 'الإعدادات', action: 'عرض', category: 'الإعدادات', scopes: 'C' },
   {
     resource: 'الإعدادات',
-    action: 'تعديل',
     category: 'الإعدادات',
     scopes: 'C',
   },
   {
-    resource: 'إشعارات الموظفين',
-    action: 'عرض',
-    category: 'الإشعارات',
-    scopes: 'CHO',
-  },
-  {
-    resource: 'إشعارات الموظفين',
-    action: 'تعليم كمنجز',
-    category: 'الإشعارات',
-    scopes: 'O',
-  },
-  {
-    resource: 'إشعارات الموظفين',
-    action: 'نشر إعلان',
-    category: 'الإشعارات',
+    resource: 'رموز التحقق',
+    category: 'الأمان',
     scopes: 'C',
   },
-] as const;
+  {
+    resource: 'الجلسات',
+    category: 'الأمان',
+    scopes: 'C',
+  },
+  {
+    resource: 'تهيئة النظام',
+    category: 'الإعدادات',
+    scopes: 'C',
+  },
+  {
+    resource: 'إجراءات الصلاحيات',
+    category: 'الموظفون والصلاحيات',
+    scopes: 'C',
+  },
+  {
+    resource: 'موارد الصلاحيات',
+    category: 'الموظفون والصلاحيات',
+    scopes: 'C',
+  },
+];
+
+const permissionCatalog = permissionResources.flatMap(
+  ({ resource, category, scopes, scopeOverrides, actions }) =>
+    crudActions
+      .filter(({ key }) => !actions || actions.includes(key))
+      .map(({ action, key }) => ({
+        resource,
+        action,
+        category,
+        scopes: scopeOverrides?.[key] ?? scopes,
+      })),
+);
 
 const scopeByCode: Record<string, ScopeType> = {
   C: ScopeType.CENTER_WIDE,
   H: ScopeType.ASSIGNED_CLASS,
-  A: ScopeType.ASSIGNED_ACTIVITY,
   O: ScopeType.OWN_ACCOUNT,
 };
 
+function getScopeType(code: string): ScopeType {
+  const scopeType = scopeByCode[code];
+  if (!scopeType) {
+    throw new Error(`رمز نطاق الصلاحية غير مدعوم: ${code}`);
+  }
+  return scopeType;
+}
+
 export async function seedPermissions(tx: Prisma.TransactionClient) {
+  const resources = new Map<string, number>();
+  const actions = new Map<string, number>();
+
   for (const item of permissionCatalog) {
-    const allowedScopes = [...item.scopes].map((code) => scopeByCode[code]);
-    await tx.permissions.upsert({
-      where: {
-        resource_action: { resource: item.resource, action: item.action },
-      },
-      update: {
-        category: item.category,
-        allowedScopes,
-      },
-      create: {
-        resource: item.resource,
-        action: item.action,
-        category: item.category,
-        allowedScopes,
-      },
+    if (!resources.has(item.resource)) {
+      const engName = resourceKeys[item.resource];
+      if (!engName) throw new Error('مفتاح مورد الصلاحية مفقود');
+      const resource = await tx.permission_resources.upsert({
+        where: { eng_name: engName },
+        update: { arb_name: item.resource },
+        create: { eng_name: engName, arb_name: item.resource },
+        select: { id: true },
+      });
+      resources.set(item.resource, resource.id);
+    }
+    if (!actions.has(item.action)) {
+      const engName = actionKeys[item.action];
+      if (!engName) throw new Error('مفتاح إجراء الصلاحية مفقود');
+      const action = await tx.permission_actions.upsert({
+        where: { eng_name: engName },
+        update: { arb_name: item.action },
+        create: { eng_name: engName, arb_name: item.action },
+        select: { id: true },
+      });
+      actions.set(item.action, action.id);
+    }
+
+    const resource = resources.get(item.resource)!;
+    const action = actions.get(item.action)!;
+    const allowedScopes = [...item.scopes].map(getScopeType);
+    const permission = await tx.permissions.upsert({
+      where: { resource_action: { resource, action } },
+      update: { category: item.category, allowedScopes },
+      create: { resource, action, category: item.category, allowedScopes },
     });
+
+    // Existing superadmin roles also need this newly introduced permission.
+    // Normal roles receive it only through explicit assignment by an admin.
+    if (resourceKeys[item.resource] === 'staff_invitations') {
+      const superadminRoles = await tx.roles.findMany({
+        where: { isSuperAdminRole: true },
+        select: { id: true },
+      });
+      if (superadminRoles.length) {
+        await tx.rolePermissions.createMany({
+          data: superadminRoles.map((role) => ({
+            roleId: role.id,
+            permissionId: permission.id,
+            scopeType: ScopeType.CENTER_WIDE,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
   }
 
   return permissionCatalog.length;
