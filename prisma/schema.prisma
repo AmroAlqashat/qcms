@@ -138,11 +138,17 @@ model AuditEvents {
   @@index([actorId])
 }
 
+enum TermType {
+  STANDARD
+  CONTINUOUS
+}
+
 model Terms {
   id                String              @id @default(uuid())
-  name              String
-  startDate         DateTime
-  endDate           DateTime
+  termId            String              @unique @db.VarChar(5)
+  type              TermType
+  startDate         DateTime?
+  endDate           DateTime?
   archivedAt        DateTime?
   halaqas           Halaqas[]
   termRegistrations TermRegistrations[]
@@ -347,6 +353,7 @@ enum RegistrationStatus {
 }
 
 enum AuditAction {
+  TERM_CREATED
   STAFF_ONBOARDING_COMPLETED
   STAFF_INVITED
   STAFF_ACTIVATED
@@ -363,6 +370,7 @@ enum AuditAction {
 }
 
 enum AuditTarget {
+  TERM
   STAFF
   STUDENT
   ROLE

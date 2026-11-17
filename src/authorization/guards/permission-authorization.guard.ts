@@ -28,7 +28,7 @@ export class PermissionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly authorization: AuthorizationService,
-  ) { }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermission =
@@ -41,16 +41,17 @@ export class PermissionGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-
-
+    // Public and onboarding routes do not establish request.user.
+    if (
+      (access?.kind === 'public' || access?.kind === 'onboarding') &&
+      !requiredPermission
+    ) {
+      return true;
+    }
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const staffId = request.user?.id;
     if (!staffId) throw new UnauthorizedException('يرجى تسجيل الدخول أولًا');
-
-    if ((access?.kind === 'public' || access?.kind === 'onboarding') && !requiredPermission) {
-      return true;
-    }
 
     if (access?.kind === 'authenticated' && !requiredPermission) return true;
 

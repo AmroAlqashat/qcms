@@ -17,6 +17,7 @@ import { SettingsModule } from './settings/settings.module';
 import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { NavigationPermissionsInterceptor } from './common/interceptors/navigation-permissions.interceptor';
+import { TermsModule } from './terms/terms.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { NavigationPermissionsInterceptor } from './common/interceptors/navigati
         from: `"No Reply" ${process.env.EMAIL_SENDER_ADDRESS}`,
       },
     }),
+    TermsModule,
   ],
   controllers: [AppController],
   providers: [
