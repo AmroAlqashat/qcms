@@ -367,6 +367,8 @@ enum AuditAction {
   ROLE_DELETED
   SYSTEM_SETUP_COMPLETED
   SUPERADMIN_RECOVERED
+  HALAQA_CREATED
+  HALAQA_EDITED
 }
 
 enum AuditTarget {
@@ -374,6 +376,7 @@ enum AuditTarget {
   STAFF
   STUDENT
   ROLE
+  HALAQA
 }
 
 enum JobTitle {

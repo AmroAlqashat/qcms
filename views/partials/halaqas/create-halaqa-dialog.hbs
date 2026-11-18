@@ -1,0 +1,34 @@
+{{#> ui/dialog id="create-halaqa-dialog" icon="users" heading="إنشاء حلقة جديدة" description="أدخل اسم الحلقة ووقت اللقاء لكل يوم من أيام الأسبوع."}}
+  <form action="/halaqas/new" method="post" hx-post="/halaqas/new" hx-target="#modal-root" hx-swap="innerHTML"
+    hx-disabled-elt="find button[type='submit']" class="space-y-5">
+    {{> ui/csrf}}
+    {{> ui/form-error error=error}}
+    <input type="hidden" name="termId" value="{{termId}}">
+    <p class="rounded-xl bg-[#f0faf9] p-3 text-sm font-bold text-[#287a73]">الفصل <bdi>{{termId}}</bdi></p>
+    {{> ui/field id="halaqa-name" name="name" label="اسم الحلقة" value=name required=true maxlength="100" error=errors.name}}
+    <fieldset class="space-y-3">
+      <legend class="text-sm font-bold">أوقات اللقاء الأسبوعية</legend>
+      <p class="text-xs leading-6 text-slate-600">أدخل وقت البداية والنهاية بصيغة 24 ساعة لكل يوم.</p>
+      <div class="space-y-3">
+        {{#each days}}
+          <div class="grid items-end gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-[minmax(5rem,0.6fr)_1fr_1fr]">
+            <h3 class="pb-2 text-sm font-bold">{{label}}</h3>
+            <div class="min-w-0">
+              <label for="halaqa-start-time-{{@index}}" class="mb-2 block text-xs font-semibold">وقت البداية</label>
+              <input id="halaqa-start-time-{{@index}}" class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]" name="meetingDays[startTime][]" type="time" value="{{startTime}}" required dir="ltr" aria-label="وقت بداية {{label}}">
+            </div>
+            <div class="min-w-0">
+              <label for="halaqa-end-time-{{@index}}" class="mb-2 block text-xs font-semibold">وقت النهاية</label>
+              <input id="halaqa-end-time-{{@index}}" class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]" name="meetingDays[endTime][]" type="time" value="{{endTime}}" required dir="ltr" aria-label="وقت نهاية {{label}}">
+            </div>
+          </div>
+        {{/each}}
+      </div>
+      {{#if errors.meetingDays}}<p class="text-xs text-red-700">{{errors.meetingDays}}</p>{{/if}}
+    </fieldset>
+    <div class="flex flex-wrap justify-start gap-2 border-t border-slate-100 pt-4">
+      {{> ui/submit label="إنشاء الحلقة"}}
+      {{> ui/cancel label="إلغاء"}}
+    </div>
+  </form>
+{{/ui/dialog}}

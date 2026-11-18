@@ -23,7 +23,7 @@ export class SettingsController {
   constructor(
     private readonly settingsService: SettingsService,
     private readonly authorizationService: AuthorizationService,
-  ) { }
+  ) {}
 
   @Get()
   @permission({ permission_action: 'read', permission_resource: 'settings' })
@@ -47,7 +47,12 @@ export class SettingsController {
         ),
       ),
       permissions: {
-        canSaveSettings: await this.authorizationService.hasPermission(user.id, 'settings', 'update', ScopeType.CENTER_WIDE)
+        canSaveSettings: await this.authorizationService.hasPermission(
+          user.id,
+          'settings',
+          'update',
+          ScopeType.CENTER_WIDE,
+        ),
       },
       activeNav: 'settings',
     };
@@ -86,7 +91,12 @@ export class SettingsController {
           ),
         ),
         permissions: {
-          canSaveSettings: await this.authorizationService.hasPermission(user.id, 'settings', 'update', ScopeType.CENTER_WIDE)
+          canSaveSettings: await this.authorizationService.hasPermission(
+            user.id,
+            'settings',
+            'update',
+            ScopeType.CENTER_WIDE,
+          ),
         },
         activeNav: 'settings',
         feedback: result.count ? 'تم حفظ التغييرات.' : 'لا توجد تغييرات للحفظ.',

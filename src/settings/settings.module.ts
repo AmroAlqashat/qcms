@@ -9,4 +9,4 @@ import { AuthorizationModule } from '../authorization/authorization.module';
   controllers: [SettingsController],
   providers: [SettingsService],
 })
-export class SettingsModule { }
+export class SettingsModule {}

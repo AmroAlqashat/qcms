@@ -18,6 +18,7 @@ import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { NavigationPermissionsInterceptor } from './common/interceptors/navigation-permissions.interceptor';
 import { TermsModule } from './terms/terms.module';
+import { HalaqasModule } from './Halaqas/halaqas.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { TermsModule } from './terms/terms.module';
     SetupModule,
     AuditModule,
     RolesModule,
+    HalaqasModule,
     StaffModule,
     AuthModule,
     AuthorizationModule,
@@ -56,7 +58,7 @@ import { TermsModule } from './terms/terms.module';
     { provide: APP_GUARD, useClass: SessionAuthGuard },
     // Keep authorization after authentication while reusing the module provider.
     { provide: APP_GUARD, useExisting: PermissionGuard },
-    { provide: APP_INTERCEPTOR, useClass: NavigationPermissionsInterceptor }
+    { provide: APP_INTERCEPTOR, useClass: NavigationPermissionsInterceptor },
   ],
 })
-export class AppModule { }
+export class AppModule {}

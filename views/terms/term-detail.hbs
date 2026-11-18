@@ -7,7 +7,12 @@
           <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-[#edbc5a]" aria-hidden="true">{{> ui/icon name="calendar" class="h-7 w-7"}}</span>
           <div class="min-w-0"><p class="mb-2 text-xs font-bold text-[#c0e3dc]">الفصول والحلقات</p><h1 id="term-title" class="text-2xl font-extrabold sm:text-3xl">الفصل <bdi>{{term.termId}}</bdi></h1></div>
         </div>
-        <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold"><span class="h-2 w-2 rounded-full bg-[#edbc5a]" aria-hidden="true"></span>فصل نشط</span>
+        <div class="flex flex-wrap items-center gap-3">
+          {{#if permissions.canCreateHalaqa}}
+            <a href="/halaqas/new?termId={{term.termId}}" hx-get="/halaqas/new?termId={{term.termId}}" hx-target="#modal-root" hx-swap="innerHTML" aria-haspopup="dialog" class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#edbc5a] px-4 py-2 text-sm font-bold text-[#12383b] hover:bg-[#f4cd80] focus-visible:outline-2 focus-visible:outline-white">{{> ui/icon name="plus" class="h-4 w-4"}}إنشاء حلقة</a>
+          {{/if}}
+          <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold"><span class="h-2 w-2 rounded-full bg-[#edbc5a]" aria-hidden="true"></span>فصل نشط</span>
+        </div>
       </div>
       <p class="mt-5 max-w-2xl text-sm leading-7 text-[#d7ebe6]">{{#if term.isContinuous}}فصل مستمر دون تاريخ بداية أو نهاية. يجمع الحلقات والتعيينات المرتبطة به.{{else}}نظرة عامة على بيانات الفصل والحلقات المرتبطة به خلال الفترة المحددة.{{/if}}</p>
     </div>

@@ -108,17 +108,25 @@ export class TermsController {
     @CurrentUser() actor: { id: string },
     @ActorEndpointPermissionScope() scope: ScopeType,
   ) {
-    const canViewHalaqas = await this.authorizationSerivce.hasPermission(
-      actor.id,
-      'halaqas',
-      'read',
-      ScopeType.CENTER_WIDE,
-    );
+    const [canViewHalaqas, canCreateHalaqa] = await Promise.all([
+      this.authorizationSerivce.hasPermission(
+        actor.id,
+        'halaqas',
+        'read',
+        ScopeType.CENTER_WIDE,
+      ),
+      this.authorizationSerivce.hasPermission(
+        actor.id,
+        'halaqas',
+        'create',
+        ScopeType.CENTER_WIDE,
+      ),
+    ]);
     const term = await this.termsService.getTerm(id, scope, canViewHalaqas);
     return {
       term: termView(term),
       title: `الفصل ${term.termId}`,
-      permissions: { canViewHalaqas },
+      permissions: { canViewHalaqas, canCreateHalaqa },
       activeNav: 'terms',
       sectionTitle: `الفصل ${term.termId}`,
     };

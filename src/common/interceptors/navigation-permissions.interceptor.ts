@@ -10,7 +10,7 @@ import { ScopeType } from '@prisma/client';
 
 @Injectable()
 export class NavigationPermissionsInterceptor implements NestInterceptor {
-  constructor(private readonly authorizationSerivce: AuthorizationService) { }
+  constructor(private readonly authorizationSerivce: AuthorizationService) {}
 
   async intercept(context: ExecutionContext, next: CallHandler) {
     // This interceptor run just before controllers and after guards.
@@ -18,9 +18,9 @@ export class NavigationPermissionsInterceptor implements NestInterceptor {
     // if valid there is req.user if not guard will reject it.
     // The optional user is for public or onboarding routes.
     // Here we are getting the request and expecting a request with type Request + user?.
-    const request = context.switchToHttp().getRequest<
-      Request & { user?: { id: string, isSuperAdmin: boolean } }
-    >();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { user?: { id: string; isSuperAdmin: boolean } }>();
 
     // If there is no user then its an endpoint the auth guard didnt validate user into request
     if (!request.user) {
@@ -53,11 +53,11 @@ export class NavigationPermissionsInterceptor implements NestInterceptor {
       ),
       canViewTerms: await this.authorizationSerivce.hasPermission(
         request.user.id,
-        "terms",
-        "read",
+        'terms',
+        'read',
         ScopeType.CENTER_WIDE,
-      )
-    }
+      ),
+    };
 
     return next.handle();
   }
