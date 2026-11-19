@@ -13,7 +13,7 @@ import { SettingsErrorFilter } from './settings-error.filter';
 import { SettingsService } from './settings.service';
 import { SettingsDto } from './dto/settings.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { permission } from '../authorization/decorators/permissions-access.decorator';
+import { Permission } from '../authorization/decorators/permissions-access.decorator';
 import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { ScopeType } from '@prisma/client';
 import { AuthorizationService } from '../authorization/authorization.service';
@@ -26,7 +26,7 @@ export class SettingsController {
   ) {}
 
   @Get()
-  @permission({ permission_action: 'read', permission_resource: 'settings' })
+  @Permission({ permission_action: 'read', permission_resource: 'settings' })
   @Render('settings/settings-page')
   async showSettingsPage(
     @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
@@ -59,7 +59,7 @@ export class SettingsController {
   }
 
   @Post()
-  @permission({ permission_action: 'update', permission_resource: 'settings' })
+  @Permission({ permission_action: 'update', permission_resource: 'settings' })
   @UseFilters(SettingsErrorFilter)
   async saveSettingsChanges(
     @Body() settingsDto: SettingsDto,

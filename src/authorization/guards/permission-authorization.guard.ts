@@ -9,7 +9,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import type { ScopeType } from '@prisma/client';
 import {
-  permission,
+  Permission,
   type PermissionAccess,
 } from '../decorators/permissions-access.decorator';
 import { AuthorizationService } from '../authorization.service';
@@ -32,7 +32,7 @@ export class PermissionGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermission =
-      this.reflector.getAllAndOverride<PermissionAccess>(permission, [
+      this.reflector.getAllAndOverride<PermissionAccess>(Permission, [
         context.getHandler(),
         context.getClass(),
       ]);

@@ -44,7 +44,7 @@ import { EditPermissionsDto } from './dto/edit-permissions.dto';
 import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
 import { ForgotPasswordEmailDto } from './dto/forgot-password-email.dto';
 import { Public } from '../auth/decorators/route-access.decorator';
-import { permission } from '../authorization/decorators/permissions-access.decorator';
+import { Permission } from '../authorization/decorators/permissions-access.decorator';
 import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { ScopeType } from '@prisma/client';
 import { AuthorizationService } from '../authorization/authorization.service';
@@ -57,7 +57,7 @@ export class StaffController {
   ) {}
 
   @Get()
-  @permission({
+  @Permission({
     permission_action: 'read',
     permission_resource: 'staff_members',
   })
@@ -103,7 +103,7 @@ export class StaffController {
   }
 
   @Get('invitations')
-  @permission({
+  @Permission({
     permission_action: 'read',
     permission_resource: 'staff_invitations',
   })
@@ -131,7 +131,7 @@ export class StaffController {
     };
   }
   @Post('invitations/cancel/:id')
-  @permission({
+  @Permission({
     permission_action: 'delete',
     permission_resource: 'staff_invitations',
   })
@@ -148,7 +148,7 @@ export class StaffController {
   }
 
   @Get('edit/permissions/:id')
-  @permission({
+  @Permission({
     permission_action: 'read',
     permission_resource: 'direct_permission_grants',
   })
@@ -188,7 +188,7 @@ export class StaffController {
   }
 
   @Post('edit/permissions/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'direct_permission_grants',
   })
@@ -225,7 +225,7 @@ export class StaffController {
   }
 
   @Get('edit/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -257,7 +257,7 @@ export class StaffController {
   }
 
   @Post('edit/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -293,7 +293,7 @@ export class StaffController {
   }
 
   @Get('invite')
-  @permission({
+  @Permission({
     permission_action: 'create',
     permission_resource: 'staff_members',
   })
@@ -305,7 +305,7 @@ export class StaffController {
     });
   }
   @Post('invite')
-  @permission({
+  @Permission({
     permission_action: 'create',
     permission_resource: 'staff_members',
   })
@@ -342,7 +342,7 @@ export class StaffController {
   }
 
   @Get('generate-new-password/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -373,7 +373,7 @@ export class StaffController {
   }
 
   @Post('generate-new-password/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -448,7 +448,7 @@ export class StaffController {
   }
 
   @Get('reset-my-password')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -470,7 +470,7 @@ export class StaffController {
   }
 
   @Get('change-email')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -493,7 +493,7 @@ export class StaffController {
   }
 
   @Post('change-email/send-otp')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -521,7 +521,7 @@ export class StaffController {
   }
 
   @Post('change-email/resend-otp')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -540,7 +540,7 @@ export class StaffController {
   }
 
   @Post('change-email')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -631,7 +631,7 @@ export class StaffController {
   }
 
   @Get(':id')
-  @permission({
+  @Permission({
     permission_action: 'read',
     permission_resource: 'staff_members',
   })
@@ -690,7 +690,7 @@ export class StaffController {
   }
 
   @Get('deactivate/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -708,7 +708,7 @@ export class StaffController {
     };
   }
   @Post('deactivate/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -741,7 +741,7 @@ export class StaffController {
   }
 
   @Get('delete/:id')
-  @permission({
+  @Permission({
     permission_action: 'delete',
     permission_resource: 'staff_members',
   })
@@ -759,7 +759,7 @@ export class StaffController {
     };
   }
   @Post('delete/:id')
-  @permission({
+  @Permission({
     permission_action: 'delete',
     permission_resource: 'staff_members',
   })
@@ -793,7 +793,7 @@ export class StaffController {
   }
 
   @Get('activate/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -810,7 +810,7 @@ export class StaffController {
     };
   }
   @Post('activate/:id')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -844,7 +844,7 @@ export class StaffController {
   }
 
   @Post('reset-my-password/send-otp')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })
@@ -861,7 +861,7 @@ export class StaffController {
   }
 
   @Post('reset-my-password')
-  @permission({
+  @Permission({
     permission_action: 'update',
     permission_resource: 'staff_members',
   })

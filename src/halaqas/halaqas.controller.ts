@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ScopeType } from '@prisma/client';
-import { permission } from '../authorization/decorators/permissions-access.decorator';
+import { Permission } from '../authorization/decorators/permissions-access.decorator';
 import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { createHalaqaDto } from './dto/create-halaqa.dto';
 import { HalaqasService } from './halaqas.service';
@@ -25,7 +25,7 @@ export class HalaqasController {
   constructor(private readonly halaqasService: HalaqasService) {}
 
   @Get('new')
-  @permission({ permission_resource: 'halaqas', permission_action: 'create' })
+  @Permission({ permission_resource: 'halaqas', permission_action: 'create' })
   @Render('halaqas/create-halaqa')
   async showCreateHalaqaForm(
     @Query('termId') termId: string,
@@ -44,7 +44,7 @@ export class HalaqasController {
   }
 
   @Post('new')
-  @permission({ permission_resource: 'halaqas', permission_action: 'create' })
+  @Permission({ permission_resource: 'halaqas', permission_action: 'create' })
   @UseFilters(CreateHalaqaErrorFilter)
   async createNewHalaqa(
     @Body() dto: createHalaqaDto,

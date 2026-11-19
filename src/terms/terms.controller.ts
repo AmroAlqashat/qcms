@@ -16,7 +16,7 @@ import type { Request, Response } from 'express';
 import { CreateTermDto } from './dto/create-term.dto';
 import { ActorEndpointPermissionScope } from '../authorization/decorators/actor-endpoint-permission-scope.decorator';
 import { TermsService } from './terms.service';
-import { permission } from '../authorization/decorators/permissions-access.decorator';
+import { Permission } from '../authorization/decorators/permissions-access.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthorizationService } from '../authorization/authorization.service';
 import { ScopeType } from '@prisma/client';
@@ -32,7 +32,7 @@ export class TermsController {
   ) {}
 
   @Get()
-  @permission({ permission_resource: 'terms', permission_action: 'read' })
+  @Permission({ permission_resource: 'terms', permission_action: 'read' })
   async showTermList(
     @Query() filterDto: FilteredTermsDto,
     @CurrentUser() user: { id: string },
@@ -80,7 +80,7 @@ export class TermsController {
   }
 
   @Get('create')
-  @permission({ permission_resource: 'terms', permission_action: 'create' })
+  @Permission({ permission_resource: 'terms', permission_action: 'create' })
   @Render('terms/create-term')
   async showCreateTermDialog(@ActorEndpointPermissionScope() scope: ScopeType) {
     this.termsService.assertCenterWideScope(scope);
@@ -95,7 +95,7 @@ export class TermsController {
   }
 
   @Get(':id')
-  @permission({ permission_resource: 'terms', permission_action: 'read' })
+  @Permission({ permission_resource: 'terms', permission_action: 'read' })
   @Render('terms/term-detail')
   async showTerm(
     @Param(
@@ -133,7 +133,7 @@ export class TermsController {
   }
 
   @Post('create')
-  @permission({ permission_resource: 'terms', permission_action: 'create' })
+  @Permission({ permission_resource: 'terms', permission_action: 'create' })
   @UseFilters(CreateTermErrorFilter)
   async newTerm(
     @Body() dto: CreateTermDto,

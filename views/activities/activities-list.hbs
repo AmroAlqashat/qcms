@@ -1,0 +1,72 @@
+<section aria-labelledby="activities-title" class="space-y-6">
+  <header class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="mb-2 text-xs font-bold text-[#287a73]">التعليم</p>
+      <h1 id="activities-title" class="text-2xl font-extrabold sm:text-3xl">الأنشطة</h1>
+      <p class="mt-2 max-w-2xl text-sm leading-7 text-slate-600">استعرض أنشطة المركز والحلقات ومواقع إقامتها.</p>
+    </div>
+    {{#if permissions.canCreateActivity}}
+      <a href="/activities/new" hx-get="/activities/new" hx-target="#modal-root" hx-swap="innerHTML" aria-haspopup="dialog"
+        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#216c65] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73] sm:w-auto">
+        {{> ui/icon name="plus"}}نشاط جديد
+      </a>
+    {{/if}}
+  </header>
+
+  <div class="flex items-center justify-between rounded-2xl border border-[#a8dfdc] bg-[#f0faf9] px-5 py-4">
+    <div class="flex items-center gap-3">
+      <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#287a73]" aria-hidden="true">{{> ui/icon name="calendar"}}</span>
+      <div><p class="text-xs font-semibold text-slate-600">الأنشطة المعروضة</p><p class="mt-1 text-lg font-extrabold tabular-nums text-[#195954]">{{activities.length}}</p></div>
+    </div>
+    <span class="text-xs font-semibold text-[#287a73]">{{#if (eq actorScope "ASSIGNED_CLASS")}}حلقاتك المعيّنة{{else}}جميع أنشطة المركز{{/if}}</span>
+  </div>
+
+  {{#if activities.length}}
+    <div class="grid gap-3 sm:hidden">
+      {{#each activities}}
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0"><h2 class="break-words text-base font-extrabold">{{name}}</h2><p class="mt-1 text-xs text-slate-500">{{levelLabel}}</p></div>
+            <span class="shrink-0 rounded-full bg-[#f0faf9] px-3 py-1 text-xs font-bold text-[#287a73]">{{dateLabel}}</span>
+          </div>
+          <dl class="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm">
+            <div><dt class="text-xs text-slate-500">الموقع</dt><dd class="mt-1 break-words font-semibold">{{location}}</dd></div>
+            {{#if halaqa}}<div><dt class="text-xs text-slate-500">الحلقة</dt><dd class="mt-1 font-semibold">{{halaqa.name}} <span class="font-normal text-slate-500">· الفصل {{halaqa.term.termId}}</span></dd></div>{{/if}}
+            <div><dt class="text-xs text-slate-500">المشاركون</dt><dd class="mt-1 font-bold tabular-nums">{{_count.participants}}</dd></div>
+          </dl>
+          <a href="/activities/{{id}}" class="mt-4 flex min-h-11 items-center justify-between border-t border-slate-100 pt-3 text-sm font-bold text-[#287a73] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]">
+            عرض التفاصيل <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f0faf9]" aria-hidden="true">{{> ui/icon name="chevron" class="h-4 w-4"}}</span>
+          </a>
+        </article>
+      {{/each}}
+    </div>
+
+    <div class="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm sm:block">
+      <table class="w-full text-right text-sm">
+        <caption class="sr-only">قائمة أنشطة المركز</caption>
+        <thead class="border-b border-slate-100 bg-slate-50 text-xs text-slate-500">
+          <tr><th scope="col" class="px-5 py-4">النشاط</th><th scope="col" class="px-5 py-4">النطاق</th><th scope="col" class="px-5 py-4">الحلقة والفصل</th><th scope="col" class="px-5 py-4">الموقع</th><th scope="col" class="px-5 py-4">التاريخ</th><th scope="col" class="px-5 py-4 text-center">المشاركون</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {{#each activities}}
+            <tr class="hover:bg-slate-50">
+              <th scope="row" class="px-5 py-4 font-bold"><a href="/activities/{{id}}" aria-label="عرض تفاصيل النشاط {{name}}" class="group inline-flex max-w-full flex-col items-start gap-1 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]"><span class="break-words text-[#12383b] underline-offset-4 group-hover:text-[#287a73] group-hover:underline">{{name}}</span><span class="inline-flex min-h-7 items-center gap-1 text-xs font-semibold text-[#287a73]">عرض التفاصيل {{> ui/icon name="chevron" class="h-3.5 w-3.5"}}</span></a></th>
+              <td class="px-5 py-4 text-slate-600">{{levelLabel}}</td>
+              <td class="px-5 py-4 text-slate-600">{{#if halaqa}}{{halaqa.name}}<span class="mt-1 block text-xs text-slate-500">الفصل {{halaqa.term.termId}}</span>{{else}}—{{/if}}</td>
+              <td class="max-w-64 px-5 py-4 text-slate-600">{{location}}</td>
+              <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{dateLabel}}</td>
+              <td class="px-5 py-4 text-center font-bold tabular-nums">{{_count.participants}}</td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  {{else}}
+    <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center sm:py-16">
+      <span class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0faf9] text-[#287a73]" aria-hidden="true">{{> ui/icon name="calendar" class="h-7 w-7"}}</span>
+      <h2 class="text-lg font-bold">لا توجد أنشطة لعرضها بعد</h2>
+      <p class="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-500">{{#if permissions.canCreateActivity}}أنشئ نشاطًا جديدًا ليظهر هنا.{{else}}ستظهر هنا الأنشطة المرتبطة بنطاق صلاحيتك عند إضافتها.{{/if}}</p>
+      {{#if permissions.canCreateActivity}}<a href="/activities/new" hx-get="/activities/new" hx-target="#modal-root" hx-swap="innerHTML" aria-haspopup="dialog" class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white hover:bg-[#216c65]">{{> ui/icon name="plus"}}إنشاء أول نشاط</a>{{/if}}
+    </div>
+  {{/if}}
+</section>

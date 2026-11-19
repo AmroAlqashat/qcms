@@ -57,6 +57,19 @@ export class NavigationPermissionsInterceptor implements NestInterceptor {
         'read',
         ScopeType.CENTER_WIDE,
       ),
+      canViewActivities:
+        (await this.authorizationSerivce.hasPermission(
+          request.user.id,
+          'activities',
+          'read',
+          ScopeType.CENTER_WIDE,
+        )) ||
+        (await this.authorizationSerivce.hasPermission(
+          request.user.id,
+          'activities',
+          'read',
+          ScopeType.ASSIGNED_CLASS,
+        )),
     };
 
     return next.handle();

@@ -1,0 +1,70 @@
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { wantsHtml } from '../../common/wants-html';
+import { ActivitiesService } from '../activities.service';
+
+@Catch(HttpException)
+export class CreateActivityErrorFilter implements ExceptionFilter {
+  constructor(private readonly activitiesService: ActivitiesService) {}
+
+  async catch(exception: HttpException, host: ArgumentsHost) {
+    const http = host.switchToHttp();
+    const request = http.getRequest<Request>();
+    const response = http.getResponse<Response>();
+
+    if (!wantsHtml(request)) {
+      response.status(exception.getStatus()).json(exception.getResponse());
+      return;
+    }
+
+    const body = request.body as Record<string, unknown>;
+    const details = exception.getResponse();
+    const errors =
+      typeof details === 'object' && details !== null
+        ? (details as { errors?: Record<string, string> }).errors
+        : undefined;
+    const isHtmx = request.get('HX-Request') === 'true';
+
+    if (isHtmx) {
+      response.set({
+        'X-QCMS-Fragment': 'true',
+        'HX-Retarget': '#modal-root',
+        'HX-Reswap': 'innerHTML',
+      });
+    }
+
+    response
+      .status(exception.getStatus())
+      .render(
+        isHtmx
+          ? 'partials/activities/create-activity-dialog'
+          : 'activities/create-activity',
+        {
+          layout: isHtmx ? false : 'main',
+          isHtmx,
+          activeNav: 'activities',
+          sectionTitle: 'إنشاء نشاط',
+          name: this.stringValue(body.name),
+          level: this.stringValue(body.level) || 'CENTER_WIDE',
+          halaqaId: this.stringValue(body.halaqaId),
+          date: this.stringValue(body.date),
+          location: this.stringValue(body.location),
+          halaqas: await this.activitiesService.getActiveHalaqas(),
+          errors,
+          error:
+            errors || exception.getStatus() === 422
+              ? 'لم يُحفظ النشاط. راجع الحقول الموضّحة أدناه.'
+              : exception.message,
+        },
+      );
+  }
+
+  private stringValue(value: unknown): string {
+    return typeof value === 'string' ? value : '';
+  }
+}

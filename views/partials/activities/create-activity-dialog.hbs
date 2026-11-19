@@ -1,0 +1,46 @@
+{{#> ui/dialog id="create-activity-dialog" icon="calendar" heading="إنشاء نشاط جديد" description="أدخل بيانات النشاط وحدد ما إذا كان تابعًا للمركز أو لحلقة بعينها."}}
+  <form action="/activities" method="post" hx-post="/activities" hx-target="#modal-root" hx-swap="innerHTML"
+    hx-disabled-elt="find button[type='submit']" data-activity-form class="space-y-5">
+    {{> ui/csrf}}
+    {{> ui/form-error error=error}}
+    {{> ui/field id="activity-name" name="name" label="اسم النشاط" value=name required=true error=errors.name}}
+
+    <fieldset>
+      <legend class="mb-3 text-sm font-bold">نطاق النشاط</legend>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 has-[:checked]:border-[#287a73] has-[:checked]:bg-[#f0faf9]">
+          <input type="radio" name="level" value="CENTER_WIDE" required {{#if (eq level "CENTER_WIDE")}}checked{{/if}} class="mt-1 h-4 w-4 accent-[#287a73]">
+          <span><span class="block text-sm font-bold">نشاط على مستوى المركز</span><span class="mt-1 block text-xs leading-6 text-slate-600">لا يرتبط بحلقة محددة.</span></span>
+        </label>
+        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 has-[:checked]:border-[#287a73] has-[:checked]:bg-[#f0faf9]">
+          <input type="radio" name="level" value="HALAQA_SPECIFIC" required {{#if (eq level "HALAQA_SPECIFIC")}}checked{{/if}} {{#unless halaqas.length}}disabled{{/unless}} class="mt-1 h-4 w-4 accent-[#287a73]">
+          <span><span class="block text-sm font-bold">نشاط خاص بحلقة</span><span class="mt-1 block text-xs leading-6 text-slate-600">اختر الحلقة التي سيقام النشاط لها.</span></span>
+        </label>
+      </div>
+      {{#if errors.level}}<p class="mt-2 text-xs text-red-700">{{errors.level}}</p>{{/if}}
+    </fieldset>
+
+    <fieldset data-activity-halaqa {{#if (eq level "CENTER_WIDE")}}hidden disabled{{/if}}>
+      <label for="activity-halaqa" class="mb-2 block text-sm font-semibold">الحلقة</label>
+      {{#if halaqas.length}}
+        <select id="activity-halaqa" name="halaqaId" data-activity-halaqa-select {{#if (eq level "HALAQA_SPECIFIC")}}required{{else}}disabled{{/if}}
+          class="block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm text-[#12383b] focus:border-[#287a73] focus:ring-2 focus:ring-[#a8dfdc]"
+          {{#if errors.halaqaId}}aria-invalid="true" aria-describedby="activity-halaqa-error"{{/if}}>
+          <option value="">اختر الحلقة</option>
+          {{#each halaqas}}<option value="{{id}}" {{#if (eq ../halaqaId id)}}selected{{/if}}>{{name}} · الفصل {{term.termId}}</option>{{/each}}
+        </select>
+      {{else}}
+        <p class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">لا توجد حلقات نشطة للاختيار. أنشئ حلقة ضمن فصل نشط أولًا.</p>
+      {{/if}}
+      <p id="activity-halaqa-error" class="mt-1 text-xs text-red-700" {{#unless errors.halaqaId}}hidden{{/unless}}>{{errors.halaqaId}}</p>
+    </fieldset>
+
+    {{> ui/field id="activity-date" name="date" label="تاريخ النشاط" type="date" value=date required=true error=errors.date dir="ltr"}}
+    {{> ui/field id="activity-location" name="location" label="موقع إقامة النشاط" value=location required=true maxlength="200" error=errors.location hint="اكتب اسم الموقع أو عنوانه، بحد أقصى 200 حرف."}}
+
+    <div class="flex flex-wrap justify-start gap-2 border-t border-slate-100 pt-4">
+      {{> ui/submit label="حفظ النشاط" icon="check"}}
+      {{> ui/cancel label="إلغاء"}}
+    </div>
+  </form>
+{{/ui/dialog}}

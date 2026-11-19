@@ -6,4 +6,4 @@ export type PermissionAccess = {
   permission_resource: permission_resources['eng_name'];
 };
 
-export const permission = Reflector.createDecorator<PermissionAccess>();
+export const Permission = Reflector.createDecorator<PermissionAccess>();

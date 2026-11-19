@@ -173,6 +173,7 @@ model Activities {
   level            ActivityLevel
   halaqaId         String?
   date             DateTime
+  location         String                     @db.VarChar(200)
   halaqa           Halaqas?                   @relation(fields: [halaqaId], references: [id])
   participants     ActivityParticipants[]
   staffAssignments StaffActivityAssignments[]

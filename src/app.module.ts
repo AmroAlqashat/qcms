@@ -19,6 +19,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { NavigationPermissionsInterceptor } from './common/interceptors/navigation-permissions.interceptor';
 import { TermsModule } from './terms/terms.module';
 import { HalaqasModule } from './halaqas/halaqas.module';
+import { ActivitiesModule } from './activities/activities.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { HalaqasModule } from './halaqas/halaqas.module';
       },
     }),
     TermsModule,
+    ActivitiesModule,
   ],
   controllers: [AppController],
   providers: [

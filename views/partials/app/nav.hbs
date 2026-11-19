@@ -10,6 +10,15 @@
     {{> ui/icon name="calendar"}}الفصول والحلقات
   </a>
   {{/if}}
+  {{#if navigationPermissions.canViewActivities}}
+  {{#unless navigationPermissions.canViewTerms}}
+  <p class="px-3 pb-1 pt-5 text-xs text-[#81aaa4]">التعليم</p>
+  {{/unless}}
+  <a href="/activities" {{#if (eq activeNav "activities")}}aria-current="page"{{/if}}
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "activities")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
+    {{> ui/icon name="calendar"}}الأنشطة
+  </a>
+  {{/if}}
   <p class="px-3 pb-1 pt-5 text-xs text-[#81aaa4]">الإدارة</p>
   {{#if navigationPermissions.canViewStaff}}
   <a href="/staff" {{#if (eq activeNav "staff")}}aria-current="page"{{/if}}
