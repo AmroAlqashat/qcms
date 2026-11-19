@@ -1,6 +1,6 @@
-{{#> ui/dialog id="create-halaqa-dialog" icon="users" heading="إنشاء حلقة جديدة" description="أدخل اسم الحلقة ووقت اللقاء لكل يوم من أيام الأسبوع."}}
+{{#> ui/dialog id="create-halaqa-dialog" wide=true icon="users" heading="إنشاء حلقة جديدة" description="أدخل اسم الحلقة وحدّد الأيام التي تُعقد فيها اللقاءات."}}
   <form action="/halaqas/new" method="post" hx-post="/halaqas/new" hx-target="#modal-root" hx-swap="innerHTML"
-    hx-disabled-elt="find button[type='submit']" class="space-y-5">
+    hx-disabled-elt="find button[type='submit']" data-halaqa-form class="space-y-5">
     {{> ui/csrf}}
     {{> ui/form-error error=error}}
     <input type="hidden" name="termId" value="{{termId}}">
@@ -8,22 +8,23 @@
     {{> ui/field id="halaqa-name" name="name" label="اسم الحلقة" value=name required=true maxlength="100" error=errors.name}}
     <fieldset class="space-y-3">
       <legend class="text-sm font-bold">أوقات اللقاء الأسبوعية</legend>
-      <p class="text-xs leading-6 text-slate-600">أدخل وقت البداية والنهاية بصيغة 24 ساعة لكل يوم.</p>
-      <div class="space-y-3">
+      <p class="text-xs leading-6 text-slate-600">حدّد موعدًا واحدًا على الأقل. أدخل وقت البداية والنهاية لليوم المختار، واترك الحقلين فارغين في بقية الأيام.</p>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
         {{#each days}}
-          <div class="grid items-end gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-[minmax(5rem,0.6fr)_1fr_1fr]">
-            <h3 class="pb-2 text-sm font-bold">{{label}}</h3>
+          <div data-meeting-day="{{label}}" class="grid min-w-0 grid-cols-2 items-end gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <h3 class="col-span-2 text-sm font-bold">{{label}}</h3>
             <div class="min-w-0">
               <label for="halaqa-start-time-{{@index}}" class="mb-2 block text-xs font-semibold">وقت البداية</label>
-              <input id="halaqa-start-time-{{@index}}" class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]" name="meetingDays[startTime][]" type="time" value="{{startTime}}" required dir="ltr" aria-label="وقت بداية {{label}}">
+              <input id="halaqa-start-time-{{@index}}" class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]" data-meeting-start name="meetingDays[startTime][]" type="time" value="{{startTime}}" dir="ltr" aria-label="وقت بداية {{label}}">
             </div>
             <div class="min-w-0">
               <label for="halaqa-end-time-{{@index}}" class="mb-2 block text-xs font-semibold">وقت النهاية</label>
-              <input id="halaqa-end-time-{{@index}}" class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]" name="meetingDays[endTime][]" type="time" value="{{endTime}}" required dir="ltr" aria-label="وقت نهاية {{label}}">
+              <input id="halaqa-end-time-{{@index}}" class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]" data-meeting-end name="meetingDays[endTime][]" type="time" value="{{endTime}}" dir="ltr" aria-label="وقت نهاية {{label}}">
             </div>
           </div>
         {{/each}}
       </div>
+      <p data-meeting-feedback class="text-xs text-red-700" role="status" hidden></p>
       {{#if errors.meetingDays}}<p class="text-xs text-red-700">{{errors.meetingDays}}</p>{{/if}}
     </fieldset>
     <div class="flex flex-wrap justify-start gap-2 border-t border-slate-100 pt-4">
