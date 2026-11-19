@@ -18,7 +18,7 @@ import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { NavigationPermissionsInterceptor } from './common/interceptors/navigation-permissions.interceptor';
 import { TermsModule } from './terms/terms.module';
-import { HalaqasModule } from './Halaqas/halaqas.module';
+import { HalaqasModule } from './halaqas/halaqas.module';
 
 @Module({
   imports: [
