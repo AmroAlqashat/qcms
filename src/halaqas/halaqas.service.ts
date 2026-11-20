@@ -1,5 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { AuditAction, AuditTarget } from '@prisma/client';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { AuditAction, AuditTarget, ScopeType } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { createHalaqaDto } from './dto/create-halaqa.dto';
@@ -19,6 +23,32 @@ export class HalaqasService {
     });
     if (!term) throw new NotFoundException('الفصل غير موجود أو مؤرشف');
     return term;
+  }
+
+  async getHalaqa(id: string, scope: ScopeType) {
+    if (scope !== ScopeType.CENTER_WIDE) {
+      throw new ForbiddenException(
+        'يتطلب عرض تفاصيل الحلقة صلاحية على مستوى المركز',
+      );
+    }
+
+    const halaqa = await this.prisma.halaqas.findFirst({
+      where: { id, archivedAt: null, term: { archivedAt: null } },
+      select: {
+        id: true,
+        name: true,
+        meetingDays: true,
+        term: { select: { id: true, termId: true } },
+        _count: {
+          select: {
+            enrollments: { where: { endedAt: null } },
+            staffAssignments: { where: { endedAt: null } },
+          },
+        },
+      },
+    });
+    if (!halaqa) throw new NotFoundException('الحلقة غير موجودة أو مؤرشفة');
+    return halaqa;
   }
 
   async createHalaqa(dto: createHalaqaDto, actorId: string) {

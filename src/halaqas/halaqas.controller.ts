@@ -3,6 +3,10 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  InternalServerErrorException,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
   Post,
   Query,
   Render,
@@ -19,6 +23,7 @@ import { HalaqasService } from './halaqas.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateHalaqaErrorFilter } from './filters/create-halaqa-error.filter';
 import { HALAQA_WEEK_DAYS } from './halaqa-week-days';
+import { Prisma } from '@prisma/client';
 
 @Controller('halaqas')
 export class HalaqasController {
@@ -63,9 +68,63 @@ export class HalaqasController {
     response.redirect(303, location);
   }
 
+  @Get(':id')
+  @Permission({ permission_resource: 'halaqas', permission_action: 'read' })
+  @Render('halaqas/detail')
+  async showHalaqa(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        exceptionFactory: () => new NotFoundException('الحلقة غير موجودة'),
+      }),
+    )
+    id: string,
+    @ActorEndpointPermissionScope() scope: ScopeType,
+  ) {
+    const halaqa = await this.halaqasService.getHalaqa(id, scope);
+    return {
+      halaqa: {
+        ...halaqa,
+        meetingDays: this.meetingDaysView(halaqa.meetingDays),
+      },
+      title: halaqa.name,
+      activeNav: 'terms',
+      sectionTitle: halaqa.name,
+    };
+  }
+
   private assertCenterWideScope(scope: ScopeType) {
     if (scope !== ScopeType.CENTER_WIDE) {
       throw new ForbiddenException('يتطلب إنشاء حلقة صلاحية على مستوى المركز');
     }
+  }
+
+  private meetingDaysView(value: Prisma.JsonValue) {
+    const startTimes =
+      typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? value.startTime
+        : undefined;
+    const endTimes =
+      typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? value.endTime
+        : undefined;
+    if (
+      !this.isStringArray(startTimes) ||
+      !this.isStringArray(endTimes) ||
+      startTimes.length !== HALAQA_WEEK_DAYS.length ||
+      endTimes.length !== HALAQA_WEEK_DAYS.length
+    ) {
+      throw new InternalServerErrorException('مواعيد الحلقة المخزنة غير صالحة');
+    }
+
+    return HALAQA_WEEK_DAYS.flatMap((label, index) => {
+      const startTime = startTimes[index];
+      const endTime = endTimes[index];
+      return startTime && endTime ? [{ label, startTime, endTime }] : [];
+    });
+  }
+
+  private isStringArray(value: Prisma.JsonValue | undefined): value is string[] {
+    return Array.isArray(value) && value.every((item) => typeof item === 'string');
   }
 }

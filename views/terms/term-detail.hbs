@@ -43,9 +43,9 @@
             <tbody class="divide-y divide-slate-100">
               {{#each term.halaqas}}
                 <tr class="hover:bg-slate-50">
-                  <th scope="row" class="px-6 py-5"><div class="flex items-center gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f0faf9] text-[#287a73]" aria-hidden="true">{{> ui/icon name="users" class="h-5 w-5"}}</span><span class="break-words font-bold">{{name}}</span></div></th>
-                  <td class="px-6 py-5 text-center font-bold tabular-nums">{{_count.enrollments}}</td>
-                  <td class="px-6 py-5 text-center font-bold tabular-nums">{{_count.staffAssignments}}</td>
+                  <th scope="row" class="p-0"><a href="/halaqas/{{id}}" class="flex min-h-full items-center gap-3 px-6 py-5 font-bold text-[#216c65] focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-[#287a73]"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f0faf9] text-[#287a73]" aria-hidden="true">{{> ui/icon name="users" class="h-5 w-5"}}</span><span class="break-words">{{name}}</span></a></th>
+                  <td class="p-0 text-center font-bold tabular-nums"><a href="/halaqas/{{id}}" class="block px-6 py-5 focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-[#287a73]">{{_count.enrollments}}</a></td>
+                  <td class="p-0 text-center font-bold tabular-nums"><a href="/halaqas/{{id}}" class="block px-6 py-5 focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-[#287a73]">{{_count.staffAssignments}}</a></td>
                 </tr>
               {{/each}}
             </tbody>
@@ -53,7 +53,7 @@
         </div>
         <ul class="divide-y divide-slate-100 sm:hidden">
           {{#each term.halaqas}}
-            <li class="p-5"><h3 class="mb-4 flex items-center gap-2 break-words font-bold">{{> ui/icon name="users" class="h-5 w-5 text-[#287a73]"}}{{name}}</h3><dl class="grid grid-cols-2 gap-3"><div class="rounded-xl bg-slate-50 p-3"><dt class="text-xs text-slate-500">الطلاب المسجّلون</dt><dd class="mt-1 text-lg font-bold tabular-nums">{{_count.enrollments}}</dd></div><div class="rounded-xl bg-slate-50 p-3"><dt class="text-xs text-slate-500">الموظفون المعيّنون</dt><dd class="mt-1 text-lg font-bold tabular-nums">{{_count.staffAssignments}}</dd></div></dl></li>
+            <li><a href="/halaqas/{{id}}" class="block p-5 text-[#12383b] hover:bg-slate-50 focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-[#287a73]"><h3 class="mb-4 flex items-center gap-2 break-words font-bold text-[#216c65]">{{> ui/icon name="users" class="h-5 w-5 text-[#287a73]"}}{{name}}</h3><dl class="grid grid-cols-2 gap-3"><div class="rounded-xl bg-slate-50 p-3"><dt class="text-xs text-slate-500">الطلاب المسجّلون</dt><dd class="mt-1 text-lg font-bold tabular-nums">{{_count.enrollments}}</dd></div><div class="rounded-xl bg-slate-50 p-3"><dt class="text-xs text-slate-500">الموظفون المعيّنون</dt><dd class="mt-1 text-lg font-bold tabular-nums">{{_count.staffAssignments}}</dd></div></dl></a></li>
           {{/each}}
         </ul>
       {{else}}

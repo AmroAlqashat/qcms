@@ -1,0 +1,30 @@
+<section aria-labelledby="halaqa-title" class="mx-auto max-w-5xl space-y-5">
+  <a class="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-bold text-[#287a73] hover:bg-[#f0faf9] focus-visible:outline-2" href="/terms/{{halaqa.term.id}}">
+    {{> ui/icon name="arrow" class="h-4 w-4"}}العودة إلى الفصل {{halaqa.term.termId}}
+  </a>
+  <header class="rounded-2xl border border-slate-200 bg-white p-6">
+    <p class="text-sm font-bold text-[#287a73]">حلقة الفصل <a class="underline decoration-[#a8dfdc] underline-offset-4 hover:text-[#195954]" href="/terms/{{halaqa.term.id}}">{{halaqa.term.termId}}</a></p>
+    <h1 id="halaqa-title" class="mt-2 break-words text-2xl font-extrabold">{{halaqa.name}}</h1>
+    <dl class="mt-5 grid gap-4 sm:grid-cols-2">
+      <div class="rounded-xl bg-slate-50 p-4">
+        <dt class="text-xs text-slate-500">الطلاب المسجّلون حاليًا</dt>
+        <dd class="mt-1 text-xl font-bold tabular-nums">{{halaqa._count.enrollments}}</dd>
+      </div>
+      <div class="rounded-xl bg-slate-50 p-4">
+        <dt class="text-xs text-slate-500">الموظفون المعيّنون حاليًا</dt>
+        <dd class="mt-1 text-xl font-bold tabular-nums">{{halaqa._count.staffAssignments}}</dd>
+      </div>
+    </dl>
+  </header>
+  <section aria-labelledby="halaqa-meetings-title" class="rounded-2xl border border-slate-200 bg-white p-6">
+    <h2 id="halaqa-meetings-title" class="text-lg font-extrabold">مواعيد اللقاء الأسبوعية</h2>
+    <dl class="mt-4 divide-y divide-slate-100">
+      {{#each halaqa.meetingDays}}
+        <div class="flex flex-wrap items-center justify-between gap-2 py-4">
+          <dt class="font-semibold">{{label}}</dt>
+          <dd class="font-semibold tabular-nums" dir="ltr">{{startTime}} – {{endTime}}</dd>
+        </div>
+      {{/each}}
+    </dl>
+  </section>
+</section>
