@@ -41,6 +41,7 @@ import {
 } from './helpers/staff-profile-formatters';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { EditPermissionsDto } from './dto/edit-permissions.dto';
+import { UpdateStaffHalaqasDto } from './dto/update-staff-halaqas.dto';
 import { ChangeMyPasswordDto } from './dto/change-my-password.dto';
 import { ForgotPasswordEmailDto } from './dto/forgot-password-email.dto';
 import { Public } from '../auth/decorators/route-access.decorator';
@@ -646,6 +647,17 @@ export class StaffController {
       id,
       actorEndpointPermissionScope,
     );
+    const canAssignHalaqas =
+      !staff.isSuperAdmin &&
+      (await this.authorizationService.hasPermission(
+        actor.id,
+        'staff_class_assignments',
+        'update',
+        ScopeType.CENTER_WIDE,
+      ));
+    const halaqaAssignmentOptions = canAssignHalaqas
+      ? await this.staffService.getStaffHalaqaAssignmentOptions(id)
+      : [];
 
     return {
       staff: {
@@ -683,10 +695,38 @@ export class StaffController {
           )) &&
           !staff.isDeleted &&
           !staff.isSuperAdmin,
+        canAssignHalaqas,
       },
+      halaqaAssignmentOptions,
       effectivePermissionCount: staff.effectivePermissionCount,
       activeNav: 'staff',
     };
+  }
+
+  @Post(':id/halaqas')
+  @Permission({
+    permission_action: 'update',
+    permission_resource: 'staff_class_assignments',
+  })
+  async updateStaffHalaqaAssignments(
+    @Param('id') id: string,
+    @Body() dto: UpdateStaffHalaqasDto,
+    @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.staffService.updateStaffHalaqaAssignments(
+      id,
+      dto.halaqaIds ?? [],
+      actor.id,
+      actorEndpointPermissionScope,
+    );
+    const location = `/staff/${id}`;
+    if (request.get('HX-Request') === 'true') {
+      return response.setHeader('HX-Redirect', location).status(204).end();
+    }
+    return response.redirect(303, location);
   }
 
   @Get('deactivate/:id')

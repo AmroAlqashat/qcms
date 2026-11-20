@@ -749,6 +749,115 @@ export class StaffService {
     };
   }
 
+  async getStaffHalaqaAssignmentOptions(staffId: string) {
+    const halaqas = await this.prisma.halaqas.findMany({
+      where: { archivedAt: null, term: { archivedAt: null } },
+      select: {
+        id: true,
+        name: true,
+        term: { select: { termId: true } },
+        staffAssignments: {
+          where: { staffId, endedAt: null },
+          select: { id: true },
+          take: 1,
+        },
+      },
+      orderBy: [{ term: { termId: 'desc' } }, { name: 'asc' }],
+    });
+
+    return halaqas.map(({ staffAssignments, ...halaqa }) => ({
+      ...halaqa,
+      assigned: staffAssignments.length > 0,
+    }));
+  }
+
+  async updateStaffHalaqaAssignments(
+    staffId: string,
+    halaqaIds: string[],
+    actorId: string,
+    actorEndpointPermissionScope: ScopeType,
+  ) {
+    this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        await this.assertStaffManageable(staffId, tx);
+        const staff = await tx.staffMembers.findUnique({
+          where: { id: staffId, isDeleted: false },
+          select: { status: true },
+        });
+        if (!staff || staff.status === StaffStatus.PENDING) {
+          throw new NotFoundException('الموظف غير موجود');
+        }
+
+        const uniqueHalaqaIds = [...new Set(halaqaIds)];
+        const activeHalaqas = await tx.halaqas.findMany({
+          where: {
+            id: { in: uniqueHalaqaIds },
+            archivedAt: null,
+            term: { archivedAt: null },
+          },
+          select: { id: true },
+        });
+        if (activeHalaqas.length !== uniqueHalaqaIds.length) {
+          throw new BadRequestException(
+            'اختر حلقات نشطة مرتبطة بفصول غير مؤرشفة',
+          );
+        }
+
+        const activeAssignments = await tx.staffClassAssignments.findMany({
+          where: {
+            staffId,
+            endedAt: null,
+            halaqa: { archivedAt: null, term: { archivedAt: null } },
+          },
+        });
+        const assignedIds = new Set(
+          activeAssignments.map(({ halaqaId }) => halaqaId),
+        );
+        const desiredIds = new Set(uniqueHalaqaIds);
+        const toAdd = uniqueHalaqaIds.filter((id) => !assignedIds.has(id));
+        const toRemove = activeAssignments.filter(
+          ({ halaqaId }) => !desiredIds.has(halaqaId),
+        );
+
+        await this.validateStaffNotAloneInClassesAndActivities(
+          staffId,
+          toRemove,
+          [],
+          tx,
+        );
+
+        if (toRemove.length) {
+          await tx.staffClassAssignments.updateMany({
+            where: {
+              staffId,
+              halaqaId: { in: toRemove.map(({ halaqaId }) => halaqaId) },
+              endedAt: null,
+            },
+            data: { endedAt: new Date() },
+          });
+        }
+        if (toAdd.length) {
+          await tx.staffClassAssignments.createMany({
+            data: toAdd.map((halaqaId) => ({ staffId, halaqaId })),
+          });
+        }
+
+        if (toAdd.length || toRemove.length) {
+          await this.audit.record(tx, {
+            actorId,
+            targetType: AuditTarget.STAFF,
+            actionType: AuditAction.STAFF_UPDATED,
+            targetId: staffId,
+            isSuccess: true,
+          });
+        }
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
+
   async showPendingStaff(actorEndpointPermissionScope: ScopeType) {
     this.assertActorEndpointCenterWideScope(actorEndpointPermissionScope);
 
