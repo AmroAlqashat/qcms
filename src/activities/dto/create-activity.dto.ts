@@ -6,6 +6,8 @@ import {
   IsNotEmpty,
   IsString,
   Matches,
+  IsIn,
+  ValidateIf,
   MaxLength,
   Validate,
   ValidationArguments,
@@ -65,6 +67,20 @@ export class CreateActivityDto {
     { message: 'تاريخ النشاط غير صالح' },
   )
   date!: string;
+
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'أدخل وقت النشاط' })
+  time!: string;
+
+  @ValidateIf((_o, v) => v !== undefined && v !== '')
+  @IsIn(['1', '2'], { message: 'اختر نموذجًا صالحًا' })
+  template?: string;
+
+  @ValidateIf((_o, v) => v !== undefined && v !== '')
+  @Matches(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, {
+    message: 'موعد الإغلاق غير صالح',
+  })
+  @IsDateString({ strict: true }, { message: 'موعد الإغلاق غير صالح' })
+  closeDate?: string;
 
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

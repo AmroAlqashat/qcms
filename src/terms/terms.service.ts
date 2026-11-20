@@ -91,9 +91,10 @@ export class TermsService {
         type: true,
         startDate: true,
         endDate: true,
-        _count: { select: { halaqas: true } },
+        _count: { select: { halaqas: { where: { archivedAt: null } } } },
         halaqas: canViewHalaqas
           ? {
+              where: { archivedAt: null },
               orderBy: { name: 'asc' },
               select: {
                 id: true,
@@ -127,7 +128,7 @@ export class TermsService {
         type: true,
         startDate: true,
         endDate: true,
-        _count: { select: { halaqas: true } },
+        _count: { select: { halaqas: { where: { archivedAt: null } } } },
       },
       orderBy: { termId: 'desc' },
     });

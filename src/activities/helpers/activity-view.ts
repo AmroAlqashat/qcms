@@ -11,7 +11,13 @@ export function activityView<T extends { level: ActivityLevel; date: Date }>(
         : 'نشاط خاص بحلقة',
     dateLabel: new Intl.DateTimeFormat('ar-JO', {
       dateStyle: 'medium',
-      timeZone: 'UTC',
+      timeStyle: 'short',
+      timeZone: 'Asia/Amman',
     }).format(activity.date),
   };
+}
+
+export function isActivityDay(date: Date) {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Amman' });
+  return day.format(date) === day.format(new Date());
 }

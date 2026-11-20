@@ -23,6 +23,16 @@ export async function seedSettings(
     )
       continue;
     await tx.settings.create({ data: { ...setting, setById: actorId } });
+    if (setting.key === 'registrationOpen')
+      await tx.forms.upsert({
+        where: { id: 'student-registration' },
+        create: {
+          id: 'student-registration',
+          kind: 'STUDENT_REGISTRATION',
+          enabled: true,
+        },
+        update: { enabled: true },
+      });
     inserted++;
   }
   return inserted;

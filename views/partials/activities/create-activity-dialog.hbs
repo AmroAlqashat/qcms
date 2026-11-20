@@ -1,5 +1,5 @@
-{{#> ui/dialog id="create-activity-dialog" icon="calendar" heading="إنشاء نشاط جديد" description="أدخل بيانات النشاط وحدد ما إذا كان تابعًا للمركز أو لحلقة بعينها."}}
-  <form action="/activities" method="post" hx-post="/activities" hx-target="#modal-root" hx-swap="innerHTML"
+{{#> ui/dialog id="create-activity-dialog" wide=true icon="calendar" heading=sectionTitle description="أدخل بيانات النشاط وحدد ما إذا كان تابعًا للمركز أو لحلقة بعينها."}}
+  <form action="{{formAction}}" method="post" hx-post="{{formAction}}" hx-target="#modal-root" hx-swap="innerHTML"
     hx-disabled-elt="find button[type='submit']" data-activity-form class="space-y-5">
     {{> ui/csrf}}
     {{> ui/form-error error=error}}
@@ -35,8 +35,23 @@
       <p id="activity-halaqa-error" class="mt-1 text-xs text-red-700" {{#unless errors.halaqaId}}hidden{{/unless}}>{{errors.halaqaId}}</p>
     </fieldset>
 
-    {{> ui/field id="activity-date" name="date" label="تاريخ النشاط" type="date" value=date required=true error=errors.date dir="ltr"}}
     {{> ui/field id="activity-location" name="location" label="موقع إقامة النشاط" value=location required=true maxlength="200" error=errors.location hint="اكتب اسم الموقع أو عنوانه، بحد أقصى 200 حرف."}}
+    <div class="grid gap-4 sm:grid-cols-2">
+    {{> ui/field id="activity-date" name="date" label="تاريخ النشاط" type="date" value=date required=true error=errors.date dir="ltr"}}
+    {{> ui/field id="activity-time" name="time" label="وقت النشاط (بتوقيت عمّان)" type="time" value=time required=true error=errors.time}}
+    </div>
+    <fieldset class="space-y-3 rounded-xl border border-slate-200 p-4"><legend class="px-2 text-sm font-bold">إعدادات التقديم</legend>
+    <label class="block text-sm font-bold">القالب
+      <select name="template" class="field mt-2 w-full rounded-lg border p-3">
+        <option value="">بدون نموذج</option>
+        <option value="1" {{#if (eq template "1")}}selected{{/if}}>النموذج الأول</option>
+        <option value="2" {{#if (eq template "2")}}selected{{/if}}>النموذج الثاني</option>
+      </select>
+    </label>
+    {{#if errors.template}}<p role="alert" class="text-xs text-red-700">{{errors.template}}</p>{{/if}}
+    <fieldset data-application-deadline {{#unless template}}hidden disabled{{/unless}}>
+    {{> ui/field id="activity-close" name="closeDate" label="إغلاق التقديم (بتوقيت عمّان)" optional=true type="datetime-local" value=closeDate error=errors.closeDate}}
+    </fieldset></fieldset>
 
     <div class="flex flex-wrap justify-start gap-2 border-t border-slate-100 pt-4">
       {{> ui/submit label="حفظ النشاط" icon="check"}}

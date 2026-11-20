@@ -155,6 +155,7 @@ model Terms {
 }
 
 model Halaqas {
+  archivedAt       DateTime?
   id               String                  @id @default(uuid())
   termId           String
   name             String
@@ -168,6 +169,8 @@ model Halaqas {
 }
 
 model Activities {
+  archivedAt       DateTime?
+  form             Forms?
   id               String                     @id @default(uuid())
   name             String
   level            ActivityLevel
@@ -201,14 +204,28 @@ model HalaqaTransfers {
   toHalaqa      Halaqas  @relation("TransferTo", fields: [toHalaqaId], references: [id])
 }
 
-model ActivityParticipants {
-  studentId  String
-  activityId String
-  attendedAt DateTime?
-  activity   Activities @relation(fields: [activityId], references: [id])
-  student    Students   @relation(fields: [studentId], references: [id])
+model Guests {
+  id              String                 @id @default(uuid())
+  fullName        String
+  guardianName    String
+  guardianPhone   String                 @db.VarChar(20)
+  activityEntries ActivityParticipants[]
+}
 
-  @@id([studentId, activityId])
+model ActivityParticipants {
+  id               String            @id @default(uuid())
+  attendanceStatus AttendanceStatus?
+  studentId        String?
+  guestId          String?
+  activityId       String
+  attendedAt       DateTime?
+  activity         Activities        @relation(fields: [activityId], references: [id])
+  student          Students?         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  guest            Guests?           @relation(fields: [guestId], references: [id], onDelete: Restrict)
+
+  // The migration also requires exactly one person reference per participant.
+  @@unique([activityId, studentId])
+  @@unique([activityId, guestId])
 }
 
 model Students {
@@ -354,6 +371,13 @@ enum RegistrationStatus {
 }
 
 enum AuditAction {
+  TERM_ARCHIVED
+  HALAQA_ARCHIVED
+  ACTIVITY_CREATED
+  ACTIVITY_UPDATED
+  ACTIVITY_ARCHIVED
+  ACTIVITY_REGISTRATION
+  ACTIVITY_ATTENDANCE
   TERM_CREATED
   STAFF_ONBOARDING_COMPLETED
   STAFF_INVITED
@@ -373,6 +397,7 @@ enum AuditAction {
 }
 
 enum AuditTarget {
+  ACTIVITY
   TERM
   STAFF
   STUDENT
@@ -386,4 +411,25 @@ enum JobTitle {
   TEACHER
   FINANCE
   MISC
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+enum FormKind {
+  STUDENT_REGISTRATION
+  ACTIVITY_APPLICATION
+}
+
+model Forms {
+  id         String      @id @default(uuid())
+  kind       FormKind
+  activityId String?     @unique
+  activity   Activities? @relation(fields: [activityId], references: [id])
+  enabled    Boolean     @default(false)
+  opensAt    DateTime?
+  closesAt   DateTime?
+  template   Int?
 }

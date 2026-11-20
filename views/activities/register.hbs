@@ -1,0 +1,48 @@
+{{#> ui/dialog id="activity-register" heading="تسجيل مشارك في النشاط" icon="users"}}
+  <details name="registration-choice" {{#if students.length}}open{{/if}} class="mb-3 rounded-xl border border-slate-200 p-4">
+    <summary class="cursor-pointer font-bold">تسجيل طالب</summary>
+  {{#if students.length}}
+    <form class="mt-4 grid gap-6" method="post" action="/activities/register/{{activityId}}">
+      {{> ui/csrf}}
+      <div>
+        <label for="activity-student" class="mb-2 block text-sm font-bold">الطالب</label>
+        <select id="activity-student" required name="studentId"
+          class="block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] p-3">
+          <option value="">اختر الطالب</option>
+          {{#each students}}<option value="{{id}}">{{fullName}}</option>{{/each}}
+        </select>
+      </div>
+      <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+        {{> ui/submit label="تسجيل الطالب"}}
+        {{> ui/cancel}}
+      </div>
+    </form>
+  {{else}}
+    <p class="rounded-xl bg-slate-50 p-4 text-sm">لا يوجد طلاب متاحون للتسجيل في هذا النشاط.</p>
+  {{/if}}
+  </details>
+  <details name="registration-choice" {{#unless students.length}}open{{/unless}} class="rounded-xl border border-slate-200 p-4">
+    <summary class="cursor-pointer font-bold">إضافة ضيف</summary>
+    {{#if guests.length}}
+      <form method="post" action="/activities/register/{{activityId}}/guest/existing" class="mt-4 grid gap-4">
+        {{> ui/csrf}}
+        <label for="previous-guest" class="text-sm font-bold">ضيف من نشاط سابق</label>
+        <select id="previous-guest" name="guestId" required class="min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] p-3">
+          <option value="">اختر الضيف</option>
+          {{#each guests}}<option value="{{id}}">{{fullName}} · ولي الأمر: {{guardianName}}</option>{{/each}}
+        </select>
+        <div>{{> ui/submit label="تسجيل الضيف في النشاط"}}</div>
+      </form>
+    {{/if}}
+    <details class="mt-4 border-t border-slate-200 pt-4" {{#unless guests.length}}open{{/unless}}>
+      <summary class="cursor-pointer text-sm font-bold">إضافة ضيف جديد</summary>
+    <form method="post" action="/activities/register/{{activityId}}/guest" class="mt-4 grid gap-4">
+      {{> ui/csrf}}
+      {{> ui/field id="guest-name" name="fullName" label="اسم الضيف" required=true maxlength="150"}}
+      {{> ui/field id="guest-guardian" name="guardianName" label="اسم ولي الأمر" required=true maxlength="150"}}
+      {{> ui/field id="guest-phone" name="guardianPhone" label="رقم هاتف ولي الأمر" type="tel" dir="ltr" required=true}}
+      <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4">{{> ui/submit label="إضافة الضيف"}} {{> ui/cancel}}</div>
+    </form>
+    </details>
+  </details>
+{{/ui/dialog}}

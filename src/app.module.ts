@@ -1,3 +1,4 @@
+import { ArchiveModule } from './archive/archive.module';
 import { SetupModule } from './setup/setup.module';
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -52,6 +53,7 @@ import { ActivitiesModule } from './activities/activities.module';
     }),
     TermsModule,
     ActivitiesModule,
+    ArchiveModule,
   ],
   controllers: [AppController],
   providers: [

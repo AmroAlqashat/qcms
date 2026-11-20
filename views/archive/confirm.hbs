@@ -1,0 +1,5 @@
+{{#> ui/dialog id="archive-selection" icon="archive" heading=heading}}
+{{#if options.length}}<form method="post" action="/archive/{{kind}}" class="space-y-4">{{> ui/csrf}}
+<label class="block">السجل المطلوب أرشفته<select class="mt-2 block w-full min-h-11 rounded-lg border border-[#a8dfdc] bg-[#f0faf9] p-3" name="id" required><option value="">اختر السجل</option>{{#each options}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label>
+<p class="text-sm text-slate-600">سيصبح هذا السجل وما يرتبط به للقراءة فقط.</p>{{> ui/submit label="تأكيد الأرشفة"}} {{> ui/cancel}}
+</form>{{else}}<p>لا توجد سجلات نشطة متاحة للأرشفة.</p>{{/if}}{{/ui/dialog}}

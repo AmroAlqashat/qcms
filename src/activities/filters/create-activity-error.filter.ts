@@ -3,12 +3,13 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { wantsHtml } from '../../common/wants-html';
 import { ActivitiesService } from '../activities.service';
 
-@Catch(HttpException)
+@Catch(UnprocessableEntityException)
 export class CreateActivityErrorFilter implements ExceptionFilter {
   constructor(private readonly activitiesService: ActivitiesService) {}
 
@@ -28,6 +29,7 @@ export class CreateActivityErrorFilter implements ExceptionFilter {
       typeof details === 'object' && details !== null
         ? (details as { errors?: Record<string, string> }).errors
         : undefined;
+    const activityId = this.stringValue(request.params.id);
     const isHtmx = request.get('HX-Request') === 'true';
 
     if (isHtmx) {
@@ -47,11 +49,17 @@ export class CreateActivityErrorFilter implements ExceptionFilter {
         {
           layout: isHtmx ? false : 'main',
           isHtmx,
+          formAction: activityId
+            ? `/activities/${activityId}/edit`
+            : '/activities',
           activeNav: 'activities',
-          sectionTitle: 'إنشاء نشاط',
+          sectionTitle: activityId ? 'تعديل النشاط' : 'إنشاء نشاط',
           name: this.stringValue(body.name),
           level: this.stringValue(body.level) || 'CENTER_WIDE',
           halaqaId: this.stringValue(body.halaqaId),
+          time: this.stringValue(body.time),
+          template: this.stringValue(body.template),
+          closeDate: this.stringValue(body.closeDate),
           date: this.stringValue(body.date),
           location: this.stringValue(body.location),
           halaqas: await this.activitiesService.getActiveHalaqas(),

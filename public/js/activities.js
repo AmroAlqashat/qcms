@@ -1,5 +1,11 @@
 (() => {
   function syncActivityForm(form) {
+    const deadline = form.querySelector('[data-application-deadline]');
+    if (deadline) {
+      const enabled = Boolean(form.elements.template.value);
+      deadline.hidden = !enabled;
+      deadline.disabled = !enabled;
+    }
     const selectedLevel = form.querySelector('[name="level"]:checked')?.value;
     const halaqaFields = form.querySelector('[data-activity-halaqa]');
     const halaqaSelect = form.querySelector('[data-activity-halaqa-select]');
@@ -11,6 +17,7 @@
     halaqaFields.disabled = !requiresHalaqa;
 
     if (halaqaSelect) {
+      halaqaSelect.disabled = !requiresHalaqa;
       halaqaSelect.required = requiresHalaqa;
       if (!requiresHalaqa) halaqaSelect.value = '';
     }
@@ -22,7 +29,7 @@
 
   document.addEventListener('change', (event) => {
     const form = event.target.closest('[data-activity-form]');
-    if (form && event.target.matches('[name="level"]')) syncActivityForm(form);
+    if (form && event.target.matches('[name="level"], [name="template"]')) syncActivityForm(form);
   });
 
   document.addEventListener('DOMContentLoaded', initialize);

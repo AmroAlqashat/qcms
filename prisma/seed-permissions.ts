@@ -85,6 +85,7 @@ const permissionResources: readonly PermissionResourceDefinition[] = [
   },
   {
     resource: 'الأنشطة',
+    scopeOverrides: { read: 'CH' },
     category: 'الحلقات والأنشطة',
     scopes: 'C',
   },
