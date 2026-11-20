@@ -1,0 +1,56 @@
+<section aria-labelledby="halaqa-edit-title" class="mx-auto max-w-3xl space-y-5">
+  <a class="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-bold text-[#287a73] hover:bg-[#f0faf9] focus-visible:outline-2" href="/halaqas/{{halaqa.id}}">
+    {{> ui/icon name="arrow" class="h-4 w-4"}}العودة إلى تفاصيل الحلقة
+  </a>
+  <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+    <header class="mb-6">
+      <p class="text-sm font-bold text-[#287a73]">تعديل بيانات الحلقة</p>
+      <h1 id="halaqa-edit-title" class="mt-2 break-words text-2xl font-extrabold">{{halaqa.name}}</h1>
+    </header>
+    {{> ui/form-error error=error}}
+    <form action="/halaqas/{{halaqa.id}}/edit" method="post" class="space-y-5">
+      {{> ui/csrf}}
+      <div>
+        <label for="halaqa-name" class="mb-2 block text-sm font-semibold">اسم الحلقة</label>
+        <input id="halaqa-name" name="name" value="{{halaqa.name}}" maxlength="100" required
+          class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]"
+          {{#if errors.name}}aria-invalid="true" aria-describedby="halaqa-name-error"{{/if}}>
+        {{#if errors.name}}<p id="halaqa-name-error" class="mt-1 text-xs text-red-700">{{errors.name}}</p>{{/if}}
+      </div>
+      <div>
+        <label for="halaqa-term" class="mb-2 block text-sm font-semibold">الفصل المرتبطة به</label>
+        <select id="halaqa-term" name="termId" required
+          class="block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] px-3 py-2.5 text-sm text-[#12383b]">
+          {{#each terms}}
+            <option value="{{termId}}" {{#if (eq ../halaqa.term.termId termId)}}selected{{/if}}>الفصل {{termId}}</option>
+          {{/each}}
+        </select>
+        {{#if errors.termId}}<p class="mt-1 text-xs text-red-700">{{errors.termId}}</p>{{/if}}
+      </div>
+      <fieldset class="space-y-3">
+        <legend class="text-sm font-bold">مواعيد اللقاء الأسبوعية</legend>
+        <p class="text-xs leading-6 text-slate-600">حدّد موعدًا واحدًا على الأقل. أدخل وقت البداية والنهاية لليوم المختار، واترك الحقلين فارغين في بقية الأيام.</p>
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {{#each halaqa.meetingDays}}
+            <div class="grid min-w-0 grid-cols-2 items-end gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h2 class="col-span-2 text-sm font-bold">{{label}}</h2>
+              <div class="min-w-0">
+                <label for="halaqa-start-time-{{@index}}" class="mb-2 block text-xs font-semibold">وقت البداية</label>
+                <input id="halaqa-start-time-{{@index}}" class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]" name="meetingDays[startTime][]" type="time" value="{{startTime}}" dir="ltr" aria-label="وقت بداية {{label}}">
+              </div>
+              <div class="min-w-0">
+                <label for="halaqa-end-time-{{@index}}" class="mb-2 block text-xs font-semibold">وقت النهاية</label>
+                <input id="halaqa-end-time-{{@index}}" class="field block min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-white px-3 py-2.5 text-sm text-[#12383b]" name="meetingDays[endTime][]" type="time" value="{{endTime}}" dir="ltr" aria-label="وقت نهاية {{label}}">
+              </div>
+            </div>
+          {{/each}}
+        </div>
+        {{#if errors.meetingDays}}<p class="text-xs text-red-700" role="alert">{{errors.meetingDays}}</p>{{/if}}
+      </fieldset>
+      <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+        {{> ui/submit label="حفظ التغييرات" icon="check"}}
+        <a href="/halaqas/{{halaqa.id}}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</section>

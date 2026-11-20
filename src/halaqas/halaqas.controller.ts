@@ -24,10 +24,15 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateHalaqaErrorFilter } from './filters/create-halaqa-error.filter';
 import { HALAQA_WEEK_DAYS } from './halaqa-week-days';
 import { Prisma } from '@prisma/client';
+import { AuthorizationService } from '../authorization/authorization.service';
+import { EditHalaqaErrorFilter } from './filters/edit-halaqa-error.filter';
 
 @Controller('halaqas')
 export class HalaqasController {
-  constructor(private readonly halaqasService: HalaqasService) {}
+  constructor(
+    private readonly halaqasService: HalaqasService,
+    private readonly authorizationService: AuthorizationService,
+  ) {}
 
   @Get('new')
   @Permission({ permission_resource: 'halaqas', permission_action: 'create' })
@@ -68,6 +73,63 @@ export class HalaqasController {
     response.redirect(303, location);
   }
 
+  @Get(':id/edit')
+  @Permission({ permission_resource: 'halaqas', permission_action: 'update' })
+  @Render('halaqas/edit')
+  async showEditHalaqa(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        exceptionFactory: () => new NotFoundException('الحلقة غير موجودة'),
+      }),
+    )
+    id: string,
+    @ActorEndpointPermissionScope() scope: ScopeType,
+  ) {
+    this.assertCenterWideScope(scope);
+    const [halaqa, terms] = await Promise.all([
+      this.halaqasService.getHalaqa(id, scope),
+      this.halaqasService.getActiveTerms(),
+    ]);
+    return {
+      halaqa: {
+        ...halaqa,
+        meetingDays: this.meetingDaysForm(halaqa.meetingDays),
+      },
+      terms,
+      title: `تعديل ${halaqa.name}`,
+      activeNav: 'terms',
+      sectionTitle: 'تعديل الحلقة',
+    };
+  }
+
+  @Post(':id/edit')
+  @Permission({ permission_resource: 'halaqas', permission_action: 'update' })
+  @UseFilters(EditHalaqaErrorFilter)
+  async updateHalaqa(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        exceptionFactory: () => new NotFoundException('الحلقة غير موجودة'),
+      }),
+    )
+    id: string,
+    @Body() dto: createHalaqaDto,
+    @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() scope: ScopeType,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    this.assertCenterWideScope(scope);
+    await this.halaqasService.updateHalaqa(id, dto, actor.id);
+    const location = `/halaqas/${id}`;
+    if (request.get('HX-Request') === 'true') {
+      response.setHeader('HX-Redirect', location).status(204).send();
+      return;
+    }
+    response.redirect(303, location);
+  }
+
   @Get(':id')
   @Permission({ permission_resource: 'halaqas', permission_action: 'read' })
   @Render('halaqas/detail')
@@ -80,8 +142,15 @@ export class HalaqasController {
     )
     id: string,
     @ActorEndpointPermissionScope() scope: ScopeType,
+    @CurrentUser() actor: { id: string },
   ) {
     const halaqa = await this.halaqasService.getHalaqa(id, scope);
+    const canEdit = await this.authorizationService.hasPermission(
+      actor.id,
+      'halaqas',
+      'update',
+      ScopeType.CENTER_WIDE,
+    );
     return {
       halaqa: {
         ...halaqa,
@@ -90,13 +159,23 @@ export class HalaqasController {
       title: halaqa.name,
       activeNav: 'terms',
       sectionTitle: halaqa.name,
+      canEdit,
     };
   }
 
   private assertCenterWideScope(scope: ScopeType) {
     if (scope !== ScopeType.CENTER_WIDE) {
-      throw new ForbiddenException('يتطلب إنشاء حلقة صلاحية على مستوى المركز');
+      throw new ForbiddenException('يتطلب هذا الإجراء صلاحية على مستوى المركز');
     }
+  }
+
+  private meetingDaysForm(value: Prisma.JsonValue) {
+    const days = this.meetingDaysView(value);
+    return HALAQA_WEEK_DAYS.map((label) => ({
+      label,
+      startTime: days.find((day) => day.label === label)?.startTime ?? '',
+      endTime: days.find((day) => day.label === label)?.endTime ?? '',
+    }));
   }
 
   private meetingDaysView(value: Prisma.JsonValue) {
@@ -124,7 +203,11 @@ export class HalaqasController {
     });
   }
 
-  private isStringArray(value: Prisma.JsonValue | undefined): value is string[] {
-    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+  private isStringArray(
+    value: Prisma.JsonValue | undefined,
+  ): value is string[] {
+    return (
+      Array.isArray(value) && value.every((item) => typeof item === 'string')
+    );
   }
 }

@@ -3,8 +3,17 @@
     {{> ui/icon name="arrow" class="h-4 w-4"}}العودة إلى الفصل {{halaqa.term.termId}}
   </a>
   <header class="rounded-2xl border border-slate-200 bg-white p-6">
-    <p class="text-sm font-bold text-[#287a73]">حلقة الفصل <a class="underline decoration-[#a8dfdc] underline-offset-4 hover:text-[#195954]" href="/terms/{{halaqa.term.id}}">{{halaqa.term.termId}}</a></p>
-    <h1 id="halaqa-title" class="mt-2 break-words text-2xl font-extrabold">{{halaqa.name}}</h1>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="text-sm font-bold text-[#287a73]">حلقة الفصل <a class="underline decoration-[#a8dfdc] underline-offset-4 hover:text-[#195954]" href="/terms/{{halaqa.term.id}}">{{halaqa.term.termId}}</a></p>
+        <h1 id="halaqa-title" class="mt-2 break-words text-2xl font-extrabold">{{halaqa.name}}</h1>
+      </div>
+      {{#if canEdit}}
+        <a href="/halaqas/{{halaqa.id}}/edit" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] px-4 py-2 text-sm font-bold text-[#216c65] hover:bg-[#f0faf9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]">
+          {{> ui/icon name="edit" class="h-4 w-4"}}تعديل الحلقة
+        </a>
+      {{/if}}
+    </div>
     <dl class="mt-5 grid gap-4 sm:grid-cols-2">
       <div class="rounded-xl bg-slate-50 p-4">
         <dt class="text-xs text-slate-500">الطلاب المسجّلون حاليًا</dt>
@@ -12,7 +21,12 @@
       </div>
       <div class="rounded-xl bg-slate-50 p-4">
         <dt class="text-xs text-slate-500">الموظفون المعيّنون حاليًا</dt>
-        <dd class="mt-1 text-xl font-bold tabular-nums">{{halaqa._count.staffAssignments}}</dd>
+        <dd class="mt-2">
+          <a href="/staff?halaqa={{halaqa.id}}"
+            class="inline-flex min-h-11 items-center rounded-lg px-2 text-xl font-bold tabular-nums text-[#216c65] hover:bg-[#e3f2ef] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]">
+            {{halaqa._count.staffAssignments}}
+          </a>
+        </dd>
       </div>
     </dl>
   </header>

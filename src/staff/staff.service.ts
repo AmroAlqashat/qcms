@@ -607,11 +607,13 @@ export class StaffService {
       }),
     ]);
 
+    const halaqaOptions = classes.map((item) => ({
+      ...item,
+      selected: item.id === selectedHalaqaId,
+    }));
     return {
-      classes: classes.map((item) => ({
-        ...item,
-        selected: item.id === selectedHalaqaId,
-      })),
+      classes: halaqaOptions,
+      halaqa: halaqaOptions,
       templates: templates.map((item) => ({
         ...item,
         selected: item.id === selectedRoleId,

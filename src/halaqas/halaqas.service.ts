@@ -25,6 +25,14 @@ export class HalaqasService {
     return term;
   }
 
+  async getActiveTerms() {
+    return this.prisma.terms.findMany({
+      where: { archivedAt: null },
+      select: { id: true, termId: true },
+      orderBy: { termId: 'desc' },
+    });
+  }
+
   async getHalaqa(id: string, scope: ScopeType) {
     if (scope !== ScopeType.CENTER_WIDE) {
       throw new ForbiddenException(
@@ -76,6 +84,45 @@ export class HalaqasService {
         isSuccess: true,
         targetType: AuditTarget.HALAQA,
         actionType: AuditAction.HALAQA_CREATED,
+      });
+      return halaqa;
+    });
+  }
+
+  async updateHalaqa(id: string, dto: createHalaqaDto, actorId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.halaqas.findFirst({
+        where: { id, archivedAt: null, term: { archivedAt: null } },
+        select: { id: true },
+      });
+      if (!current) {
+        throw new NotFoundException('الحلقة غير موجودة أو مؤرشفة');
+      }
+
+      const term = await tx.terms.findFirst({
+        where: { termId: dto.termId, archivedAt: null },
+        select: { id: true },
+      });
+      if (!term) throw new NotFoundException('الفصل غير موجود أو مؤرشف');
+
+      const halaqa = await tx.halaqas.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          meetingDays: {
+            startTime: dto.meetingDays.startTime,
+            endTime: dto.meetingDays.endTime,
+          },
+          termId: term.id,
+        },
+        select: { id: true },
+      });
+      await this.audit.record(tx, {
+        actorId,
+        targetId: halaqa.id,
+        isSuccess: true,
+        targetType: AuditTarget.HALAQA,
+        actionType: AuditAction.HALAQA_EDITED,
       });
       return halaqa;
     });
