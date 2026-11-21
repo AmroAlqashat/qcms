@@ -4,6 +4,8 @@
 /build
 /tmp
 /public/css/source.css
+/public/css/formio-scope.css
+/public/vendor/formio/
 
 # Logs
 logs

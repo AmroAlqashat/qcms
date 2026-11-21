@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-  <head>{{> shared/head}}</head>
+  <head>
+    {{> shared/head}}
+    {{{_sections.styles}}}
+  </head>
   <body class="min-h-screen bg-[#f5f6f8] text-[#12383b] antialiased">
     <a href="#main-content" class="skip-link">تجاوز إلى المحتوى</a>
     {{> shared/icons}}
@@ -21,5 +24,6 @@
        aria-live="polite"
        class="sr-only"></p>
     {{> shared/scripts}}
+    {{{_sections.scripts}}}
   </body>
 </html>

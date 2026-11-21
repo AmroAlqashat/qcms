@@ -21,6 +21,7 @@ import { NavigationPermissionsInterceptor } from './common/interceptors/navigati
 import { TermsModule } from './terms/terms.module';
 import { HalaqasModule } from './halaqas/halaqas.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { FormsModule } from './forms/forms.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { ActivitiesModule } from './activities/activities.module';
     TermsModule,
     ActivitiesModule,
     ArchiveModule,
+    FormsModule,
   ],
   controllers: [AppController],
   providers: [

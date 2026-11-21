@@ -1,0 +1,17 @@
+{{!--
+  Form.io library. Include only on pages that show Form.io, through the
+  layout's scripts slot:
+
+    {{#section "scripts"}}{{> formio/scripts builder=true}}{{/section}}
+
+  builder=true  full bundle: builder + renderer (admin pages)
+  (omitted)     renderer only (e.g. public apply page)
+
+  Page logic (Formio.builder / Formio.createForm) belongs in its own file
+  under public/js/, loaded after this partial.
+--}}
+{{#if builder}}
+  <script src="/vendor/formio/formio.full.min.js"></script>
+{{else}}
+  <script src="/vendor/formio/formio.form.min.js"></script>
+{{/if}}

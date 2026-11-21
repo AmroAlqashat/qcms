@@ -3,6 +3,7 @@
   <head>
     {{> shared/head}}
     {{> auth/styles}}
+    {{{_sections.styles}}}
   </head>
   <body
     class='flex min-h-screen flex-col bg-[#faf7ef] text-[#12383b] antialiased'
@@ -30,5 +31,6 @@
     <div id="toast-root" class="fixed inset-x-4 top-4 z-[100] flex flex-col items-start gap-3 sm:left-auto sm:right-6 sm:w-[min(24rem,calc(100vw-3rem))]"></div>
     <p id='app-announcement' class='sr-only' role='status' aria-live='polite'></p>
     {{> shared/scripts}}
+    {{{_sections.scripts}}}
   </body>
 </html>

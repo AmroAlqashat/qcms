@@ -6,6 +6,7 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { engine } from 'express-handlebars';
+import type { HelperOptions } from 'handlebars';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { NotFoundFilter } from './common/filters/not-found.filter';
 import { BadRequestFilter } from './common/filters/bad-request.filter';
@@ -75,6 +76,16 @@ async function bootstrap() {
       partialsDir: join(__dirname, '..', 'views', 'partials'),
       helpers: {
         eq: (a: any, b: any) => a === b,
+        // Lets a view add page-specific assets to slots in the layout:
+        //   {{#section "styles"}}<link ...>{{/section}}  ->  {{{_sections.styles}}}
+        // Views render before their layout, so the slot is filled in time.
+        // Stored on the root context so it also works inside partials/blocks.
+        section(this: unknown, name: string, options: HelperOptions) {
+          const root = (options.data as { root: Record<string, unknown> }).root;
+          const sections = (root._sections ??= {}) as Record<string, string>;
+          sections[name] = (sections[name] ?? '') + options.fn(this);
+          return null;
+        },
       },
     }),
   );

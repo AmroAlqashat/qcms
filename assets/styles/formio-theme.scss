@@ -1,0 +1,31 @@
+// Bootstrap theme used ONLY by Form.io (builder and form renderer).
+//
+// This file is compiled by scripts/build-formio-css.mjs, which then scopes
+// every rule to the Form.io containers and flips it to RTL. The result is
+// public/css/formio-scope.css. The rest of the app uses Tailwind.
+//
+// Keep these values in sync with the app's Tailwind colors in views/.
+
+// Colors
+$primary: #287a73;
+$body-color: #12383b;
+$secondary-color: #536e73;
+$border-color: #b5cdca;
+
+// Typography
+$font-family-sans-serif: Cairo, system-ui, sans-serif;
+
+// Shape (matches Tailwind's rounded-lg)
+$border-radius: 0.5rem;
+$border-radius-sm: 0.375rem;
+$border-radius-lg: 0.75rem;
+
+// Inputs (match the app's fields: bg-[#f0faf9] border-[#a8dfdc])
+$input-bg: #f0faf9;
+$input-border-color: #a8dfdc;
+$input-focus-border-color: #287a73;
+
+// The app has no dark mode; skip generating Bootstrap's dark theme rules.
+$enable-dark-mode: false;
+
+@import 'bootstrap/scss/bootstrap';
