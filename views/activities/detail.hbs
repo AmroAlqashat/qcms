@@ -11,7 +11,7 @@
         <div><dt class="text-xs text-slate-500">المكان</dt><dd class="mt-1 break-words font-semibold">{{activity.location}}</dd></div>
         {{#if activity.halaqa}}<div><dt class="text-xs text-slate-500">الحلقة</dt><dd class="mt-1 font-semibold">{{activity.halaqa.name}}</dd></div>{{/if}}
       </dl>
-      {{#if activity.form.enabled}}<p class="mt-2 text-sm">نموذج التقديم {{activity.form.template}}</p>{{/if}}
+      <p class="mt-2 text-sm">{{activity.form.name}} · {{#if registrationOpen}}التسجيل مفتوح{{else}}التسجيل مغلق{{/if}}</p>
     </div>
     <div class="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">{{#if canRegister}}<a aria-haspopup="dialog" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#287a73] px-4 py-2 font-bold text-white" href="/activities/register/{{activity.id}}" hx-get="/activities/register/{{activity.id}}" hx-target="#modal-root">تسجيل مشارك</a>{{/if}}{{#if canEdit}}<a aria-haspopup="dialog" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 font-bold" href="/activities/{{activity.id}}/edit" hx-get="/activities/{{activity.id}}/edit" hx-target="#modal-root">تعديل النشاط</a>{{/if}}
     </div>

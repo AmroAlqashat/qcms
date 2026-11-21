@@ -95,8 +95,11 @@ already exist, so do not repeat creation. The UI does not modify `.env`.
 
 ```bash
 npm run seed:permissions
+npm run seed:forms
 npm run seed:settings
 ```
+
+The forms migration supplies an Arabic activity registration form. Run `npm run seed:forms` to restore it if missing. Rerunning the seed preserves edits. `npx prisma db seed` runs both the permission and form seeds.
 
 The settings seed requires `SEED_ACTOR_EMAIL` in `.env` for an active, non-deleted
 staff member. It inserts only missing defaults. Permissions retain their IDs when

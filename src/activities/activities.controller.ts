@@ -85,6 +85,7 @@ export class ActivitiesController {
       sectionTitle: 'إنشاء نشاط',
       level: 'CENTER_WIDE',
       formAction: '/activities',
+      forms: await this.activitiesService.getFormOptions(),
       halaqas: await this.activitiesService.getActiveHalaqas(),
     };
   }
@@ -152,6 +153,11 @@ export class ActivitiesController {
       canAttend:
         !archived && isActivityDay(activity.date) && (await permits('update')),
       canViewParticipants: await permits('read'),
+      registrationOpen:
+        !archived &&
+        activity.isFormEnabled &&
+        (!activity.formClosesAt ||
+          activity.formClosesAt.getTime() > Date.now()),
       activity: activityView(activity),
       archived,
       activeNav: archived ? 'archive' : 'activities',
@@ -198,8 +204,8 @@ export class ActivitiesController {
       formAction: '/activities/' + id + '/edit',
       date,
       time,
-      template: String(a.form?.template ?? ''),
-      closeDate: a.form?.closesAt ? local(a.form.closesAt) : '',
+      closeDate: a.formClosesAt ? local(a.formClosesAt) : '',
+      forms: await this.activitiesService.getFormOptions(),
       halaqas: await this.activitiesService.getActiveHalaqas(),
       sectionTitle: 'تعديل النشاط',
     };
@@ -236,14 +242,15 @@ export class ActivitiesController {
     @CurrentUser() actor: { id: string },
     @ActorEndpointPermissionScope() scope: ScopeType,
   ) {
+    const options = await this.activitiesService.eligibleStudents(
+      actor.id,
+      id,
+      scope,
+    );
     return {
+      ...options,
       activityId: id,
       guests: await this.activitiesService.previousGuests(actor.id, id, scope),
-      students: await this.activitiesService.eligibleStudents(
-        actor.id,
-        id,
-        scope,
-      ),
     };
   }
   @Post('register/:id')

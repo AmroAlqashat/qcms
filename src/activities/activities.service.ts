@@ -80,6 +80,13 @@ export class ActivitiesService {
     });
   }
 
+  async getFormOptions() {
+    return this.prisma.forms.findMany({
+      select: { id: true, name: true },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    });
+  }
+
   async saveActivity(
     createActivityDto: CreateActivityDto,
     actorId: string,
@@ -106,7 +113,21 @@ export class ActivitiesService {
           }
         }
 
+        const form = await tx.forms.findUnique({
+          where: { id: createActivityDto.formId },
+          select: { id: true },
+        });
+        if (!form)
+          throw new UnprocessableEntityException({
+            errors: { formId: 'النموذج المحدد غير موجود' },
+          });
+
         const data = {
+          formId: form.id,
+          isFormEnabled: createActivityDto.isFormEnabled === 'true',
+          formClosesAt: createActivityDto.closeDate
+            ? new Date(createActivityDto.closeDate + ':00+03:00')
+            : null,
           name,
           level,
           location,
@@ -118,28 +139,13 @@ export class ActivitiesService {
           !(await tx.activities.findFirst({ where: { id, ...this.active } }))
         )
           throw new NotFoundException('النشاط غير موجود أو مؤرشف');
+        if (data.formClosesAt && data.formClosesAt > data.date)
+          throw new UnprocessableEntityException({
+            errors: { closeDate: 'يجب إغلاق التقديم قبل موعد النشاط أو عنده' },
+          });
         const activity = id
           ? await tx.activities.update({ where: { id }, data })
           : await tx.activities.create({ data });
-        const template = Number(createActivityDto.template) || null;
-        const closesAt =
-          template && createActivityDto.closeDate
-            ? new Date(createActivityDto.closeDate + ':00+03:00')
-            : null;
-        if (closesAt && closesAt > data.date)
-          throw new UnprocessableEntityException(
-            'يجب إغلاق التقديم قبل موعد النشاط',
-          );
-        const form = { enabled: !!template, template, closesAt };
-        await tx.forms.upsert({
-          where: { activityId: activity.id },
-          create: {
-            activityId: activity.id,
-            kind: 'ACTIVITY_APPLICATION',
-            ...form,
-          },
-          update: form,
-        });
         await this.audit.record(tx, {
           actorId,
           targetId: activity.id,
@@ -179,7 +185,7 @@ export class ActivitiesService {
     const activity = await this.prisma.activities.findFirst({
       where: { id, ...this.visibility(actorId, scope) },
       include: {
-        form: true,
+        form: { select: { name: true } },
         halaqa: { include: { term: true } },
         participants: {
           select: {
@@ -207,20 +213,28 @@ export class ActivitiesService {
       select: { halaqaId: true },
     });
     if (!activity) throw new NotFoundException('النشاط غير متاح');
-    return this.prisma.students.findMany({
-      where: {
-        ...(activity.halaqaId
-          ? {
-              enrollments: {
-                some: { halaqaId: activity.halaqaId, endedAt: null },
-              },
-            }
-          : {}),
-        activityEntries: { none: { activityId: id } },
-      },
-      select: { id: true, fullName: true },
-      orderBy: { fullName: 'asc' },
-    });
+    const canRegisterCenterStudents = scope === ScopeType.CENTER_WIDE;
+    const listStudents = (halaqaId?: string) =>
+      this.prisma.students.findMany({
+        where: {
+          ...(halaqaId && {
+            enrollments: { some: { halaqaId, endedAt: null } },
+          }),
+          activityEntries: { none: { activityId: id } },
+        },
+        select: { id: true, fullName: true },
+        orderBy: [{ fullName: 'asc' }, { id: 'asc' }],
+      });
+    const [halaqaStudents, centerStudents] = await Promise.all([
+      activity.halaqaId ? listStudents(activity.halaqaId) : [],
+      canRegisterCenterStudents ? listStudents() : [],
+    ]);
+    return {
+      hasHalaqa: Boolean(activity.halaqaId),
+      canRegisterCenterStudents,
+      halaqaStudents,
+      centerStudents,
+    };
   }
 
   async register(
@@ -239,7 +253,7 @@ export class ActivitiesService {
         const student = await tx.students.findFirst({
           where: {
             id: dto.studentId,
-            ...(halaqaId
+            ...(scope === ScopeType.ASSIGNED_CLASS && halaqaId
               ? {
                   enrollments: {
                     some: {

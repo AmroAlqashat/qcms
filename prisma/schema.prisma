@@ -169,17 +169,27 @@ model Halaqas {
 }
 
 model Activities {
-  archivedAt       DateTime?
-  form             Forms?
   id               String                     @id @default(uuid())
+  formId           String
+  archivedAt       DateTime?
+  isFormEnabled    Boolean                    @default(false)
+  formClosesAt     DateTime?
   name             String
   level            ActivityLevel
   halaqaId         String?
   date             DateTime
   location         String                     @db.VarChar(200)
   halaqa           Halaqas?                   @relation(fields: [halaqaId], references: [id])
+  form             Forms                      @relation(fields: [formId], references: [id])
   participants     ActivityParticipants[]
   staffAssignments StaffActivityAssignments[]
+}
+
+model Forms {
+  id         String       @id @default(uuid())
+  name       String
+  form       Json
+  activities Activities[]
 }
 
 model Enrollments {
@@ -416,20 +426,4 @@ enum JobTitle {
 enum AttendanceStatus {
   PRESENT
   ABSENT
-}
-
-enum FormKind {
-  STUDENT_REGISTRATION
-  ACTIVITY_APPLICATION
-}
-
-model Forms {
-  id         String      @id @default(uuid())
-  kind       FormKind
-  activityId String?     @unique
-  activity   Activities? @relation(fields: [activityId], references: [id])
-  enabled    Boolean     @default(false)
-  opensAt    DateTime?
-  closesAt   DateTime?
-  template   Int?
 }

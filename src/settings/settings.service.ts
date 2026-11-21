@@ -59,12 +59,6 @@ export class SettingsService {
       settings.map((setting) => [setting.key, setting]),
     );
 
-    const registration = await this.prisma.forms.findUnique({
-      where: { id: 'student-registration' },
-      select: { enabled: true },
-    });
-    if (registration && settingsObject.registrationOpen)
-      settingsObject.registrationOpen.value = registration.enabled;
     return settingsObject;
   }
 
@@ -107,20 +101,7 @@ export class SettingsService {
         this.cache.delete(dbSetting.key);
       }
     }
-    return this.prisma.$transaction(async (tx) => {
-      if (typeof settingsDto.registrationOpen === 'boolean') {
-        await tx.forms.upsert({
-          where: { id: 'student-registration' },
-          create: {
-            id: 'student-registration',
-            kind: 'STUDENT_REGISTRATION',
-            enabled: settingsDto.registrationOpen,
-          },
-          update: { enabled: settingsDto.registrationOpen },
-        });
-      }
-      return tx.settings.createMany({ data: changedSettings });
-    });
+    return this.prisma.settings.createMany({ data: changedSettings });
   }
 
   async refresh(key?: string): Promise<void> {

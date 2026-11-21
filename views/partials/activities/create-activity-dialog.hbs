@@ -41,17 +41,25 @@
     {{> ui/field id="activity-time" name="time" label="وقت النشاط (بتوقيت عمّان)" type="time" value=time required=true error=errors.time}}
     </div>
     <fieldset class="space-y-3 rounded-xl border border-slate-200 p-4"><legend class="px-2 text-sm font-bold">إعدادات التقديم</legend>
-    <label class="block text-sm font-bold">القالب
-      <select name="template" class="field mt-2 w-full rounded-lg border p-3">
-        <option value="">بدون نموذج</option>
-        <option value="1" {{#if (eq template "1")}}selected{{/if}}>النموذج الأول</option>
-        <option value="2" {{#if (eq template "2")}}selected{{/if}}>النموذج الثاني</option>
+    <label class="block text-sm font-bold">نموذج التسجيل
+      <select name="formId" required class="field mt-2 w-full rounded-lg border p-3">
+        <option value="">اختر نموذج التسجيل</option>
+        {{#each forms}}<option value="{{id}}" {{#if (eq id ../formId)}}selected{{/if}}>{{name}}</option>{{/each}}
       </select>
     </label>
-    {{#if errors.template}}<p role="alert" class="text-xs text-red-700">{{errors.template}}</p>{{/if}}
-    <fieldset data-application-deadline {{#unless template}}hidden disabled{{/unless}}>
+    {{#unless forms}}<p class="text-sm">لا توجد نماذج تسجيل متاحة.</p>{{/unless}}
+    {{#if errors.formId}}<p role="alert" class="text-xs text-red-700">{{errors.formId}}</p>{{/if}}
+    <label class="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-2">
+      <span id="activity-registration-label" class="text-sm font-bold">تفعيل نموذج التسجيل</span>
+      <span class="relative inline-flex items-center gap-2">
+        <input class="peer sr-only" type="checkbox" role="switch" aria-labelledby="activity-registration-label" name="isFormEnabled" value="true" {{#if isFormEnabled}}checked{{/if}}>
+        <span aria-hidden="true" class="text-sm text-slate-600 peer-checked:hidden">غير مفعّل</span>
+        <span aria-hidden="true" class="hidden text-sm font-bold text-[#287a73] peer-checked:inline">مفعّل</span>
+        <span aria-hidden="true" class="relative h-6 w-11 rounded-full bg-slate-400 peer-checked:bg-[#287a73] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 after:absolute after:top-1 after:right-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:-translate-x-5"></span>
+      </span>
+    </label>
     {{> ui/field id="activity-close" name="closeDate" label="إغلاق التقديم (بتوقيت عمّان)" optional=true type="datetime-local" value=closeDate error=errors.closeDate}}
-    </fieldset></fieldset>
+    </fieldset>
 
     <div class="flex flex-wrap justify-start gap-2 border-t border-slate-100 pt-4">
       {{> ui/submit label="حفظ النشاط" icon="check"}}
