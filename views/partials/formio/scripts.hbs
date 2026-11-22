@@ -15,3 +15,7 @@
 {{else}}
   <script src="/vendor/formio/formio.form.min.js"></script>
 {{/if}}
+{{!-- Libraries from our server instead of cdn.form.io (formio-setup.js), and
+      the Arabic dictionary for both builder and renderer (window.qcmsFormioI18n). --}}
+<script src="/js/formio-setup.js"></script>
+<script src="/js/formio-ar.js"></script>

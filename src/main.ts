@@ -15,6 +15,21 @@ import connectPgSimple from 'connect-pg-simple';
 import { SettingsService } from './settings/settings.service';
 import { csrfMiddleware } from './common/middleware/csrf.middleware';
 
+// A property's own message, or else the first one from its nested DTO
+// (e.g. form.components), so nested errors still reach the response under
+// the top-level property name.
+function firstValidationMessage(error: ValidationError): string | undefined {
+  const own = Object.values(error.constraints ?? {})[0];
+  if (own) return own;
+
+  for (const child of error.children ?? []) {
+    const message = firstValidationMessage(child);
+    if (message) return message;
+  }
+
+  return undefined;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const settings = app.get(SettingsService, { strict: false });
@@ -86,6 +101,18 @@ async function bootstrap() {
           sections[name] = (sections[name] ?? '') + options.fn(this);
           return null;
         },
+        // Writes a value as JSON inside <script type="application/json">:
+        //   <script type="application/json">{{{json form}}}</script>
+        // Escaping < > & stops a label like "</script>" from closing the tag
+        // early and injecting HTML. Use triple braces: the output is escaped here.
+        json(value: unknown) {
+          return JSON.stringify(value ?? null)
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e')
+            .replace(/&/g, '\\u0026')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+        },
       },
     }),
   );
@@ -110,10 +137,7 @@ async function bootstrap() {
         new UnprocessableEntityException({
           message: 'تعذر التحقق من البيانات المدخلة',
           errors: Object.fromEntries(
-            errors.map((e) => [
-              e.property,
-              Object.values(e.constraints ?? {})[0],
-            ]),
+            errors.map((e) => [e.property, firstValidationMessage(e)]),
           ),
         }),
     }),

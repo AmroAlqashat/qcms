@@ -32,6 +32,12 @@
     {{> ui/icon name="layers"}}قوالب الصلاحيات
   </a>
   {{/if}}
+  {{#if navigationPermissions.canViewForms}}
+  <a href="/forms" {{#if (eq activeNav "forms")}}aria-current="page"{{/if}}
+    class="flex min-h-11 items-center gap-3 rounded-xl px-3 {{#if (eq activeNav "forms")}}bg-[#2b827a] font-bold text-white{{else}}text-[#b5cdca] hover:bg-white/10{{/if}}">
+    {{> ui/icon name="document"}}النماذج
+  </a>
+  {{/if}}
   <a href="/archive" {{#if (eq activeNav "archive")}}aria-current="page"{{/if}} class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[#b5cdca] hover:bg-white/10">{{> ui/icon name="archive"}}الأرشيف</a>
   {{#if navigationPermissions.canViewSettings}}
   <a href="/settings" {{#if (eq activeNav "settings")}}aria-current="page"{{/if}}

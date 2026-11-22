@@ -90,6 +90,11 @@ const permissionResources: readonly PermissionResourceDefinition[] = [
     scopes: 'C',
   },
   {
+    resource: 'النماذج',
+    category: 'الحلقات والأنشطة',
+    scopes: 'C',
+  },
+  {
     resource: 'تسجيلات الطلاب',
     category: 'الطلاب',
     scopes: 'CH',
@@ -190,6 +195,10 @@ function getScopeType(code: string): ScopeType {
 export async function seedPermissions(tx: Prisma.TransactionClient) {
   const resources = new Map<string, number>();
   const actions = new Map<string, number>();
+  const superadminRoles = await tx.roles.findMany({
+    where: { isSuperAdminRole: true },
+    select: { id: true },
+  });
 
   for (const item of permissionCatalog) {
     if (!resources.has(item.resource)) {
@@ -224,23 +233,24 @@ export async function seedPermissions(tx: Prisma.TransactionClient) {
       create: { resource, action, category: item.category, allowedScopes },
     });
 
-    // Existing superadmin roles also need this newly introduced permission.
-    // Normal roles receive it only through explicit assignment by an admin.
-    if (resourceKeys[item.resource] === 'staff_invitations') {
-      const superadminRoles = await tx.roles.findMany({
-        where: { isSuperAdminRole: true },
-        select: { id: true },
-      });
-      if (superadminRoles.length) {
-        await tx.rolePermissions.createMany({
-          data: superadminRoles.map((role) => ({
+    // Superadmin roles always hold every permission, including ones added
+    // after setup (initialize-superadmin only grants what existed then).
+    // Same scope rule as setup: center-wide when allowed. Normal roles get
+    // new permissions only when an admin assigns them.
+    if (superadminRoles.length) {
+      const scopes = allowedScopes.includes(ScopeType.CENTER_WIDE)
+        ? [ScopeType.CENTER_WIDE]
+        : allowedScopes;
+      await tx.rolePermissions.createMany({
+        data: superadminRoles.flatMap((role) =>
+          scopes.map((scopeType) => ({
             roleId: role.id,
             permissionId: permission.id,
-            scopeType: ScopeType.CENTER_WIDE,
+            scopeType,
           })),
-          skipDuplicates: true,
-        });
-      }
+        ),
+        skipDuplicates: true,
+      });
     }
   }
 

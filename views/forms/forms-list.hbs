@@ -1,0 +1,63 @@
+{{#section "styles"}}{{> formio/styles}}{{/section}}
+{{#section "scripts"}}
+  {{> formio/scripts}}
+  <script src="/js/forms-preview.js" defer></script>
+{{/section}}
+<section id="forms-page" aria-labelledby="forms-title">
+  <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="mb-2 text-xs font-bold text-[#287a73]">الإدارة</p>
+      <h1 id="forms-title" class="text-2xl font-extrabold sm:text-3xl">النماذج</h1>
+      <p class="mt-2 max-w-2xl text-sm leading-7 text-slate-600">نماذج التسجيل التي يملؤها الطلاب عند التقديم على الأنشطة. اختر نموذجًا لمعاينته كما يراه الطالب.</p>
+    </div>
+    {{#if permissions.canCreateForm}}
+      <a href="/forms/create"
+        class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#216c65] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]">
+        {{> ui/icon name="plus"}}نموذج جديد
+      </a>
+    {{/if}}
+  </header>
+
+  {{#if forms.length}}
+    {{!-- Clicking a name swaps this whole block, so the list's selection and
+          the detail always match. Links keep their ids so focus survives. --}}
+    <div id="forms-workspace" class="grid items-start gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <nav aria-label="قائمة النماذج"
+        class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm lg:sticky lg:top-6">
+        <p class="px-3 pb-2 pt-2 text-xs font-bold text-slate-500" role="status">{{forms.length}} نموذج</p>
+        <ul class="max-h-[60vh] space-y-1 overflow-y-auto lg:max-h-[calc(100dvh-12rem)]">
+          {{#each forms}}
+            <li>
+              <a id="form-link-{{id}}" href="/forms/{{id}}"
+                hx-get="/forms/{{id}}" hx-target="#forms-workspace" hx-select="#forms-workspace"
+                hx-swap="outerHTML show:none" hx-push-url="true"
+                {{#if isSelected}}aria-current="page"{{/if}}
+                class="group flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[#287a73] aria-[current=page]:bg-[#f0faf9] aria-[current=page]:font-bold aria-[current=page]:text-[#195954]">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 group-aria-[current=page]:bg-white group-aria-[current=page]:text-[#287a73]">
+                  {{> ui/icon name="document" class="h-5 w-5"}}
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate">{{name}}</span>
+                  <span class="block text-xs font-normal text-slate-500">{{#if activitiesCount}}مستخدم في {{activitiesCount}} نشاط{{else}}غير مرتبط بأي نشاط{{/if}}</span>
+                </span>
+              </a>
+            </li>
+          {{/each}}
+        </ul>
+      </nav>
+      {{> forms/form-detail}}
+    </div>
+  {{else}}
+    <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
+      <span class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f0faf9] text-[#287a73]">{{> ui/icon name="document"}}</span>
+      <h2 class="font-bold">لا توجد نماذج بعد</h2>
+      <p class="mt-2 text-sm leading-7 text-slate-500">{{#if permissions.canCreateForm}}أنشئ أول نموذج تسجيل لاستخدامه في الأنشطة.{{else}}ستظهر النماذج هنا عند إنشائها.{{/if}}</p>
+      {{#if permissions.canCreateForm}}
+        <a href="/forms/create"
+          class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#2b827a] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#216c65]">
+          {{> ui/icon name="plus"}}إنشاء نموذج
+        </a>
+      {{/if}}
+    </div>
+  {{/if}}
+</section>

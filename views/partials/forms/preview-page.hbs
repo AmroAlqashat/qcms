@@ -1,0 +1,21 @@
+{{!--
+  A form shown as the student will see it: a white page on a soft background.
+  Used by the forms list (form-detail.hbs) and the builder's preview tab.
+
+    {{#> forms/preview-page title=selected.name}}
+      <div class="formio-scope" data-form-preview></div>
+    {{/forms/preview-page}}
+
+  Bigger field styles: .form-preview-page in assets/styles/form-builder.css.
+--}}
+<div class="rounded-xl bg-[#eef3f2] p-3 sm:p-8">
+  <div class="form-preview-page mx-auto max-w-2xl rounded-2xl bg-white p-5 shadow-lg ring-1 ring-slate-200 sm:p-8">
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-[#f0faf9] px-3 py-1 text-xs font-bold text-[#287a73]">
+      {{> ui/icon name="eye" class="h-3.5 w-3.5"}}معاينة
+    </span>
+    <h3 class="mt-3 break-words text-xl font-extrabold sm:text-2xl" data-preview-title>{{title}}</h3>
+    <p class="mt-1 text-xs leading-6 text-slate-500">هكذا يرى الطالب النموذج. يمكنك تجربة الحقول، ولن تُحفظ أي بيانات.</p>
+    <hr class="my-5 border-slate-100">
+    {{> @partial-block}}
+  </div>
+</div>

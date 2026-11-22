@@ -1,0 +1,38 @@
+{{#unless isHtmx}}
+  <a href="/forms" class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-[#287a73]">
+    {{> ui/icon name="arrow" class="h-4 w-4"}}النماذج
+  </a>
+{{/unless}}
+{{#if form.activitiesCount}}
+  {{!-- The database refuses to delete a form an activity uses, so say it
+        here instead of offering a button that will fail. --}}
+  {{#> ui/dialog id="form-delete-dialog" icon="info" heading="لا يمكن حذف النموذج" description="هذا النموذج مستخدم حاليًا في الأنشطة."}}
+    <div class="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <p class="text-xs font-bold text-slate-600">اسم النموذج</p>
+      <p class="mt-1 break-words text-base font-extrabold">{{form.name}}</p>
+    </div>
+    <div role="alert" class="mb-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-[#fff9ef] p-3 text-sm leading-7 text-[#92600c]">
+      {{> ui/icon name="info" class="mt-1 h-4 w-4 shrink-0"}}
+      <p>هذا النموذج مستخدم في {{form.activitiesCount}} نشاط. اختر نموذجًا آخر لهذه الأنشطة أولًا، ثم أعد المحاولة.</p>
+    </div>
+    <div dir="rtl" class="flex flex-wrap justify-start gap-3">
+      {{> ui/cancel label="حسنًا"}}
+    </div>
+  {{/ui/dialog}}
+{{else}}
+  {{#> ui/dialog id="form-delete-dialog" icon="trash" heading="حذف النموذج؟" description="راجع تفاصيل النموذج قبل تأكيد الحذف." danger=true}}
+    <div class="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <p class="text-xs font-bold text-slate-600">اسم النموذج</p>
+      <p class="mt-1 break-words text-base font-extrabold">{{form.name}}</p>
+    </div>
+    <p class="mb-5 text-sm leading-7 text-red-700">هذا الإجراء نهائي ولا يمكن التراجع عنه.</p>
+    <form action="/forms/delete/{{form.id}}" method="post" hx-post="/forms/delete/{{form.id}}"
+      hx-disabled-elt="find button[type='submit']" class="space-y-4">
+      {{> ui/csrf}}
+      <div dir="rtl" class="flex flex-wrap justify-start gap-3">
+        {{> ui/submit label="تأكيد الحذف" icon="trash" danger=true}}
+        {{> ui/cancel label="إلغاء"}}
+      </div>
+    </form>
+  {{/ui/dialog}}
+{{/if}}

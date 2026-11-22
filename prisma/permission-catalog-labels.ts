@@ -10,6 +10,7 @@ export const resourceKeys: Record<string, string> = {
   'الفصول الدراسية': 'terms',
   الحلقات: 'halaqas',
   الأنشطة: 'activities',
+  النماذج: 'forms',
   التقويم: 'calendar',
   'تفويض الوصول': 'access_delegations',
   'طلبات التفويض': 'delegation_requests',

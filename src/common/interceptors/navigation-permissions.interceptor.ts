@@ -51,6 +51,12 @@ export class NavigationPermissionsInterceptor implements NestInterceptor {
         'read',
         ScopeType.CENTER_WIDE,
       ),
+      canViewForms: await this.authorizationSerivce.hasPermission(
+        request.user.id,
+        'forms',
+        'read',
+        ScopeType.CENTER_WIDE,
+      ),
       canViewTerms: await this.authorizationSerivce.hasPermission(
         request.user.id,
         'terms',

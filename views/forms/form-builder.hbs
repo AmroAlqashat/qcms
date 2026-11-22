@@ -1,0 +1,76 @@
+{{!-- Create and edit share this page. `action` is where the save goes.
+      Layout and builder styles: assets/styles/form-builder.css. --}}
+{{#section "styles"}}{{> formio/styles builder=true}}{{/section}}
+{{#section "scripts"}}
+  {{> formio/scripts builder=true}}
+  <script src="/js/forms-builder.js" defer></script>
+{{/section}}
+<section aria-labelledby="form-builder-title" data-form-builder data-action="{{action}}" data-csrf="{{@root.csrfToken}}">
+  {{!-- One compact row, so the builder gets most of the screen. --}}
+  <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex min-w-0 items-center gap-3">
+      {{#if navigationPermissions.canViewForms}}
+        <a href="/forms" aria-label="العودة إلى النماذج"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#287a73] hover:bg-[#f0faf9]">
+          {{> ui/icon name="arrow" class="h-4 w-4"}}
+        </a>
+      {{/if}}
+      <div class="min-w-0">
+        <h1 id="form-builder-title" class="text-xl font-extrabold leading-8">{{sectionTitle}}</h1>
+        <p class="text-xs text-slate-500" data-save-status role="status" aria-live="polite">لا توجد تغييرات غير محفوظة</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      {{#if navigationPermissions.canViewForms}}
+        <a href="/forms" class="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">إلغاء</a>
+      {{/if}}
+      <button type="submit" form="form-builder-form" data-save-button title="حفظ (Ctrl+S)"
+        class="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#2b827a] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#216c65] disabled:cursor-not-allowed disabled:opacity-70">
+        {{> ui/icon name="check" class="h-4 w-4"}}<span data-save-label>حفظ النموذج</span>
+      </button>
+    </div>
+  </header>
+
+  <div data-form-error-box tabindex="-1" class="mb-4" hidden>
+    <div role="alert" class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm leading-7 text-red-700">
+      {{> ui/icon name="info" class="mt-1 h-4 w-4 shrink-0"}}
+      <p data-form-error-message></p>
+    </div>
+  </div>
+
+  {{!-- Two columns (RTL): the palette on the right; the name, the tabs and
+        the form on the left. Form.io's palette (.formcomponents) and form
+        area (.formarea) are placed into this grid by form-builder.css. --}}
+  <div class="form-builder-layout" data-builder-layout data-mode="build">
+    {{!-- Only the name is inside the <form>: Form.io's own inputs (its search
+          box, its edit popup) must not submit it. The save button points here. --}}
+    <form id="form-builder-form" novalidate class="form-builder-name rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      {{> ui/field id="form-name" name="name" label="اسم النموذج" value=name required=true maxlength="200" hint="يظهر للموظفين عند اختيار نموذج التسجيل للنشاط."}}
+    </form>
+
+    <div role="tablist" aria-label="طريقة عرض النموذج" class="form-builder-tabs flex items-center gap-1 rounded-t-2xl border border-b-0 border-slate-200 bg-white p-2">
+      <button type="button" role="tab" id="form-tab-build" aria-controls="form-panel-build" aria-selected="true" data-builder-tab="build"
+        class="inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-sm font-bold text-slate-600 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[#287a73] aria-selected:bg-[#f0faf9] aria-selected:text-[#195954]">
+        {{> ui/icon name="edit" class="h-4 w-4"}}البناء
+      </button>
+      <button type="button" role="tab" id="form-tab-preview" aria-controls="form-panel-preview" aria-selected="false" tabindex="-1" data-builder-tab="preview"
+        class="inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-sm font-bold text-slate-600 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[#287a73] aria-selected:bg-[#f0faf9] aria-selected:text-[#195954]">
+        {{> ui/icon name="eye" class="h-4 w-4"}}المعاينة
+      </button>
+      <p class="ms-auto hidden px-2 text-xs text-slate-500 sm:block" data-build-hint>اسحب الحقول من القائمة وأفلتها في النموذج</p>
+    </div>
+
+    <div id="form-panel-build" role="tabpanel" aria-labelledby="form-tab-build" class="formio-scope form-builder-root" data-builder-root aria-busy="true">
+      <p class="form-builder-loading p-4 text-sm text-slate-500" role="status">جارٍ تحميل أداة البناء…</p>
+    </div>
+
+    <div id="form-panel-preview" role="tabpanel" aria-labelledby="form-tab-preview" class="form-builder-preview rounded-b-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" hidden>
+      {{!-- The title follows the name field (forms-builder.js). --}}
+      {{#> forms/preview-page title=name}}
+        <div class="formio-scope" data-preview-root></div>
+      {{/forms/preview-page}}
+    </div>
+  </div>
+
+  <script type="application/json" data-form-schema>{{{json form}}}</script>
+</section>

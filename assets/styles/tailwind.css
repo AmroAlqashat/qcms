@@ -1,4 +1,5 @@
 @import 'tailwindcss' source(none);
+@import './form-builder.css';
 
 [data-permission-group] > summary {
   cursor: pointer;

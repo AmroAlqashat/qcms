@@ -404,6 +404,9 @@ enum AuditAction {
   SUPERADMIN_RECOVERED
   HALAQA_CREATED
   HALAQA_EDITED
+  FORM_CREATED
+  FORM_UPDATED
+  FORM_DELETED
 }
 
 enum AuditTarget {
@@ -413,6 +416,7 @@ enum AuditTarget {
   STUDENT
   ROLE
   HALAQA
+  FORM
 }
 
 enum JobTitle {
