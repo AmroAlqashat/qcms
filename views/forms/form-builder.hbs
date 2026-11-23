@@ -1,10 +1,20 @@
 {{!-- Create and edit share this page. `action` is where the save goes.
       Layout and builder styles: assets/styles/form-builder.css. --}}
-{{#section "styles"}}{{> formio/styles builder=true}}{{/section}}
-{{#section "scripts"}}
-  {{> formio/scripts builder=true}}
-  <script src="/js/forms-builder.js" defer></script>
-{{/section}}
+{{!-- Locked (an activity uses the form): a read-only preview
+      instead of the builder, so nothing looks editable. --}}
+{{#if isLocked}}
+  {{#section "styles"}}{{> formio/styles}}{{/section}}
+  {{#section "scripts"}}
+    {{> formio/scripts}}
+    <script src="/js/forms-preview.js" defer></script>
+  {{/section}}
+{{else}}
+  {{#section "styles"}}{{> formio/styles builder=true}}{{/section}}
+  {{#section "scripts"}}
+    {{> formio/scripts builder=true}}
+    <script src="/js/forms-builder.js" defer></script>
+  {{/section}}
+{{/if}}
 <section aria-labelledby="form-builder-title" data-form-builder data-action="{{action}}" data-csrf="{{@root.csrfToken}}">
   {{!-- One compact row, so the builder gets most of the screen. --}}
   <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -17,20 +27,36 @@
       {{/if}}
       <div class="min-w-0">
         <h1 id="form-builder-title" class="text-xl font-extrabold leading-8">{{sectionTitle}}</h1>
-        <p class="text-xs text-slate-500" data-save-status role="status" aria-live="polite">لا توجد تغييرات غير محفوظة</p>
+        {{#if isLocked}}
+          <p class="text-xs text-slate-500">{{name}}</p>
+        {{else}}
+          <p class="text-xs text-slate-500" data-save-status role="status" aria-live="polite">لا توجد تغييرات غير محفوظة</p>
+        {{/if}}
       </div>
     </div>
     <div class="flex flex-wrap items-center gap-2">
       {{#if navigationPermissions.canViewForms}}
         <a href="/forms" class="inline-flex min-h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">إلغاء</a>
       {{/if}}
-      <button type="submit" form="form-builder-form" data-save-button title="حفظ (Ctrl+S)"
+      <button type="submit" form="form-builder-form" data-save-button
+        {{#if isLocked}}disabled title="مقفل: النموذج مستخدم في نشاط"{{else}}title="حفظ (Ctrl+S)"{{/if}}
         class="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#2b827a] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#216c65] disabled:cursor-not-allowed disabled:opacity-70">
-        {{> ui/icon name="check" class="h-4 w-4"}}<span data-save-label>حفظ النموذج</span>
+        {{#if isLocked}}{{> ui/icon name="lock" class="h-4 w-4"}}{{else}}{{> ui/icon name="check" class="h-4 w-4"}}{{/if}}<span data-save-label>حفظ النموذج</span>
       </button>
     </div>
   </header>
 
+  {{#if isLocked}}
+    <div role="alert" class="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-[#fff9ef] p-3 text-sm leading-7 text-[#92600c]">
+      {{> ui/icon name="lock" class="mt-1 h-4 w-4 shrink-0"}}
+      <p>لا يمكن تعديل النموذج لأنه مستخدم في نشاط. يمكنك معاينته فقط.</p>
+    </div>
+    {{#> forms/preview-page title=name}}
+      <div class="formio-scope" data-form-preview aria-busy="true">
+        <p class="text-sm text-slate-500" data-form-preview-status role="status">جارٍ تحميل المعاينة…</p>
+      </div>
+    {{/forms/preview-page}}
+  {{else}}
   <div data-form-error-box tabindex="-1" class="mb-4" hidden>
     <div role="alert" class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm leading-7 text-red-700">
       {{> ui/icon name="info" class="mt-1 h-4 w-4 shrink-0"}}
@@ -71,6 +97,7 @@
       {{/forms/preview-page}}
     </div>
   </div>
+  {{/if}}
 
   <script type="application/json" data-form-schema>{{{json form}}}</script>
 </section>

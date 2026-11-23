@@ -9,12 +9,17 @@ import { CreateFormDto } from './dto/create-form.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { EditFormDto } from './dto/edit-form.dto';
+import { AuthorizationService } from '../authorization/authorization.service';
+
+const FORM_EDIT_LOCKED_MESSAGE = 'لا يمكن تعديل النموذج لأنه مستخدم في نشاط';
+const FORM_DELETE_LOCKED_MESSAGE = 'لا يمكن حذف النموذج لأنه مستخدم في نشاط';
 
 @Injectable()
 export class FormsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async getForms() {
@@ -75,6 +80,10 @@ export class FormsService {
     const { name, form } = editFormDto;
 
     await this.prisma.$transaction(async (tx) => {
+      if (await this.isActivityFormLocked(formId, tx)) {
+        throw new ConflictException(FORM_EDIT_LOCKED_MESSAGE);
+      }
+
       const result = await tx.forms.updateMany({
         where: { id: formId },
         data: {
@@ -105,6 +114,10 @@ export class FormsService {
   async deleteForm(actorId: string, formId: string) {
     try {
       await this.prisma.$transaction(async (tx) => {
+        if (await this.isActivityFormLocked(formId, tx)) {
+          throw new ConflictException(FORM_DELETE_LOCKED_MESSAGE);
+        }
+
         const result = await tx.forms.deleteMany({
           where: { id: formId },
         });
@@ -122,16 +135,78 @@ export class FormsService {
         });
       });
     } catch (error) {
-      // Activities.formId references the form, so the database refuses
-      // to delete a form that an activity still uses.
+      // Safety net: an activity linked between the count and the delete
+      // makes the database refuse it.
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2003'
       ) {
-        throw new ConflictException('لا يمكن حذف النموذج لأنه مستخدم في نشاط');
+        throw new ConflictException(FORM_DELETE_LOCKED_MESSAGE);
       }
       throw error;
     }
+  }
+
+  // A form used by any activity is locked for edit and delete: its
+  // registration may be open, and the activity can't be left without a form.
+  async isActivityFormLocked(
+    formId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ) {
+    const linkedActivitiesCount = await tx.activities.count({
+      where: { formId },
+    });
+
+    return linkedActivitiesCount > 0;
+  }
+
+  async formsListView(userId: string, scope: ScopeType, selectedId?: string) {
+    const forms = await this.getForms();
+    const firstId = selectedId ?? forms[0]?.id;
+
+    const [selected, canCreateForm, canEditForm, canDeleteForm, lockEdit] =
+      await Promise.all([
+        firstId ? this.getForm(firstId) : null,
+        this.authorizationService.hasPermission(
+          userId,
+          'forms',
+          'create',
+          scope,
+        ),
+        this.authorizationService.hasPermission(
+          userId,
+          'forms',
+          'update',
+          scope,
+        ),
+        this.authorizationService.hasPermission(
+          userId,
+          'forms',
+          'delete',
+          scope,
+        ),
+        firstId ? this.isActivityFormLocked(firstId) : false,
+      ]);
+
+    return {
+      forms: forms.map((form) => ({
+        id: form.id,
+        name: form.name,
+        activitiesCount: form._count.activities,
+        isSelected: form.id === selected?.id,
+      })),
+      selected: selected && {
+        id: selected.id,
+        name: selected.name,
+        form: selected.form,
+        activitiesCount: selected._count.activities,
+        isLocked: lockEdit,
+      },
+      permissions: { canCreateForm, canEditForm, canDeleteForm },
+      title: selected ? `${selected.name} · النماذج` : 'النماذج',
+      activeNav: 'forms',
+      sectionTitle: 'النماذج',
+    };
   }
 
   assertCenterWideScope(userScope: ScopeType) {

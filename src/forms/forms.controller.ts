@@ -38,7 +38,7 @@ export class FormsController {
     @CurrentUser() user: { id: string },
   ) {
     this.formsService.assertCenterWideScope(scope);
-    return this.formsListView(user.id, scope);
+    return this.formsService.formsListView(user.id, scope);
   }
 
   // Create and edit share one builder view; `action` tells its JS where to save.
@@ -78,6 +78,7 @@ export class FormsController {
       name: form.name,
       form: form.form,
       action: `/forms/edit/${form.id}`,
+      isLocked: await this.formsService.isActivityFormLocked(formId),
       title: 'تعديل نموذج',
       activeNav: 'forms',
       sectionTitle: 'تعديل نموذج',
@@ -199,57 +200,6 @@ export class FormsController {
     @CurrentUser() user: { id: string },
   ) {
     this.formsService.assertCenterWideScope(scope);
-    return this.formsListView(user.id, scope, formId);
-  }
-
-  private async formsListView(
-    userId: string,
-    scope: ScopeType,
-    selectedId?: string,
-  ) {
-    const forms = await this.formsService.getForms();
-    const firstId = selectedId ?? forms[0]?.id;
-
-    const [selected, canCreateForm, canEditForm, canDeleteForm] =
-      await Promise.all([
-        firstId ? this.formsService.getForm(firstId) : null,
-        this.authorizationSerivce.hasPermission(
-          userId,
-          'forms',
-          'create',
-          scope,
-        ),
-        this.authorizationSerivce.hasPermission(
-          userId,
-          'forms',
-          'update',
-          scope,
-        ),
-        this.authorizationSerivce.hasPermission(
-          userId,
-          'forms',
-          'delete',
-          scope,
-        ),
-      ]);
-
-    return {
-      forms: forms.map((form) => ({
-        id: form.id,
-        name: form.name,
-        activitiesCount: form._count.activities,
-        isSelected: form.id === selected?.id,
-      })),
-      selected: selected && {
-        id: selected.id,
-        name: selected.name,
-        form: selected.form,
-        activitiesCount: selected._count.activities,
-      },
-      permissions: { canCreateForm, canEditForm, canDeleteForm },
-      title: selected ? `${selected.name} · النماذج` : 'النماذج',
-      activeNav: 'forms',
-      sectionTitle: 'النماذج',
-    };
+    return this.formsService.formsListView(user.id, scope, formId);
   }
 }

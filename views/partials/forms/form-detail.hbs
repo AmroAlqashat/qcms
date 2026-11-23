@@ -8,20 +8,40 @@
         <p class="mt-1 text-xs leading-6 text-slate-500">
           {{#if selected.activitiesCount}}مستخدم في {{selected.activitiesCount}} نشاط{{else}}غير مرتبط بأي نشاط بعد{{/if}}
         </p>
+        {{#if selected.isLocked}}
+          <p id="form-lock-note" class="mt-2 inline-flex items-start gap-1.5 rounded-lg bg-[#fff9ef] px-2.5 py-1 text-xs leading-6 text-[#92600c]">
+            {{> ui/icon name="lock" class="mt-1 h-3.5 w-3.5 shrink-0"}}
+            مقفل للتعديل والحذف: النموذج مستخدم في نشاط.
+          </p>
+        {{/if}}
       </div>
       <div class="flex flex-wrap gap-2">
         {{#if permissions.canEditForm}}
-          <a href="/forms/edit/{{selected.id}}"
-            class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#a8dfdc] bg-white px-4 text-sm font-bold text-[#287a73] hover:bg-[#f0faf9] focus-visible:outline-2 focus-visible:outline-[#287a73]">
-            {{> ui/icon name="edit"}}تعديل
-          </a>
+          {{#if selected.isLocked}}
+            <button type="button" disabled aria-describedby="form-lock-note" title="مقفل: النموذج مستخدم في نشاط"
+              class="inline-flex min-h-11 cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-400">
+              {{> ui/icon name="lock"}}تعديل
+            </button>
+          {{else}}
+            <a href="/forms/edit/{{selected.id}}"
+              class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#a8dfdc] bg-white px-4 text-sm font-bold text-[#287a73] hover:bg-[#f0faf9] focus-visible:outline-2 focus-visible:outline-[#287a73]">
+              {{> ui/icon name="edit"}}تعديل
+            </a>
+          {{/if}}
         {{/if}}
         {{#if permissions.canDeleteForm}}
-          <a href="/forms/delete/{{selected.id}}" hx-get="/forms/delete/{{selected.id}}" hx-target="#modal-root"
-            hx-swap="innerHTML" aria-haspopup="dialog"
-            class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-200 bg-white px-4 text-sm font-bold text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700">
-            {{> ui/icon name="trash"}}حذف
-          </a>
+          {{#if selected.isLocked}}
+            <button type="button" disabled aria-describedby="form-lock-note" title="مستخدم في نشاط"
+              class="inline-flex min-h-11 cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-400">
+              {{> ui/icon name="lock"}}حذف
+            </button>
+          {{else}}
+            <a href="/forms/delete/{{selected.id}}" hx-get="/forms/delete/{{selected.id}}" hx-target="#modal-root"
+              hx-swap="innerHTML" aria-haspopup="dialog"
+              class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-200 bg-white px-4 text-sm font-bold text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700">
+              {{> ui/icon name="trash"}}حذف
+            </a>
+          {{/if}}
         {{/if}}
       </div>
     </header>
