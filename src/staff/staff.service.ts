@@ -875,6 +875,13 @@ export class StaffService {
     return staff;
   }
 
+  // Same rows as showPendingStaff, for the count on the staff page tab.
+  countPendingStaff() {
+    return this.prisma.staffMembers.count({
+      where: { status: 'PENDING', mustChangePassword: true, isDeleted: false },
+    });
+  }
+
   async deactivateStaff(
     staffId: string,
     actorId: string,

@@ -5,6 +5,8 @@ import {
   ReturningGuestDto,
 } from './dto/activity-roster.dto';
 import { isActivityDay } from './helpers/activity-view';
+import { formatFormAnswers } from './helpers/format-form-answers';
+import { validateFormAnswers } from '../forms/helpers/validate-form-answers';
 import {
   ForbiddenException,
   UnprocessableEntityException,
@@ -13,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { ScopeType } from '@prisma/client';
+import { Prisma, ScopeType } from '@prisma/client';
 import { CreateActivityDto } from './dto/create-activity.dto';
 
 @Injectable()
@@ -134,11 +136,28 @@ export class ActivitiesService {
           date: new Date(date + 'T' + createActivityDto.time + ':00+03:00'),
           halaqaId: halaqaId ?? null,
         };
-        if (
-          id &&
-          !(await tx.activities.findFirst({ where: { id, ...this.active } }))
-        )
-          throw new NotFoundException('النشاط غير موجود أو مؤرشف');
+        if (id) {
+          const existing = await tx.activities.findFirst({
+            where: { id, ...this.active },
+            select: {
+              formId: true,
+              _count: { select: { participants: true } },
+            },
+          });
+          if (!existing)
+            throw new NotFoundException('النشاط غير موجود أو مؤرشف');
+          // Participants' answers follow the current form, so it can't be
+          // swapped for another once someone has registered.
+          if (
+            existing._count.participants > 0 &&
+            existing.formId !== data.formId
+          )
+            throw new UnprocessableEntityException({
+              errors: {
+                formId: 'لا يمكن تغيير نموذج التسجيل لأن النشاط لديه مشاركون',
+              },
+            });
+        }
         if (data.formClosesAt && data.formClosesAt > data.date)
           throw new UnprocessableEntityException({
             errors: { closeDate: 'يجب إغلاق التقديم قبل موعد النشاط أو عنده' },
@@ -181,11 +200,64 @@ export class ActivitiesService {
           },
         };
   }
+  // Same check as the public apply page, so every participant's answers
+  // have the same shape whoever registered them.
+  private checkFormAnswers(
+    form: Prisma.JsonValue,
+    answers: Record<string, unknown>,
+  ): Prisma.InputJsonObject {
+    const result = validateFormAnswers(form, answers);
+    if (result.error !== undefined)
+      throw new UnprocessableEntityException({
+        message: result.error,
+        errors: { formAnswers: result.error },
+      });
+    return result.answers as Prisma.InputJsonObject;
+  }
+
+  // One participant's answers, as rows staff can read. Same visibility as
+  // the activity page: a teacher only reaches their own halaqa's activities.
+  async getParticipantAnswers(
+    actorId: string,
+    activityId: string,
+    participantId: string,
+    scope: ScopeType,
+  ) {
+    const participant = await this.prisma.activityParticipants.findFirst({
+      where: {
+        id: participantId,
+        activityId,
+        activity: this.visibility(actorId, scope),
+      },
+      select: {
+        formAnswers: true,
+        student: { select: { fullName: true } },
+        guest: { select: { fullName: true } },
+        activity: { select: { form: { select: { name: true, form: true } } } },
+      },
+    });
+    if (!participant) throw new NotFoundException('المشارك غير موجود');
+
+    const name =
+      participant.student?.fullName ?? participant.guest?.fullName ?? '';
+    return {
+      name,
+      isGuest: !participant.student,
+      formName: participant.activity.form.name,
+      // {} = the form has no fields to answer.
+      hasAnswers: Object.keys(participant.formAnswers ?? {}).length > 0,
+      sections: formatFormAnswers(
+        participant.activity.form.form,
+        participant.formAnswers,
+      ),
+    };
+  }
+
   async getActivityData(actorId: string, id: string, scope: ScopeType) {
     const activity = await this.prisma.activities.findFirst({
       where: { id, ...this.visibility(actorId, scope) },
       include: {
-        form: { select: { name: true } },
+        form: { select: { id: true, name: true } },
         halaqa: { include: { term: true } },
         participants: {
           select: {
@@ -193,6 +265,7 @@ export class ActivitiesService {
             guest: { select: { fullName: true } },
             student: { select: { fullName: true } },
             attendanceStatus: true,
+            formAnswers: true,
           },
           orderBy: { student: { fullName: 'asc' } },
         },
@@ -210,7 +283,7 @@ export class ActivitiesService {
   async eligibleStudents(actorId: string, id: string, scope: ScopeType) {
     const activity = await this.prisma.activities.findFirst({
       where: { id, ...this.active, ...this.visibility(actorId, scope) },
-      select: { halaqaId: true },
+      select: { halaqaId: true, form: { select: { form: true } } },
     });
     if (!activity) throw new NotFoundException('النشاط غير متاح');
     const canRegisterCenterStudents = scope === ScopeType.CENTER_WIDE;
@@ -230,6 +303,8 @@ export class ActivitiesService {
       canRegisterCenterStudents ? listStudents() : [],
     ]);
     return {
+      // The dialog renders this form so staff fill the same answers.
+      formSchema: activity.form.form,
       hasHalaqa: Boolean(activity.halaqaId),
       canRegisterCenterStudents,
       halaqaStudents,
@@ -247,8 +322,13 @@ export class ActivitiesService {
       async (tx) => {
         const activity = await tx.activities.findFirst({
           where: { id, ...this.active, ...this.visibility(actorId, scope) },
+          include: { form: { select: { form: true } } },
         });
         if (!activity) throw new NotFoundException('النشاط غير متاح');
+        const formAnswers = this.checkFormAnswers(
+          activity.form.form,
+          dto.formAnswers,
+        );
         const { halaqaId } = activity;
         const student = await tx.students.findFirst({
           where: {
@@ -272,7 +352,7 @@ export class ActivitiesService {
             'هذا الطالب غير متاح للتسجيل في النشاط',
           );
         const result = await tx.activityParticipants.createMany({
-          data: { studentId: student.id, activityId: id },
+          data: { studentId: student.id, activityId: id, formAnswers },
           skipDuplicates: true,
         });
         if (result.count)
@@ -320,9 +400,13 @@ export class ActivitiesService {
       async (tx) => {
         const activity = await tx.activities.findFirst({
           where: { id, ...this.active, ...this.visibility(actorId, scope) },
-          select: { id: true },
+          select: { id: true, form: { select: { form: true } } },
         });
         if (!activity) throw new NotFoundException('النشاط غير متاح');
+        const formAnswers = this.checkFormAnswers(
+          activity.form.form,
+          dto.formAnswers,
+        );
         if ('guestId' in dto) {
           const guest = await tx.guests.findFirst({
             where: {
@@ -333,13 +417,14 @@ export class ActivitiesService {
           });
           if (!guest) throw new NotFoundException('الضيف غير متاح للتسجيل');
           const result = await tx.activityParticipants.createMany({
-            data: { activityId: id, guestId: guest.id },
+            data: { activityId: id, guestId: guest.id, formAnswers },
             skipDuplicates: true,
           });
           if (!result.count) return;
         } else {
           await tx.activityParticipants.create({
             data: {
+              formAnswers,
               activity: { connect: { id } },
               guest: {
                 create: {

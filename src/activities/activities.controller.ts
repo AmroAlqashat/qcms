@@ -27,6 +27,7 @@ import {
   ReturningGuestDto,
 } from './dto/activity-roster.dto';
 import { activityView, isActivityDay } from './helpers/activity-view';
+import { isRegistrationOpen } from './helpers/registration';
 
 @Controller('activities')
 export class ActivitiesController {
@@ -122,6 +123,7 @@ export class ActivitiesController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() actor: { id: string },
     @ActorEndpointPermissionScope() scope: ScopeType,
+    @Req() req: Request,
   ) {
     const activity = await this.activitiesService.getActivityData(
       actor.id,
@@ -153,12 +155,27 @@ export class ActivitiesController {
       canAttend:
         !archived && isActivityDay(activity.date) && (await permits('update')),
       canViewParticipants: await permits('read'),
-      registrationOpen:
-        !archived &&
-        activity.isFormEnabled &&
-        (!activity.formClosesAt ||
-          activity.formClosesAt.getTime() > Date.now()),
-      activity: activityView(activity),
+      registrationOpen: !archived && isRegistrationOpen(activity),
+      // Full link to share (WhatsApp...): the address the staff member used
+      // to open the app, so it also works from a phone on the LAN.
+      applyUrl: `${req.protocol}://${req.get('host')}/applications/activities/${activity.id}`,
+      closeDateLabel: activity.formClosesAt
+        ? new Intl.DateTimeFormat('ar-JO', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+            timeZone: 'Asia/Amman',
+          }).format(activity.formClosesAt)
+        : null,
+      activity: {
+        ...activityView(activity),
+        // {} = the form has no fields to answer.
+        participants: activity.participants.map(
+          ({ formAnswers, ...participant }) => ({
+            ...participant,
+            hasAnswers: Object.keys(formAnswers ?? {}).length > 0,
+          }),
+        ),
+      },
       archived,
       activeNav: archived ? 'archive' : 'activities',
       sectionTitle: activity.name,
@@ -207,6 +224,8 @@ export class ActivitiesController {
       closeDate: a.formClosesAt ? local(a.formClosesAt) : '',
       forms: await this.activitiesService.getFormOptions(),
       halaqas: await this.activitiesService.getActiveHalaqas(),
+      // Once someone registered, the form can't change (see saveActivity).
+      isFormLocked: a.participants.length > 0,
       sectionTitle: 'تعديل النشاط',
     };
   }
@@ -231,6 +250,32 @@ export class ActivitiesController {
       return res.set('HX-Redirect', url).status(204).send();
     return res.redirect(303, url);
   }
+  @Get(':id/participants/:participantId/answers')
+  @Permission({
+    permission_resource: 'activity_participants',
+    permission_action: 'read',
+  })
+  @Render('activities/participant-answers-dialog')
+  async participantAnswers(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('participantId', ParseUUIDPipe) participantId: string,
+    @CurrentUser() actor: { id: string },
+    @ActorEndpointPermissionScope() scope: ScopeType,
+  ) {
+    const answers = await this.activitiesService.getParticipantAnswers(
+      actor.id,
+      id,
+      participantId,
+      scope,
+    );
+    return {
+      ...answers,
+      activityId: id,
+      heading: `إجابات ${answers.name}`,
+      sectionTitle: 'إجابات المشارك',
+    };
+  }
+
   @Get('register/:id')
   @Permission({
     permission_resource: 'activity_participants',

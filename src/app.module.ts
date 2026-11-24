@@ -22,6 +22,7 @@ import { TermsModule } from './terms/terms.module';
 import { HalaqasModule } from './halaqas/halaqas.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { FormsModule } from './forms/forms.module';
+import { ApplicationsModule } from './applications/applications.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { FormsModule } from './forms/forms.module';
     ActivitiesModule,
     ArchiveModule,
     FormsModule,
+    ApplicationsModule,
   ],
   controllers: [AppController],
   providers: [

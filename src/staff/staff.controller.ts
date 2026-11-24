@@ -81,24 +81,15 @@ export class StaffController {
           )
         : Promise.resolve({ classes: [], templates: [] }),
     ]);
+    const permissions = await this.staffHeaderPermissions(actor.id);
     return {
       staffList,
       filters: filterDto,
       filterOptions,
-      permissions: {
-        canInvite: await this.authorizationService.hasPermission(
-          actor.id,
-          'staff_members',
-          'create',
-          ScopeType.CENTER_WIDE,
-        ),
-        canViewInvitations: await this.authorizationService.hasPermission(
-          actor.id,
-          'staff_invitations',
-          'read',
-          ScopeType.CENTER_WIDE,
-        ),
-      },
+      permissions,
+      pendingCount: permissions.canViewInvitations
+        ? await this.staffService.countPendingStaff()
+        : 0,
       activeNav: 'staff',
     };
   }
@@ -128,8 +119,30 @@ export class StaffController {
         ...invite,
         canCancel,
       })),
+      permissions: await this.staffHeaderPermissions(user.id),
+      pendingCount: invitations.length,
       activeNav: 'staff',
     };
+  }
+
+  // The staff page header (shared by both tabs) needs these to show the
+  // invite button and the invitations tab.
+  private async staffHeaderPermissions(actorId: string) {
+    const [canInvite, canViewInvitations] = await Promise.all([
+      this.authorizationService.hasPermission(
+        actorId,
+        'staff_members',
+        'create',
+        ScopeType.CENTER_WIDE,
+      ),
+      this.authorizationService.hasPermission(
+        actorId,
+        'staff_invitations',
+        'read',
+        ScopeType.CENTER_WIDE,
+      ),
+    ]);
+    return { canInvite, canViewInvitations };
   }
   @Post('invitations/cancel/:id')
   @Permission({
@@ -139,13 +152,20 @@ export class StaffController {
   async cancelPendingInvitation(
     @Param('id') staffId: string,
     @ActorEndpointPermissionScope() actorEndpointPermissionScope: ScopeType,
+    @Res() response: Response,
   ) {
     await this.staffService.cancelPendingInvitation(
       staffId,
       actorEndpointPermissionScope,
     );
 
-    return { success: true };
+    // HTMX deletes the row (hx-swap="delete") and swaps this new count into
+    // the tab out of band (hx-swap-oob).
+    return response.render('partials/staff/pending-count', {
+      layout: false,
+      pendingCount: await this.staffService.countPendingStaff(),
+      oob: true,
+    });
   }
 
   @Get('edit/permissions/:id')

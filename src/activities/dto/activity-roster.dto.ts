@@ -8,9 +8,14 @@ import {
   IsUUID,
   ValidateIf,
 } from 'class-validator';
+import { FormAnswers } from '../../forms/dto/form-answers.decorator';
+
 export class RegisterActivityDto {
   @IsUUID(undefined, { message: 'اختر طالبًا صالحًا' })
   studentId!: string;
+
+  @FormAnswers()
+  formAnswers!: Record<string, unknown>;
 }
 function trimText({ value }: { value: unknown }) {
   return typeof value === 'string' ? value.trim() : value;
@@ -19,6 +24,9 @@ function trimText({ value }: { value: unknown }) {
 export class ReturningGuestDto {
   @IsUUID(undefined, { message: 'اختر ضيفًا من القائمة' })
   guestId!: string;
+
+  @FormAnswers()
+  formAnswers!: Record<string, unknown>;
 }
 
 export class RegisterGuestDto {
@@ -43,6 +51,9 @@ export class RegisterGuestDto {
   )
   @Matches(/^\+?\d{7,15}$/, { message: 'أدخل رقم هاتف صالحًا لولي الأمر' })
   guardianPhone!: string;
+
+  @FormAnswers()
+  formAnswers!: Record<string, unknown>;
 }
 
 export class ActivityAttendanceDto {

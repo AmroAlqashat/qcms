@@ -24,6 +24,7 @@
     "seed": "npm run seed:permissions && npm run seed:forms",
     "seed:forms": "tsx prisma/seed-forms.ts",
     "seed:settings": "tsx prisma/seed-settings.ts",
+    "seed:demo": "tsx prisma/seed-demo.ts",
     "setup:token": "ts-node --files scripts/setup-token.ts"
   },
   "dependencies": {

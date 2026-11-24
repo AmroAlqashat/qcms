@@ -229,6 +229,7 @@ model ActivityParticipants {
   guestId          String?
   activityId       String
   attendedAt       DateTime?
+  formAnswers      Json
   activity         Activities        @relation(fields: [activityId], references: [id])
   student          Students?         @relation(fields: [studentId], references: [id], onDelete: Restrict)
   guest            Guests?           @relation(fields: [guestId], references: [id], onDelete: Restrict)
