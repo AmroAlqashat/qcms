@@ -20,6 +20,6 @@
   <a href="/staff/invitations" hx-get="/staff/invitations" hx-target="#main-content" hx-swap="innerHTML"
     hx-push-url="true"
     class="rounded-xl px-4 py-2.5 {{#if pendingTab}}bg-white font-bold shadow-sm{{else}}text-slate-600{{/if}}"
-    {{#if pendingTab}}aria-current="page" {{/if}}>الدعوات المعلّقة {{#if pendingCount}}({{pendingCount}}){{/if}}</a>
+    {{#if pendingTab}}aria-current="page" {{/if}}>الدعوات المعلّقة {{> staff/pending-count}}</a>
   {{/if}}
 </nav>

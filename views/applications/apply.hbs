@@ -1,0 +1,81 @@
+{{!-- Public application page for an activity: the student's national ID and
+      date of birth (an existing student), then the activity's form.
+      Logic: public/js/apply-form.js. Field styles: .form-preview-page. --}}
+{{#if isFormOpen}}
+  {{#section "styles"}}{{> formio/styles}}{{/section}}
+  {{#section "scripts"}}
+    {{> formio/scripts}}
+    <script src="/js/apply-form.js" defer></script>
+  {{/section}}
+{{/if}}
+<article aria-labelledby="apply-title"
+  class="form-preview-page mx-auto max-w-2xl rounded-2xl bg-white p-5 shadow-lg ring-1 ring-slate-200 sm:p-8">
+  <header>
+    <p class="text-xs font-bold text-[#287a73]">التسجيل في نشاط</p>
+    <h1 id="apply-title" class="mt-2 break-words text-2xl font-extrabold sm:text-3xl">{{activity.name}}</h1>
+    <dl class="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+      <div class="flex items-center gap-2">
+        <dt class="text-[#287a73]">{{> ui/icon name="calendar" class="h-4 w-4"}}<span class="sr-only">الموعد</span></dt>
+        <dd>{{activity.dateLabel}}</dd>
+      </div>
+      <div class="flex items-center gap-2">
+        <dt class="text-[#287a73]">{{> ui/icon name="home" class="h-4 w-4"}}<span class="sr-only">المكان</span></dt>
+        <dd class="break-words">{{activity.location}}</dd>
+      </div>
+    </dl>
+  </header>
+  <hr class="my-6 border-slate-100">
+
+  {{#if isFormOpen}}
+    <form data-apply-page data-action="/applications/activities/{{activityId}}" data-csrf="{{@root.csrfToken}}" novalidate>
+      <div data-apply-error-box tabindex="-1" class="mb-5" hidden>
+        <div role="alert" class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm leading-7 text-red-700">
+          {{> ui/icon name="info" class="mt-1 h-4 w-4 shrink-0"}}
+          <p data-apply-error-message></p>
+        </div>
+      </div>
+
+      <fieldset class="grid gap-4 sm:grid-cols-2">
+        <legend class="mb-3 text-base font-extrabold">بيانات الطالب</legend>
+        {{> ui/field id="apply-national-id" name="nationalId" label="الرقم الوطني للطالب" required=true maxlength="20" inputmode="numeric" autocomplete="off" dir="ltr"}}
+        {{> ui/field id="apply-date-of-birth" name="dateOfBirth" label="تاريخ ميلاد الطالب" type="date" required=true dir="ltr"}}
+      </fieldset>
+      <p class="mt-2 text-xs leading-6 text-slate-500">للطلاب المسجّلين في المركز. إن لم تجد بياناتك فتواصل مع إدارة المركز.</p>
+
+      <hr class="my-6 border-slate-100">
+
+      {{!-- Form.io's buttons are removed by apply-form.js: the page has one
+            button that checks the fields above and the form together. --}}
+      <div class="formio-scope" data-apply-form aria-busy="true">
+        <p class="text-sm text-slate-500" role="status">جارٍ تحميل النموذج…</p>
+      </div>
+      <script type="application/json" data-form-schema>{{{json form}}}</script>
+
+      <button type="submit" data-apply-submit
+        class="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#2b827a] px-6 text-base font-bold text-white shadow-sm hover:bg-[#216c65] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto">
+        {{> ui/icon name="send" class="h-4 w-4"}}<span data-apply-submit-label>إرسال التسجيل</span>
+      </button>
+    </form>
+
+    {{!-- Shown by apply-form.js after the server saves the application. --}}
+    <div data-apply-success tabindex="-1" class="rounded-xl border border-[#a8dfdc] bg-[#f0faf9] p-6 text-center" hidden>
+      <span class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#287a73] shadow-sm">
+        {{> ui/icon name="check" class="h-7 w-7"}}
+      </span>
+      <h2 class="text-lg font-extrabold text-[#195954]">تم التسجيل بنجاح</h2>
+      <p class="mt-2 text-sm leading-7 text-[#195954]">سُجّل الطالب في النشاط. سيتواصل معكم المركز عند الحاجة.</p>
+      <a href="/applications/activities/{{activityId}}"
+        class="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#a8dfdc] bg-white px-5 text-sm font-bold text-[#287a73] hover:bg-white/70">
+        {{> ui/icon name="plus" class="h-4 w-4"}}تسجيل طالب آخر
+      </a>
+    </div>
+  {{else}}
+    <div role="status" class="rounded-xl border border-amber-200 bg-[#fff9ef] p-5 text-center">
+      <span class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#92600c]">
+        {{> ui/icon name="lock"}}
+      </span>
+      <h2 class="font-bold text-[#92600c]">التسجيل مغلق</h2>
+      <p class="mt-2 text-sm leading-7 text-[#92600c]">لا يمكن التسجيل في هذا النشاط حاليًا. للاستفسار تواصل مع إدارة المركز.</p>
+    </div>
+  {{/if}}
+</article>

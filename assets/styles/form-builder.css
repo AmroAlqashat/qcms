@@ -744,3 +744,17 @@ html .formio-dialog.formio-dialog-theme-default.component-settings {
   font-size: 1rem;
   font-weight: 700;
 }
+
+/* Panel and fieldset titles: section headings, not Bootstrap's 1.5rem legend. */
+.form-preview-page .formio-form .formio-component-fieldset legend,
+.form-preview-page .formio-form .card-header .card-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #195954;
+}
+.form-preview-page .formio-form .formio-component-fieldset legend {
+  float: none;
+  width: auto;
+  margin-bottom: 0.75rem;
+  padding: 0 0.25rem;
+}

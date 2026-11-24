@@ -42,11 +42,18 @@
     </div>
     <fieldset class="space-y-3 rounded-xl border border-slate-200 p-4"><legend class="px-2 text-sm font-bold">إعدادات التقديم</legend>
     <label class="block text-sm font-bold">نموذج التسجيل
-      <select name="formId" required class="field mt-2 w-full rounded-lg border p-3">
+      {{!-- A disabled <select> isn't sent, so the hidden input keeps formId. --}}
+      {{#if isFormLocked}}<input type="hidden" name="formId" value="{{formId}}">{{/if}}
+      <select {{#if isFormLocked}}disabled aria-describedby="form-locked-note"{{else}}name="formId" required{{/if}} class="field mt-2 w-full rounded-lg border p-3 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500">
         <option value="">اختر نموذج التسجيل</option>
         {{#each forms}}<option value="{{id}}" {{#if (eq id ../formId)}}selected{{/if}}>{{name}}</option>{{/each}}
       </select>
     </label>
+    {{#if isFormLocked}}
+      <p id="form-locked-note" class="flex items-start gap-1.5 text-xs leading-6 text-[#92600c]">
+        {{> ui/icon name="lock" class="mt-1 h-3.5 w-3.5 shrink-0"}}لا يمكن تغيير النموذج لأن النشاط لديه مشاركون.
+      </p>
+    {{/if}}
     {{#unless forms}}<p class="text-sm">لا توجد نماذج تسجيل متاحة.</p>{{/unless}}
     {{#if errors.formId}}<p role="alert" class="text-xs text-red-700">{{errors.formId}}</p>{{/if}}
     <label class="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-2">

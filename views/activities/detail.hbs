@@ -1,22 +1,199 @@
+{{!-- The registration dialog (HTMX) shows the activity's form. --}}
+{{#if canRegister}}
+  {{#section "styles"}}{{> formio/styles}}{{/section}}
+  {{#section "scripts"}}
+    {{> formio/scripts}}
+    <script src="/js/activity-register-form.js" defer></script>
+  {{/section}}
+{{/if}}
 <section aria-labelledby="activity-title" class="mx-auto max-w-5xl space-y-5">
   <a class="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-bold text-[#287a73] hover:bg-[#f0faf9] focus-visible:outline-2" href="{{#if archived}}/archive{{else}}/activities{{/if}}">
     {{> ui/icon name="arrow" class="h-4 w-4"}}
     {{#if archived}}العودة إلى الأرشيف{{else}}العودة إلى الأنشطة{{/if}}
   </a>
-  <header class="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-slate-200 bg-white p-6">
-    <div class="min-w-0"><p class="text-sm font-bold text-[#287a73]">{{activity.levelLabel}}{{#if archived}} · مؤرشف{{/if}}</p>
-      <h1 id="activity-title" class="my-2 break-words text-2xl font-extrabold">{{activity.name}}</h1>
-      <dl class="mt-4 flex flex-wrap gap-x-8 gap-y-3 text-sm">
-        <div><dt class="text-xs text-slate-500">الموعد · بتوقيت عمّان</dt><dd class="mt-1 font-semibold">{{activity.dateLabel}}</dd></div>
-        <div><dt class="text-xs text-slate-500">المكان</dt><dd class="mt-1 break-words font-semibold">{{activity.location}}</dd></div>
-        {{#if activity.halaqa}}<div><dt class="text-xs text-slate-500">الحلقة</dt><dd class="mt-1 font-semibold">{{activity.halaqa.name}}</dd></div>{{/if}}
-      </dl>
-      <p class="mt-2 text-sm">{{activity.form.name}} · {{#if registrationOpen}}التسجيل مفتوح{{else}}التسجيل مغلق{{/if}}</p>
+
+  {{!-- Header: badges, name, actions --}}
+  <header class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="min-w-0">
+        <div class="flex flex-wrap gap-2">
+          <span class="rounded-full bg-[#f0faf9] px-3 py-1 text-xs font-bold text-[#287a73]">{{activity.levelLabel}}</span>
+          {{#if archived}}<span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">مؤرشف</span>{{/if}}
+        </div>
+        <h1 id="activity-title" class="mt-3 break-words text-2xl font-extrabold sm:text-3xl">{{activity.name}}</h1>
+      </div>
+      <div class="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">
+        {{#if canRegister}}
+          <a aria-haspopup="dialog" href="/activities/register/{{activity.id}}" hx-get="/activities/register/{{activity.id}}" hx-target="#modal-root"
+            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2b827a] px-4 text-sm font-bold text-white shadow-sm hover:bg-[#216c65] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73]">
+            {{> ui/icon name="plus" class="h-4 w-4"}}تسجيل مشارك
+          </a>
+        {{/if}}
+        {{#if canEdit}}
+          <a aria-haspopup="dialog" href="/activities/{{activity.id}}/edit" hx-get="/activities/{{activity.id}}/edit" hx-target="#modal-root"
+            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#a8dfdc] bg-white px-4 text-sm font-bold text-[#287a73] hover:bg-[#f0faf9] focus-visible:outline-2 focus-visible:outline-[#287a73]">
+            {{> ui/icon name="edit" class="h-4 w-4"}}تعديل النشاط
+          </a>
+        {{/if}}
+      </div>
     </div>
-    <div class="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">{{#if canRegister}}<a aria-haspopup="dialog" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#287a73] px-4 py-2 font-bold text-white" href="/activities/register/{{activity.id}}" hx-get="/activities/register/{{activity.id}}" hx-target="#modal-root">تسجيل مشارك</a>{{/if}}{{#if canEdit}}<a aria-haspopup="dialog" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 font-bold" href="/activities/{{activity.id}}/edit" hx-get="/activities/{{activity.id}}/edit" hx-target="#modal-root">تعديل النشاط</a>{{/if}}
-    </div>
+
+    {{!-- Info tiles --}}
+    <dl class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#287a73] shadow-sm">{{> ui/icon name="calendar"}}</span>
+        <div class="min-w-0"><dt class="text-xs text-slate-500">الموعد · بتوقيت عمّان</dt><dd class="mt-1 text-sm font-bold">{{activity.dateLabel}}</dd></div>
+      </div>
+      <div class="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#287a73] shadow-sm">{{> ui/icon name="home"}}</span>
+        <div class="min-w-0"><dt class="text-xs text-slate-500">المكان</dt><dd class="mt-1 break-words text-sm font-bold">{{activity.location}}</dd></div>
+      </div>
+      <div class="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#287a73] shadow-sm">{{> ui/icon name="users"}}</span>
+        <div class="min-w-0"><dt class="text-xs text-slate-500">الحلقة</dt><dd class="mt-1 break-words text-sm font-bold">{{#if activity.halaqa}}{{activity.halaqa.name}}{{else}}كل المركز{{/if}}</dd></div>
+      </div>
+      <div class="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#287a73] shadow-sm">{{> ui/icon name="user"}}</span>
+        <div class="min-w-0"><dt class="text-xs text-slate-500">المشاركون</dt><dd class="mt-1 text-sm font-bold tabular-nums">{{activity.participants.length}}</dd></div>
+      </div>
+    </dl>
   </header>
-  {{#if canViewParticipants}}<section class="rounded-2xl border border-slate-200 bg-white p-6"><h2 class="mb-4 font-extrabold">المشاركون ({{activity.participants.length}})</h2>
-    <form method="post" action="/activities/{{activity.id}}/attendance">{{> ui/csrf}}{{#if canAttend}}{{#if activity.participants.length}}<p class="mb-3 rounded-xl bg-[#f0faf9] p-3 text-sm">حدّد المشاركين الحاضرين. عند الحفظ يُسجَّل بقية المشاركين غائبين.</p>{{/if}}{{/if}}<ul class="divide-y">{{#each activity.participants}}<li class="py-3">{{#if ../canAttend}}<input type="hidden" name="roster" value="{{id}}"><label class="flex min-h-11 cursor-pointer items-center gap-3 font-semibold"><input class="h-5 w-5 accent-[#287a73]" type="checkbox" name="present" value="{{id}}" {{#if (eq attendanceStatus "PRESENT")}}checked{{/if}}> {{#if guest}}{{guest.fullName}} <small class="text-slate-500">ضيف</small>{{else}}{{student.fullName}}{{/if}}</label>{{else}}<div class="flex flex-wrap items-center justify-between gap-2"><span class="font-semibold">{{#if guest}}{{guest.fullName}} <small class="text-slate-500">ضيف</small>{{else}}{{student.fullName}}{{/if}}</span><span class="rounded-full bg-slate-50 px-3 py-1 text-xs">{{#if (eq attendanceStatus "PRESENT")}}حاضر{{else if (eq attendanceStatus "ABSENT")}}غائب{{else}}لم يُسجّل الحضور{{/if}}</span></div>{{/if}}</li>{{else}}<li class="text-slate-600">لا يوجد مشاركون مسجّلون في هذا النشاط بعد.</li>{{/each}}</ul>{{#if canAttend}}{{#if activity.participants.length}}{{> ui/submit label="حفظ الحضور"}}{{/if}}{{/if}}</form>
-  </section>{{/if}}
+
+  {{!-- Registration: status, form, and the public link to share --}}
+  <section aria-labelledby="registration-title" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="registration-title" class="text-lg font-extrabold">التسجيل</h2>
+      {{#if registrationOpen}}
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-[#e7f6ef] px-3 py-1 text-xs font-bold text-[#1f7a4d]">
+          <span class="h-2 w-2 rounded-full bg-[#1f9d5c]" aria-hidden="true"></span>مفتوح
+        </span>
+      {{else}}
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-[#fff4e0] px-3 py-1 text-xs font-bold text-[#92600c]">
+          {{> ui/icon name="lock" class="h-3.5 w-3.5"}}مغلق
+        </span>
+      {{/if}}
+    </div>
+
+    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+      <div class="flex items-center gap-2">
+        <dt class="text-slate-500">{{> ui/icon name="document" class="h-4 w-4"}}<span class="sr-only">نموذج التسجيل</span></dt>
+        <dd class="min-w-0 break-words font-bold">
+          {{#if navigationPermissions.canViewForms}}
+            <a href="/forms/{{activity.form.id}}" class="text-[#287a73] underline-offset-4 hover:underline">{{activity.form.name}}</a>
+          {{else}}
+            {{activity.form.name}}
+          {{/if}}
+        </dd>
+      </div>
+      <div class="flex items-center gap-2">
+        <dt class="text-slate-500">{{> ui/icon name="clock" class="h-4 w-4"}}<span class="sr-only">موعد إغلاق التسجيل</span></dt>
+        <dd class="font-bold">{{#if closeDateLabel}}يغلق في {{closeDateLabel}}{{else}}لا يوجد موعد إغلاق{{/if}}</dd>
+      </div>
+    </dl>
+
+    {{#unless archived}}
+      <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3" data-copy-group>
+        <label for="apply-url" class="text-xs font-bold text-slate-600">رابط التسجيل للطلاب</label>
+        <div class="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input id="apply-url" type="text" readonly value="{{applyUrl}}" dir="ltr"
+            class="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm text-slate-700 focus-visible:outline-2 focus-visible:outline-[#287a73]">
+          <div class="flex gap-2">
+            <button type="button" data-copy="apply-url" data-copy-message="نُسخ الرابط." {{#unless registrationOpen}}disabled{{/unless}}
+              class="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[#2b827a] px-4 text-sm font-bold text-white hover:bg-[#216c65] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287a73] disabled:cursor-not-allowed disabled:bg-slate-300 sm:flex-none">
+              {{> ui/icon name="copy" class="h-4 w-4"}}نسخ الرابط
+            </button>
+            {{#if registrationOpen}}
+              <a href="{{applyUrl}}" target="_blank" rel="noopener"
+                class="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-[#a8dfdc] bg-white px-4 text-sm font-bold text-[#287a73] hover:bg-[#f0faf9] focus-visible:outline-2 focus-visible:outline-[#287a73] sm:flex-none">
+                {{> ui/icon name="eye" class="h-4 w-4"}}فتح<span class="sr-only"> صفحة التسجيل في نافذة جديدة</span>
+              </a>
+            {{else}}
+              <button type="button" disabled
+                class="inline-flex min-h-11 flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-400 sm:flex-none">
+                {{> ui/icon name="eye" class="h-4 w-4"}}فتح
+              </button>
+            {{/if}}
+          </div>
+        </div>
+        <p class="mt-2 min-h-5 text-xs text-[#287a73]" data-copy-feedback role="status"></p>
+        {{#unless registrationOpen}}
+          <p class="text-xs leading-6 text-slate-500">التسجيل مغلق، فالرابط يعرض للطلاب «التسجيل مغلق» حاليًا.</p>
+        {{/unless}}
+      </div>
+    {{/unless}}
+  </section>
+
+  {{!-- Participants (and attendance on the activity day) --}}
+  {{#if canViewParticipants}}
+    <section aria-labelledby="participants-title" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div class="mb-4 flex items-center gap-2">
+        <h2 id="participants-title" class="text-lg font-extrabold">المشاركون</h2>
+        <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold tabular-nums text-slate-600">{{activity.participants.length}}</span>
+      </div>
+      <form method="post" action="/activities/{{activity.id}}/attendance">
+        {{> ui/csrf}}
+        {{#if canAttend}}{{#if activity.participants.length}}
+          <p class="mb-3 flex items-start gap-2 rounded-xl bg-[#f0faf9] p-3 text-sm leading-7 text-[#195954]">
+            {{> ui/icon name="info" class="mt-1 h-4 w-4 shrink-0"}}حدّد المشاركين الحاضرين. عند الحفظ يُسجَّل بقية المشاركين غائبين.
+          </p>
+        {{/if}}{{/if}}
+        <ul class="divide-y divide-slate-100">
+          {{#each activity.participants}}
+            <li>
+              {{#if ../canAttend}}
+                <input type="hidden" name="roster" value="{{id}}">
+                <div class="flex items-center gap-2">
+                <label class="flex min-h-14 min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-slate-50">
+                  <span class="flex min-w-0 items-center gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f0faf9] text-[#287a73]">{{> ui/icon name="user" class="h-4 w-4"}}</span>
+                    <span class="min-w-0 truncate font-semibold">{{#if guest}}{{guest.fullName}}{{else}}{{student.fullName}}{{/if}}</span>
+                    {{#if guest}}<span class="shrink-0 rounded-full bg-[#fff4e0] px-2 py-0.5 text-xs font-bold text-[#92600c]">ضيف</span>{{/if}}
+                  </span>
+                  <span class="flex shrink-0 items-center gap-2 text-sm text-slate-600">
+                    حاضر
+                    <input class="h-5 w-5 accent-[#287a73]" type="checkbox" name="present" value="{{id}}" {{#if (eq attendanceStatus "PRESENT")}}checked{{/if}}>
+                  </span>
+                </label>
+                <a href="/activities/{{../activity.id}}/participants/{{id}}/answers" hx-get="/activities/{{../activity.id}}/participants/{{id}}/answers" hx-target="#modal-root" aria-haspopup="dialog"
+                  aria-label="إجابات {{#if guest}}{{guest.fullName}}{{else}}{{student.fullName}}{{/if}}"
+                  class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold focus-visible:outline-2 focus-visible:outline-[#287a73] {{#if hasAnswers}}border-[#a8dfdc] bg-white text-[#287a73] hover:bg-[#f0faf9]{{else}}border-slate-200 bg-white text-slate-400 hover:bg-slate-50{{/if}}">
+                  {{> ui/icon name="document" class="h-4 w-4"}}<span class="hidden sm:inline">الإجابات</span>
+                </a>
+                </div>
+              {{else}}
+                <div class="flex min-h-14 items-center justify-between gap-3 px-2 py-2">
+                  <span class="flex min-w-0 items-center gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f0faf9] text-[#287a73]">{{> ui/icon name="user" class="h-4 w-4"}}</span>
+                    <span class="min-w-0 truncate font-semibold">{{#if guest}}{{guest.fullName}}{{else}}{{student.fullName}}{{/if}}</span>
+                    {{#if guest}}<span class="shrink-0 rounded-full bg-[#fff4e0] px-2 py-0.5 text-xs font-bold text-[#92600c]">ضيف</span>{{/if}}
+                  </span>
+                  <span class="flex shrink-0 items-center gap-2">
+                  {{#if (eq attendanceStatus "PRESENT")}}
+                    <span class="shrink-0 rounded-full bg-[#e7f6ef] px-3 py-1 text-xs font-bold text-[#1f7a4d]">حاضر</span>
+                  {{else if (eq attendanceStatus "ABSENT")}}
+                    <span class="shrink-0 rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700">غائب</span>
+                  {{else}}
+                    <span class="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">لم يُسجّل الحضور</span>
+                  {{/if}}
+                  {{!-- Last item = far left in RTL, same as in attendance mode. --}}
+                  <a href="/activities/{{../activity.id}}/participants/{{id}}/answers" hx-get="/activities/{{../activity.id}}/participants/{{id}}/answers" hx-target="#modal-root" aria-haspopup="dialog"
+                  aria-label="إجابات {{#if guest}}{{guest.fullName}}{{else}}{{student.fullName}}{{/if}}"
+                  class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold focus-visible:outline-2 focus-visible:outline-[#287a73] {{#if hasAnswers}}border-[#a8dfdc] bg-white text-[#287a73] hover:bg-[#f0faf9]{{else}}border-slate-200 bg-white text-slate-400 hover:bg-slate-50{{/if}}">
+                  {{> ui/icon name="document" class="h-4 w-4"}}<span class="hidden sm:inline">الإجابات</span>
+                </a>
+                  </span>
+                </div>
+              {{/if}}
+            </li>
+          {{else}}
+            <li class="flex flex-col items-center gap-2 py-8 text-center text-sm text-slate-500">
+              <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">{{> ui/icon name="users"}}</span>
+              لا يوجد مشاركون مسجّلون في هذا النشاط بعد.
+            </li>
+          {{/each}}
+        </ul>
+        {{#if canAttend}}{{#if activity.participants.length}}<div class="mt-4">{{> ui/submit label="حفظ الحضور"}}</div>{{/if}}{{/if}}
+      </form>
+    </section>
+  {{/if}}
 </section>

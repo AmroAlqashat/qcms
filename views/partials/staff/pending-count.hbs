@@ -1,0 +1,7 @@
+{{!-- The pending invitations count in the staff tabs. oob=true when sent
+after cancelling an invitation: HTMX swaps it into the tab by id, and when
+the last one was cancelled, the empty message into the list. --}}
+<span id="pending-count"{{#if oob}} hx-swap-oob="true"{{/if}}>{{#if pendingCount}}({{pendingCount}}){{/if}}</span>
+{{#if oob}}{{#unless pendingCount}}
+<div hx-swap-oob="innerHTML:#pending-invitations">{{> staff/pending-invitations-empty}}</div>
+{{/unless}}{{/if}}

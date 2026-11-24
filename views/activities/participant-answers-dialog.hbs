@@ -1,0 +1,43 @@
+{{!-- One participant's answers to the activity's form, as label/answer rows
+      (src/activities/helpers/format-form-answers.ts). Opened from the
+      participants list on the activity page. --}}
+{{#unless isHtmx}}
+  <a href="/activities/{{activityId}}" class="mb-4 inline-flex min-h-11 items-center gap-2 text-sm text-[#287a73]">
+    {{> ui/icon name="arrow" class="h-4 w-4"}}العودة إلى النشاط
+  </a>
+{{/unless}}
+{{#> ui/dialog id="participant-answers" icon="document" heading=heading description=formName wide=true}}
+  {{#if isGuest}}
+    <p class="mb-4 inline-flex rounded-full bg-[#fff4e0] px-3 py-1 text-xs font-bold text-[#92600c]">ضيف</p>
+  {{/if}}
+
+  {{#if hasAnswers}}
+    <div class="space-y-4">
+      {{#each sections}}
+        <section class="rounded-xl border border-slate-200">
+          {{#if title}}
+            <h3 class="border-b border-slate-100 bg-slate-50 px-4 py-2.5 text-sm font-extrabold text-[#195954]">{{title}}</h3>
+          {{/if}}
+          <dl class="divide-y divide-slate-100 px-4">
+            {{#each rows}}
+              <div class="grid gap-1 py-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:gap-4">
+                <dt class="text-xs text-slate-500 sm:text-sm">{{label}}</dt>
+                <dd class="whitespace-pre-line break-words text-sm font-semibold">{{value}}</dd>
+              </div>
+            {{/each}}
+          </dl>
+        </section>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="flex flex-col items-center gap-2 rounded-xl bg-slate-50 px-4 py-8 text-center">
+      <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm">{{> ui/icon name="document"}}</span>
+      <p class="font-bold text-slate-700">لا توجد إجابات</p>
+      <p class="text-sm leading-7 text-slate-500">سُجّل هذا المشارك يدويًا من قِبل الموظفين، دون تعبئة النموذج.</p>
+    </div>
+  {{/if}}
+
+  <div class="mt-5 flex justify-start">
+    {{> ui/cancel label="إغلاق"}}
+  </div>
+{{/ui/dialog}}

@@ -1,7 +1,16 @@
-{{#> ui/dialog id="activity-register" heading="تسجيل مشارك في النشاط" icon="users"}}
+{{!-- Staff register a participant and fill the activity's form for them.
+      One Form.io form is shared by all tabs: activity-register-form.js moves
+      it into the active form, checks it, and puts the answers (JSON) into
+      that form's hidden formAnswers input before it is sent. --}}
+{{#section "styles"}}{{> formio/styles}}{{/section}}
+{{#section "scripts"}}
+  {{> formio/scripts}}
+  <script src="/js/activity-register-form.js" defer></script>
+{{/section}}
+{{#> ui/dialog id="activity-register" heading="تسجيل مشارك في النشاط" icon="users" wide=true}}
   {{#*inline "student-picker"}}
     {{#if students.length}}
-      <form class="grid gap-5" method="post" action="/activities/register/{{activityId}}">
+      <form class="grid gap-5" method="post" action="/activities/register/{{activityId}}" data-needs-answers>
         {{> ui/csrf}}
         <label class="grid gap-2 text-sm font-bold">الطالب
           <select required name="studentId" class="min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] p-3">
@@ -9,6 +18,8 @@
             {{#each students}}<option value="{{id}}">{{fullName}}</option>{{/each}}
           </select>
         </label>
+        <input type="hidden" name="formAnswers" value="{}">
+        <div data-answers-slot></div>
         <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
           {{> ui/submit label="تسجيل الطالب"}} {{> ui/cancel}}
         </div>
@@ -37,26 +48,40 @@
     </section>
     <section role="tabpanel" id="register-guest" aria-labelledby="register-guest-tab" tabindex="0" hidden>
     {{#if guests.length}}
-      <form method="post" action="/activities/register/{{activityId}}/guest/existing" class="mt-4 grid gap-4">
+      <form method="post" action="/activities/register/{{activityId}}/guest/existing" class="mt-4 grid gap-4" data-needs-answers>
         {{> ui/csrf}}
         <label for="previous-guest" class="text-sm font-bold">ضيف من نشاط سابق</label>
         <select id="previous-guest" name="guestId" required class="min-h-11 w-full rounded-lg border border-[#a8dfdc] bg-[#f0faf9] p-3">
           <option value="">اختر الضيف</option>
           {{#each guests}}<option value="{{id}}">{{fullName}} · ولي الأمر: {{guardianName}}</option>{{/each}}
         </select>
+        <input type="hidden" name="formAnswers" value="{}">
+        <div data-answers-slot></div>
         <div>{{> ui/submit label="تسجيل الضيف في النشاط"}}</div>
       </form>
     {{/if}}
     <details class="mt-4 border-t border-slate-200 pt-4" {{#unless guests.length}}open{{/unless}}>
       <summary class="cursor-pointer text-sm font-bold">إضافة ضيف جديد</summary>
-    <form method="post" action="/activities/register/{{activityId}}/guest" class="mt-4 grid gap-4">
+    <form method="post" action="/activities/register/{{activityId}}/guest" class="mt-4 grid gap-4" data-needs-answers>
       {{> ui/csrf}}
       {{> ui/field id="guest-name" name="fullName" label="اسم الضيف" required=true maxlength="150"}}
       {{> ui/field id="guest-guardian" name="guardianName" label="اسم ولي الأمر" required=true maxlength="150"}}
       {{> ui/field id="guest-phone" name="guardianPhone" label="رقم هاتف ولي الأمر" type="tel" dir="ltr" required=true}}
+        <input type="hidden" name="formAnswers" value="{}">
+        <div data-answers-slot></div>
       <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4">{{> ui/submit label="إضافة الضيف"}} {{> ui/cancel}}</div>
     </form>
     </details>
     </section>
+  </div>
+
+  {{!-- Moved into the active form's [data-answers-slot] by the JS. Form.io's
+        buttons are removed by the JS: each form keeps its own button. --}}
+  <div data-register-answers class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+    <p class="mb-3 flex items-center gap-2 text-sm font-extrabold text-[#195954]">{{> ui/icon name="document" class="h-4 w-4"}}إجابات النموذج</p>
+    <div class="formio-scope form-preview-page" data-register-form aria-busy="true">
+      <p class="text-sm text-slate-500" role="status">جارٍ تحميل النموذج…</p>
+    </div>
+    <script type="application/json" data-register-schema>{{{json formSchema}}}</script>
   </div>
 {{/ui/dialog}}

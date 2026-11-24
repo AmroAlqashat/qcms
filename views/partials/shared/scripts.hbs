@@ -254,15 +254,17 @@
           return;
         }
 
+        // Feedback goes in the nearest wrapper: the password dialog, or any
+        // [data-copy-group]. data-copy-message overrides the default text.
         const feedback = control
-          .closest('[data-sensitive-credentials]')
+          .closest('[data-sensitive-credentials], [data-copy-group]')
           ?.querySelector('[data-copy-feedback]');
 
         try {
           await navigator.clipboard.writeText(input.value);
 
           if (feedback) {
-            feedback.textContent = 'نُسخت كلمة المرور.';
+            feedback.textContent = control.dataset.copyMessage ?? 'نُسخت كلمة المرور.';
           }
         } catch {
           input.focus();
